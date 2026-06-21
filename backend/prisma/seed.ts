@@ -1,8 +1,5 @@
-import { PrismaClient } from '@prisma/client';
+import prisma from '../src/config/db'; // الاعتماد على الـ instance الجاهز والمعد في db.ts
 import bcrypt from 'bcryptjs';
-import { process } from 'zod/v4/core';
-
-const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting database seeding...');
