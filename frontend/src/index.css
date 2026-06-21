@@ -1,0 +1,83 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-heading: var(--font-sans);
+  --font-sans: var(--font-geist-sans), 'Geist Fallback';
+  --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
+  
+  /* الأسماء الطبية الرائعة والمفهومة للـ Theme */
+  --color-clinic-bg: var(--clinic-bg);
+  --color-clinic-text: var(--clinic-text);
+  --color-clinic-card: var(--clinic-card);
+  
+  --color-hospital-navy: var(--hospital-navy);
+  --color-hospital-navy-fg: var(--hospital-navy-fg);
+  
+  --color-medical-teal: var(--medical-teal);
+  --color-medical-teal-fg: var(--medical-teal-fg);
+  
+  --color-emergency-red: var(--emergency-red);
+  --color-pulse-soft: var(--pulse-soft);
+  --color-pulse-text: var(--pulse-text);
+  
+  /* ربط متغيرات الـ Sidebar بأسماء مفهومة */
+  --color-sidebar: var(--sidebar-base);
+  --color-sidebar-foreground: var(--sidebar-text);
+  --color-sidebar-primary: var(--medical-teal);
+  --color-sidebar-border: var(--sidebar-line);
+  
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+}
+
+:root {
+  color-scheme: light;
+  
+  /* خلفية العيادة البيضاء النظيفة والمريحة */
+  --clinic-bg: oklch(0.984 0.004 220);
+  --clinic-text: oklch(0.27 0.035 248);
+  --clinic-card: oklch(1 0 0);
+  
+  /* الكحلي الطبي الوقور (المستخدم في الـ Sidebar والعناصر الرئيسية) */
+  --hospital-navy: oklch(0.275 0.025 248);
+  --hospital-navy-fg: oklch(0.99 0.005 220);
+  
+  /* الفيروزي الطبي الحيوي للأزرار والعدادات النشطة */
+  --medical-teal: oklch(0.625 0.085 188);
+  --medical-teal-fg: oklch(1 0 0);
+  
+  /* الرمادي الناعم المهدئ للعناصر المطفية أو المكتومة */
+  --pulse-soft: oklch(0.965 0.008 220);
+  --pulse-text: oklch(0.52 0.025 240);
+  
+  /* أحمر الطوارئ والأزمات الحاد */
+  --emergency-red: oklch(0.55 0.21 25);
+  
+  /* خطوط الربط والحدود البينية */
+  --border: oklch(0.91 0.01 220);
+  --input: oklch(0.91 0.01 220);
+  --radius: 0.75rem;
+  
+  /* إعدادات الـ Sidebar المبنية على الكحلي الطبي */
+  --sidebar-base: oklch(0.275 0.025 248);
+  --sidebar-text: oklch(0.9 0.012 220);
+  --sidebar-line: oklch(0.38 0.03 248);
+}
+
+/* طبقة التطبيق الأساسية للـ Utility Classes */
+@layer base {
+  * {
+    @apply border-[var(--border)] outline-[var(--medical-teal)]/50;
+  }
+  body {
+    @apply bg-clinic-bg text-clinic-text;
+  }
+  html {
+    @apply font-sans;
+  }
+}
