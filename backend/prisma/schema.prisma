@@ -1,0 +1,69 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. جدول المستشفيات المركزي
+model Hospital {
+  id            String         @id @default(uuid())
+  name          String
+  location      String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  
+  // العلاقات
+  users         User[]
+  beds          Bed[]
+}
+
+// 2. أدوار المستخدمين داخل النظام
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  DISPATCHER
+}
+
+// 3. جدول المستخدمين والطواقم الطبية (للـ Auth والـ Shifts)
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String
+  name          String
+  role          Role           @default(DOCTOR)
+  department    String         // Emergency, ICU, Surgery, Cardiology, Maternity
+  shift         String         // Day, Evening, Night
+  status        String         // On Duty, Off Duty
+  hospitalId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // العلاقات
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+}
+
+// 4. حالات الأسرة والأقسام
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+}
+
+// 5. جدول الأسرة لتقديم خريطة الطوابق (Floor Map)
+model Bed {
+  id            String         @id @default(uuid())
+  bedNumber     String         // ICU-01, ICU-02
+  wardName      String         // ICU, Emergency, Surgery
+  status        BedStatus      @default(AVAILABLE)
+  patientName   String?        // اسم المريض المشغل للسرير إن وجد
+  hospitalId    String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  // العلاقات
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+}
