@@ -1,26 +1,28 @@
+// 1. تعريف المصدر والمولد
 datasource db {
   provider = "postgresql"
-
 }
 
 generator client {
   provider = "prisma-client-js"
 }
 
-// 1. جدول المستشفيات المركزي
+// 2. النماذج (Models)
+
+// جدول المستشفيات
 model Hospital {
-  id            String         @id @default(uuid())
-  name          String
-  location      String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   
-  // العلاقات
-  users         User[]
-  beds          Bed[]
+  users     User[]
+  beds      Bed[]
+  patients  Patient[]
 }
 
-// 2. أدوار المستخدمين داخل النظام
+// أدوار المستخدمين
 enum Role {
   ADMIN
   DOCTOR
@@ -28,42 +30,53 @@ enum Role {
   DISPATCHER
 }
 
-// 3. جدول المستخدمين والطواقم الطبية (للـ Auth والـ Shifts)
+// جدول الطواقم الطبية
 model User {
-  id            String         @id @default(uuid())
-  email         String         @unique
-  password      String
-  name          String
-  role          Role           @default(DOCTOR)
-  department    String         // Emergency, ICU, Surgery, Cardiology, Maternity
-  shift         String         // Day, Evening, Night
-  status        String         // On Duty, Off Duty
-  hospitalId    String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String   @id @default(uuid())
+  email       String   @unique
+  password    String
+  name        String
+  role        Role     @default(DOCTOR)
+  department  String
+  shift       String
+  status      String   @default("OFF_DUTY")
+  hospitalId  String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  // العلاقات
-  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 }
 
-// 4. حالات الأسرة والأقسام
+// حالات الأسرة
 enum BedStatus {
   AVAILABLE
   OCCUPIED
   CLEANING
 }
 
-// 5. جدول الأسرة لتقديم خريطة الطوابق (Floor Map)
+// جدول الأسرة
 model Bed {
-  id            String         @id @default(uuid())
-  bedNumber     String         // ICU-01, ICU-02
-  wardName      String         // ICU, Emergency, Surgery
-  status        BedStatus      @default(AVAILABLE)
-  patientName   String?        // اسم المريض المشغل للسرير إن وجد
-  hospitalId    String
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String    @id @default(uuid())
+  bedNumber   String    @unique
+  wardName    String
+  status      BedStatus @default(AVAILABLE)
+  hospitalId  String
+  
+  patient     Patient?  // علاقة مع المريض
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+}
 
-  // العلاقات
-  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+// جدول المرضى
+model Patient {
+  id          String   @id @default(uuid())
+  name        String
+  age         Int
+  condition   String
+  admissionDate DateTime @default(now())
+  
+  bedId       String?  @unique // المريض لا يشغل إلا سريراً واحداً
+  bed         Bed?     @relation(fields: [bedId], references: [id])
+  
+  hospitalId  String
+  hospital    Hospital @relation(fields: [hospitalId], references: [id])
 }
