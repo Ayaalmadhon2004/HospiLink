@@ -12,7 +12,6 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
   const token = authHeader.split(' ')[1];
 
   try {
-    // التحقق من وجود المتغير
     if (!process.env.JWT_SECRET) {
       throw new Error("JWT_SECRET is not defined in environment variables");
     }
@@ -24,11 +23,9 @@ export const protect = (req: Request, res: Response, next: NextFunction): void =
     res.status(403).json({ error: 'التوكن غير صالح أو منتهي الصلاحية' });
   }
 };
-// أضيفي هذا الكود في نهاية نفس ملف الميدل وير
+
 export const authorize = (...roles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    // نفترض أن الـ user تم وضعه في الـ req بواسطة الميدل وير السابق (protect)
-    // تأكدي أن الـ role موجودة في الـ Token أو الـ user object
     const userRole = (req.user as any)?.role; 
 
     if (!roles.includes(userRole)) {
