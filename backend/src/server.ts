@@ -5,6 +5,7 @@ import prisma from './config/db';
 import authRoutes from './routes/auth';
 import patientRoutes from './routes/patient.routes'; // لا تنسي إضافة مسار المرضى الجديد
 import { errorHandler } from './middlewares/error.middleware'; // استيراد الميدل وير
+import path from 'path';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(express.json());
 // المسارات
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes); // ربط مسارات المرضى
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // مسار فحص حالة الاتصال
 app.get('/api/health', async (req, res) => {
