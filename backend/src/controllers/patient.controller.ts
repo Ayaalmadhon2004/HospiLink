@@ -33,3 +33,31 @@ export const admitPatient = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: 'فشل إدخال المريض', error });
   }
 };
+
+// في الـ Controller، يمكنكِ استخدام (req as any) للوصول للملف بسهولة
+export const uploadReport = async (req: any, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded!' });
+    }
+    
+    // تأكدي من استلام الـ patientId من الـ body
+    const { patientId } = req.body; 
+    const filePath = req.file.path; 
+
+    // تطبيق حفظ المسار في قاعدة البيانات
+    const record = await prisma.medicalRecord.create({
+      data: { 
+        patientId: patientId, 
+        documentUrl: filePath 
+      }
+    });
+
+    res.status(200).json({ 
+      message: 'File uploaded successfully', 
+      data: record 
+    });
+  } catch (error) {
+    res.status(500).json({ message: 'Server error during upload', error });
+  }
+};
