@@ -80,3 +80,12 @@ model Patient {
   hospitalId  String
   hospital    Hospital @relation(fields: [hospitalId], references: [id])
 }
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String   
+  userId    String   
+  entityId  String   
+  details   String?  
+  createdAt DateTime @default(now())
+}
