@@ -1,6 +1,4 @@
-@import 'tailwindcss';
-@import 'tw-animate-css';
-@import 'shadcn/tailwind.css';
+@import "tailwindcss";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -9,7 +7,6 @@
   --font-sans: var(--font-geist-sans), 'Geist Fallback';
   --font-mono: var(--font-geist-mono), 'Geist Mono Fallback';
   
-  /* الأسماء الطبية الرائعة والمفهومة للـ Theme */
   --color-clinic-bg: var(--clinic-bg);
   --color-clinic-text: var(--clinic-text);
   --color-clinic-card: var(--clinic-card);
