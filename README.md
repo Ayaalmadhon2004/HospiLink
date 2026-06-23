@@ -5,7 +5,7 @@
 ##  Overview
 HospiLink provides a digital solution for clinical management, enabling medical professionals and administrators to track patient status, bed occupancy, and update medical records in real-time using modern web technologies.
 
-## 🛠 Tech Stack
+##  Tech Stack
 
 ### **Backend:**
 * **Node.js & Express.js:** Robust and scalable API development.
@@ -38,7 +38,7 @@ HospiLink/
 ├── frontend/         # React.js web application
 ├── uploads/          # Local storage for medical reports
 └── package.json
-⚙️ Local Setup
+ Local Setup
 1. Backend Setup
 Bash
 cd backend
