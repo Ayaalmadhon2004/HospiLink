@@ -3,8 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './config/db';
 import authRoutes from './routes/auth';
-import patientRoutes from './routes/patient.routes'; // لا تنسي إضافة مسار المرضى الجديد
-import { errorHandler } from './middlewares/error.middleware'; // استيراد الميدل وير
+import patientRoutes from './routes/patient.routes'; 
+import { errorHandler } from './middlewares/error.middleware'; 
 import path from 'path';
 
 dotenv.config();
@@ -15,6 +15,11 @@ const PORT = process.env.PORT || 5000;
 // Middlewares
 app.use(cors());
 app.use(express.json());
+
+app.use(cors({
+  origin: "http://localhost:5173", // تأكدي أن هذا هو رابط الفرونت إند
+  credentials: true
+}));
 
 // المسارات
 app.use('/api/auth', authRoutes);
@@ -31,7 +36,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// --- هنا نضع معالج الأخطاء العالمي ---
 app.use(errorHandler); 
 
 app.listen(PORT, () => {

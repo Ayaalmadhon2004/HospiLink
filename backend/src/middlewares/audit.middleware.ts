@@ -4,7 +4,6 @@ import prisma from '../config/db';
 export const logActivity = (action: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // نأخذ الـ userId من التوكن (الذي وضعناه في الـ authMiddleware)
       const userId = (req as any).user?.id; 
 
       if (userId) {
