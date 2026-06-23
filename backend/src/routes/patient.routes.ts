@@ -1,9 +1,8 @@
 import { Router } from 'express';
-import { admitPatient, uploadReport } from '../controllers/patient.controller';
+import { admitPatient, uploadReport , getRecentPatients } from '../controllers/patient.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { upload } from '../middlewares/upload.middleware';
-import { getRecentPatients } from '../controllers/patient.controller'; 
 
 const router = Router();
 
@@ -26,5 +25,4 @@ router.get(
   authorize('DOCTOR', 'NURSE', 'ADMIN'), 
   getRecentPatients
 );
-////////////////
 export default router;

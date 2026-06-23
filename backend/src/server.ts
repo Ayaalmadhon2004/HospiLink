@@ -16,6 +16,11 @@ const PORT = process.env.PORT || 5000;
 app.use(cors());
 app.use(express.json());
 
+app.use(cors({
+  origin: "http://localhost:5173", // تأكدي أن هذا هو رابط الفرونت إند
+  credentials: true
+}));
+
 // المسارات
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes); // ربط مسارات المرضى

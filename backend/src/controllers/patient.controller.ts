@@ -1,23 +1,41 @@
 import { Request, Response } from 'express';
-import { prisma } from '../config/db';
+import prisma from '../config/db';
 import { admitPatientSchema } from '../validators/patient.validator';
 
-// 1. جلب آخر 5 مرضى للداشبورد
 export const getRecentPatients = async (req: Request, res: Response) => {
   try {
+    // التحقق من أن اتصال بريزما يعمل (خطوة وقائية)
+    if (!prisma) {
+      throw new Error("Prisma client is not initialized");
+    }
+
     const recentPatients = await prisma.patient.findMany({
       take: 5,
-      orderBy: {
-        admissionDate: 'desc', // الأحدث أولاً
+      // نستخدم orderBy مع التأكد من أن الحقل موجود في الـ Schema
+      orderBy: { 
+        admissionDate: 'desc' 
       },
-      include: {
-        bed: true, // جلب تفاصيل الغرفة والسرير
+      // نستخدم include لجلب بيانات السرير المرتبطة
+      include: { 
+        bed: true 
       },
     });
 
-    res.status(200).json({ success: true, data: recentPatients });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'فشل جلب قائمة المرضى', error });
+    res.status(200).json({ 
+      success: true, 
+      count: recentPatients.length,
+      data: recentPatients 
+    });
+
+  } catch (error: any) {
+    // هذا الجزء هو الذي سيخبركِ بالسر في Postman
+    console.error("🔥 الخطأ من Prisma:", error);
+    
+    res.status(500).json({ 
+        success: false, 
+        message: 'فشل جلب قائمة المرضى', 
+        details: error.message || 'خطأ غير معروف'
+    });
   }
 };
 
@@ -58,5 +76,28 @@ export const admitPatient = async (req: Request, res: Response) => {
     res.status(201).json({ success: true, data: result });
   } catch (error) {
     res.status(500).json({ success: false, message: 'فشل إدخال المريض', error });
+  }
+};
+
+// أضيفي هذا في ملف: backend/src/controllers/patient.controller.ts
+
+export const uploadReport = async (req: Request, res: Response) => {
+  try {
+    // تأكدي من التعامل مع الملف المرفوع (مخزن في req.file)
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'لم يتم رفع أي ملف' });
+    }
+
+    // هنا تضعين منطق حفظ مسار الملف في قاعدة البيانات
+    // مثال:
+    // await prisma.patientReport.create({ data: { path: req.file.path, ... } });
+
+    res.status(200).json({ 
+      success: true, 
+      message: 'تم رفع التقرير بنجاح', 
+      filePath: req.file.path 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'فشل رفع التقرير', error });
   }
 };

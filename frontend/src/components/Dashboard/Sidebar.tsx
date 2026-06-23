@@ -12,12 +12,11 @@ const Sidebar = () => {
 
   return (
     <aside className="w-64 min-h-screen p-6 bg-hospital-navy text-sidebar-text">
-      {/* القسم العلوي (اللوجو) */}
       <div className="flex items-center gap-3 mb-10 px-2">
         <div className="w-8 h-8 rounded-lg bg-medical-teal flex items-center justify-center shadow-lg">
           <span className="text-white font-bold">♥</span>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-white font-sans">CareSync</h2>
+        <h2 className="text-xl font-bold tracking-tight text-white font-sans">HospiLink</h2>
       </div>
 
       {/* القائمة */}

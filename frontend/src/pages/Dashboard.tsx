@@ -1,18 +1,15 @@
 import Sidebar from '../components/Dashboard/Sidebar';
 import StatCard from '../components/Dashboard/StatCard';
+import RecentPatientsTable from '../components/RecentPatientsTable';
 
 const Dashboard = () => {
   return (
-    // استخدام flex لضمان أن السايد بار بجانب المحتوى
-    // h-screen تضمن أن الحاوية تأخذ طول الشاشة بالكامل
     <div className="flex w-full h-screen overflow-hidden bg-[var(--clinic-bg)]">
       
-      {/* السايد بار ثابت العرض */}
       <div className="flex-shrink-0">
         <Sidebar />
       </div>
       
-      {/* المحتوى الرئيسي يأخذ باقي المساحة */}
       <main className="flex-1 overflow-y-auto p-8">
         <header className="mb-8">
           <h1 className="text-2xl font-bold text-[var(--hospital-navy)]">Operations Overview</h1>
@@ -24,6 +21,9 @@ const Dashboard = () => {
           <StatCard title="Avg. Wait Time" value="18m" />
           <StatCard title="Staff On Duty" value="346" />
         </div>
+
+        <RecentPatientsTable/>
+
       </main>
     </div>
   );
