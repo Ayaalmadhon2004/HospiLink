@@ -89,3 +89,23 @@ model AuditLog {
   details   String?  
   createdAt DateTime @default(now())
 }
+
+enum PatientStatus {
+  OBSERVATION
+  CRITICAL
+  STABLE
+}
+
+model Patient {
+  id            String        @id @default(uuid())
+  name          String
+  age           Int
+  condition     String
+  status        PatientStatus @default(OBSERVATION) 
+  physicianName String        
+  admissionDate DateTime      @default(now())
+  bedId         String?       @unique
+  bed           Bed?          @relation(fields: [bedId], references: [id])
+  hospitalId    String
+  hospital      Hospital      @relation(fields: [hospitalId], references: [id])
+}
