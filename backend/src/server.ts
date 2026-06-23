@@ -3,8 +3,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import prisma from './config/db';
 import authRoutes from './routes/auth';
-import patientRoutes from './routes/patient.routes'; // لا تنسي إضافة مسار المرضى الجديد
-import { errorHandler } from './middlewares/error.middleware'; // استيراد الميدل وير
+import patientRoutes from './routes/patient.routes'; 
+import { errorHandler } from './middlewares/error.middleware'; 
 import path from 'path';
 
 dotenv.config();
@@ -31,7 +31,6 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-// --- هنا نضع معالج الأخطاء العالمي ---
 app.use(errorHandler); 
 
 app.listen(PORT, () => {

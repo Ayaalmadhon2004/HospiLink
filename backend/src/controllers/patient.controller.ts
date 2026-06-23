@@ -3,7 +3,6 @@ import { prisma } from '../config/db';
 import { admitPatientSchema } from '../validators/patient.validator';
 
 export const admitPatient = async (req: Request, res: Response) => {
-  // 1. التحقق من البيانات
   const validation = admitPatientSchema.safeParse(req.body);
   
   if (!validation.success) {
@@ -13,14 +12,12 @@ export const admitPatient = async (req: Request, res: Response) => {
   const { name, age, condition, bedId, hospitalId } = validation.data;
 
   try {
-    const result = await prisma.$transaction(async (tx) => {
-      // 2. إنشاء المريض
+    const result = await prisma.$transaction(async (tx) => {// شو الترانزاكشن هنا يعني 
       const newPatient = await tx.patient.create({
         data: { name, age, condition, bedId, hospitalId }
       });
 
-      // 3. تحديث السرير
-      await tx.bed.update({
+  await tx.bed.update({
         where: { id: bedId },
         data: { status: 'OCCUPIED' }
       });
@@ -34,18 +31,15 @@ export const admitPatient = async (req: Request, res: Response) => {
   }
 };
 
-// في الـ Controller، يمكنكِ استخدام (req as any) للوصول للملف بسهولة
 export const uploadReport = async (req: any, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'No file uploaded!' });
     }
     
-    // تأكدي من استلام الـ patientId من الـ body
     const { patientId } = req.body; 
     const filePath = req.file.path; 
 
-    // تطبيق حفظ المسار في قاعدة البيانات
     const record = await prisma.medicalRecord.create({
       data: { 
         patientId: patientId, 

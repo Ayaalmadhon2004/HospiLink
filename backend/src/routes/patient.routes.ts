@@ -16,7 +16,7 @@ router.post(
 router.post(
   '/upload-report', 
   protect, 
-  upload.single('reportFile'), // 'reportFile' هو اسم الحقل في الـ Form
+  upload.single('reportFile'), 
   uploadReport
 );
 
