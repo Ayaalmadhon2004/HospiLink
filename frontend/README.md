@@ -1,73 +1,57 @@
-# React + TypeScript + Vite
+# HospiLink 🏥
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**HospiLink** is a comprehensive, intelligent Hospital Management System (HMS) designed to streamline clinical operations, manage patient records, and coordinate medical staff efficiently.
 
-Currently, two official plugins are available:
+## 🚀 Overview
+HospiLink provides a digital solution for clinical management, enabling medical professionals and administrators to track patient status, bed occupancy, and update medical records in real-time using modern web technologies.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🛠 Tech Stack
 
-## React Compiler
+### **Backend:**
+* **Node.js & Express.js:** Robust and scalable API development.
+* **TypeScript:** Ensuring type safety and maintainable code.
+* **Prisma ORM:** Flexible and secure database interaction.
+* **PostgreSQL (Neon):** High-performance cloud-native database.
+* **JWT (JSON Web Tokens):** Secure authentication and protected route management.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### **Frontend:**
+* **React.js:** Dynamic and high-performance user interface.
+* **Vite:** Next-generation frontend tooling for fast builds.
+* **Tailwind CSS:** Modern, responsive, and utility-first design.
+* **Axios:** Seamless API communication and data fetching.
 
-## Expanding the ESLint configuration
+---
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## ✨ Key Features
+* **Patient Management:** Streamlined admission, updates, and status tracking (Observation, Critical, Stable).
+* **Bed Management:** Intelligent monitoring of bed availability and allocation.
+* **Medical Reporting:** Secure documentation and file upload capabilities.
+* **Operations Dashboard:** Comprehensive overview of clinical operations, including recent admissions and staff status.
+* **Role-Based Access Control (RBAC):** Enhanced security with protected routes and user authentication.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+---
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 📂 Project Structure
+```text
+HospiLink/
+├── backend/          # Express.js server & Prisma ORM
+├── frontend/         # React.js web application
+├── uploads/          # Local storage for medical reports
+└── package.json
+⚙️ Local Setup
+1. Backend Setup
+Bash
+cd backend
+npm install
+# Configure your .env file with DATABASE_URL
+npx prisma generate
+npx prisma db push
+npx ts-node prisma/seed.ts  # Populate database with initial data
+npm run dev
+2. Frontend Setup
+Bash
+cd frontend
+npm install
+npm run dev
+🤝 Contribution
+This project is open for collaboration. We welcome contributions to enhance system efficiency or add new clinical features.
