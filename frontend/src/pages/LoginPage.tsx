@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -61,7 +61,8 @@ const LoginPage: React.FC = () => {
       </form>
       
       <p className="text-center text-slate-400 mt-6 text-sm">
-        Don't have an account? <a href="/signup" className="text-blue-600 hover:underline">Sign Up</a>
+        Don't have an account? 
+        <Link to="/signup" className="text-blue-600 hover:underline"> Sign Up</Link>
       </p>
     </div>
   </div>

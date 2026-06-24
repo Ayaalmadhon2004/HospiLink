@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { signup } from '../services/authService';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 export const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -40,6 +40,11 @@ export const SignupPage = () => {
             Sign Up
           </button>
         </form>
+
+        <p className="text-center text-slate-400 mt-6 text-sm">
+            Do you already have an account? 
+            <Link to="/login" className="text-blue-600 hover:underline"> Login</Link>
+        </p>
       </div>
     </div>
   );

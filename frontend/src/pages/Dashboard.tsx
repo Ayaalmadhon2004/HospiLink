@@ -56,7 +56,7 @@ const Dashboard = () => {
         />
 
 
-        <div className="bg-white p-6 rounded-xl shadow-sm">
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
           <h2 className="text-lg font-bold mb-4">Department Load</h2>
           <DepartmentBar title="Emergency" current={46} max={50} />
           <DepartmentBar title="ICU" current={39} max={50} />
