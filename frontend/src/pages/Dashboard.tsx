@@ -4,12 +4,12 @@ import StatCard from '../components/Dashboard/StatCard';
 import RecentPatientsTable from '../components/RecentPatientsTable';
 import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
 import { getRecentPatients } from '../services/patientService';
+import { DepartmentBar } from '../components/Dashboard/DepartmentBar'; 
+
 
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
-
-  // استخدام useCallback لمنع تكرار تعريف الدالة وتجنب تحذيرات useEffect
   const fetchRecentPatients = useCallback(async () => {
     try {
       const data = await getRecentPatients();
@@ -48,14 +48,23 @@ const Dashboard = () => {
           <StatCard title="Staff On Duty" value="346" />
         </div>
 
-        {/* تمرير مصفوفة المرضى للجدول */}
-        <RecentPatientsTable patients={patients} />
-
+        
         <AdmitPatientModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
           onAdd={fetchRecentPatients} 
         />
+
+
+        <div className="bg-white p-6 rounded-xl shadow-sm">
+          <h2 className="text-lg font-bold mb-4">Department Load</h2>
+          <DepartmentBar title="Emergency" current={46} max={50} />
+          <DepartmentBar title="ICU" current={39} max={50} />
+          <DepartmentBar title="Surgery" current={32} max={50} />
+          <DepartmentBar title="Pediatrics" current={24} max={50} />
+        </div>
+
+        <RecentPatientsTable patients={patients} />
       </main>
     </div>
   );
