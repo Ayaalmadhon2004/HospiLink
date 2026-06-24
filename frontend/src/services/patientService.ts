@@ -1,18 +1,25 @@
 import axios from 'axios';
-//meta for what we use it ? 
+
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-export const getRecentPatients = async (token: string) => {
-  try {
-    const response = await axios.get(`${API_URL}/patients/recent`, {
-      headers: {
-        'Authorization': `Bearer ${token}`, // هنا يكمن الحل!
-        'Content-Type': 'application/json'
-      }
-    });
-    return response.data;
-  } catch (error) {
-    console.error("خطأ في جلب البيانات:", error);
-    throw error;
+const api = axios.create({
+  baseURL: API_URL,
+});
+
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
+
+export const getRecentPatients = async () => {
+  const response = await api.get('/patients/recent');
+  return response.data;
+};
+
+export const admitPatient = async (data: any) => {
+  const response = await api.post('/patients/admit', data);
+  return response.data;
 };
