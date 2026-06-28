@@ -9,8 +9,7 @@ export const useRecentPatients = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token') || '';
-        const res = await getRecentPatients(token);
+        const res = await getRecentPatients();
         setPatients(res.data);
       } catch (err: any) {
         setError(err);

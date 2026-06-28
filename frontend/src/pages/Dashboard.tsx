@@ -1,15 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '../components/Dashboard/Sidebar';
 import StatCard from '../components/Dashboard/StatCard';
-import RecentPatientsTable from '../components/RecentPatientsTable';
+import RecentPatientsTable from '../components/Dashboard/RecentPatientsTable';
 import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
 import { getRecentPatients } from '../services/patientService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar'; 
 
-
 const Dashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
+
   const fetchRecentPatients = useCallback(async () => {
     try {
       const data = await getRecentPatients();
@@ -19,7 +19,6 @@ const Dashboard = () => {
     }
   }, []);
 
-  // جلب البيانات عند تحميل المكون
   useEffect(() => {
     fetchRecentPatients();
   }, [fetchRecentPatients]);

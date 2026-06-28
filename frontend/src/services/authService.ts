@@ -1,41 +1,55 @@
 import axios from 'axios';
 
-// استيراد الـ Base URL من الإعدادات
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-// إنشاء instance خاص بالـ Auth (لأنه لا يحتاج Token في البداية)
-const authApi = axios.create({
-  baseURL: `${API_URL}/auth`,
+// ✅ instance واحد — مع withCredentials!
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true, // ← ضروري عشان الكوكي يروح!
 });
 
 // خدمة تسجيل الدخول
 export const login = async (credentials: { email: string; password: string }) => {
-  const response = await authApi.post('/login', credentials);
+  const response = await api.post('/auth/login', credentials);
   
-  if (response.data.token) {
-    // تخزين الـ Token وبيانات المستخدم
-    localStorage.setItem('token', response.data.token);
-    localStorage.setItem('user', JSON.stringify(response.data.user));
-  }
+  // ✅ شيلنا localStorage — الكوكي بيجي من Backend!
+  // Backend بيحط الكوكي أوتوماتيك
   
   return response.data;
 };
 
 // خدمة إنشاء حساب
 export const signup = async (userData: any) => {
-  const response = await authApi.post('/signup', userData);
+  const response = await api.post('/auth/signup', userData);
   return response.data;
 };
 
 // خدمة تسجيل الخروج
-export const logout = () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  window.location.href = '/login'; // إعادة توجيه المستخدم
+export const logout = async () => {
+  await api.post('/auth/logout'); // ← Backend بيمسح الكوكي
+  
+  // ✅ شيلنا localStorage.removeItem
+  // Backend بيمسح الكوكي أوتوماتيك
+  
+  window.location.href = '/login';
 };
 
-// الحصول على بيانات المستخدم الحالي المخزنة
-export const getCurrentUser = () => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+// الحصول على بيانات المستخدم الحالي
+export const getCurrentUser = async () => {
+  try {
+    const response = await api.get('/auth/me'); // ← من Backend
+    return response.data.user;
+  } catch {
+    return null;
+  }
+};
+
+// ✅ جديد: التحقق من حالة تسجيل الدخول
+export const isAuthenticated = async () => {
+  try {
+    await api.get('/auth/me');
+    return true;
+  } catch {
+    return false;
+  }
 };

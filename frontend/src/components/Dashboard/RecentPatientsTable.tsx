@@ -1,4 +1,4 @@
-import { useRecentPatients } from '../hooks/useRecentPatients';
+import { useRecentPatients } from '../../hooks/useRecentPatients';
 
 interface Patient {
   id: string;
@@ -25,8 +25,6 @@ const RecentPatientsTable = () => {
   const { patients, loading, error } = useRecentPatients();
 
   if (loading) return <div className="p-8 text-center text-slate-400">جاري التحميل...</div>;
-  
-  // تصحيح الخطأ: نستخدم error.message أو نعتبر الخطأ نصاً
   if (error) return <div className="p-8 text-center text-red-500 font-medium">حدث خطأ: {error?.toString()}</div>;
 
   return (

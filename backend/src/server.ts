@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser'; // ← ضروري!
 import prisma from './config/db';
 import authRoutes from './routes/auth';
 import patientRoutes from './routes/patient.routes'; 
@@ -12,18 +13,17 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-
 app.use(cors({
-  origin: "http://localhost:5173", // تأكدي أن هذا هو رابط الفرونت إند
-  credentials: true
+  origin: "http://localhost:5173",
+  credentials: true          // ← وحدة بس!
 }));
+
+app.use(express.json());
+app.use(cookieParser());     // ← ضروري عشان تقرأ الكوكيز!
 
 // المسارات
 app.use('/api/auth', authRoutes);
-app.use('/api/patients', patientRoutes); // ربط مسارات المرضى
+app.use('/api/patients', patientRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // مسار فحص حالة الاتصال

@@ -5,19 +5,14 @@ import jwt from 'jsonwebtoken';
 
 const router = Router();
 
-// ==========================================
-// 1️⃣ مسار إنشاء حساب جديد (Sign Up)
-// ==========================================
 router.post('/signup', async (req: Request, res: Response): Promise<any> => {
   try {
     const { name, email, password, role, department, shift, hospitalId } = req.body;
 
-    // التحقق من المدخلات الأساسية الإلزامية
     if (!name || !email || !password || !role || !hospitalId) {
       return res.status(400).json({ error: 'الرجاء ملء الحقول الأساسية: الاسم، البريد، كلمة المرور، الدور، والمستشفى' });
     }
 
-    // التأكد من أن البريد الإلكتروني غير مسجل مسبقاً
     const existingUser = await prisma.user.findUnique({
       where: { email },
     });
@@ -26,11 +21,9 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
       return res.status(400).json({ error: 'البريد الإلكتروني مسجل بالفعل في النظام' });
     }
 
-    // تشفير كلمة المرور لحماية الحساب
     const saltRounds = 12;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    // إنشاء المستخدم الجديد في قاعدة البيانات عبر Prisma
     const newUser = await prisma.user.create({
       data: {
         name,
@@ -44,7 +37,6 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
       },
     });
 
-    // توليد JWT Token للمستخدم الجديد مباشرة ليتمكن من الدخول فوراً
     const token = jwt.sign(
       { 
         userId: newUser.id, 
@@ -55,7 +47,6 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
       { expiresIn: '1d' }
     );
 
-    // إرجاع بيانات النجاح والتوكن (باستثناء الباسورد للأمان)
     return res.status(201).json({
       message: 'تم إنشاء الحساب بنجاح',
       token,
@@ -74,35 +65,27 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
   }
 });
 
-// ==========================================
-// 2️⃣ مسار تسجيل الدخول (Login)
-// ==========================================
 router.post('/login', async (req: Request, res: Response): Promise<any> => {
   try {
     const { email, password } = req.body;
 
-    // التحقق من إدخال البيانات الأساسية
     if (!email || !password) {
       return res.status(400).json({ error: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' });
     }
 
-    // البحث عن المستخدم في قاعدة البيانات
     const user = await prisma.user.findUnique({
       where: { email },
     });
 
-    // إذا لم يتم العثور على المستخدم
     if (!user) {
       return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
 
-    // مقارنة كلمة المرور الممررة مع المشفرة في قاعدة البيانات
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
     }
 
-    // توليد الـ JWT Token في حال نجاح المطابقة
     const token = jwt.sign(
       { 
         userId: user.id, 
@@ -113,7 +96,6 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
       { expiresIn: '1d' }
     );
 
-    // إرجاع بيانات نجاح العملية مع الـ Token
     return res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
       token,

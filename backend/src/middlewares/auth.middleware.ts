@@ -4,7 +4,7 @@ import jwt from 'jsonwebtoken';
 export const protect = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  if (!authHeader || !authHeader.startsWith('Bearer ')) { // شو الفرق بين الستارت وذ برير ومع ؟؟ هنا يعني 
     res.status(401).json({ error: 'غير مصرح لك بالوصول: لا يوجد توكن' });
     return;
   }
