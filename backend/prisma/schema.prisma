@@ -7,9 +7,6 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// 2. النماذج (Models)
-
-// جدول المستشفيات
 model Hospital {
   id        String   @id @default(uuid())
   name      String
@@ -22,7 +19,6 @@ model Hospital {
   patients  Patient[]
 }
 
-// أدوار المستخدمين
 enum Role {
   ADMIN
   DOCTOR
@@ -30,7 +26,6 @@ enum Role {
   DISPATCHER
 }
 
-// جدول الطواقم الطبية
 model User {
   id          String   @id @default(uuid())
   email       String   @unique
@@ -45,25 +40,23 @@ model User {
   updatedAt   DateTime @updatedAt
 
   hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patients    Patient[] // ← Doctor's patients
 }
 
-// حالات الأسرة
 enum BedStatus {
   AVAILABLE
   OCCUPIED
   CLEANING
 }
 
-// جدول الأسرة
 model Bed {
   id          String    @id @default(uuid())
   bedNumber   String    @unique
   wardName    String
   status      BedStatus @default(AVAILABLE)
   hospitalId  String
-  
-  patient     Patient?  // علاقة مع المريض
   hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient     Patient?  @relation("BedPatient")
 }
 
 model AuditLog {
@@ -76,21 +69,34 @@ model AuditLog {
 }
 
 enum PatientStatus {
+  STABLE
   OBSERVATION
   CRITICAL
-  STABLE
+  DISCHARGED
+}
+
+enum Gender {
+  MALE
+  FEMALE
 }
 
 model Patient {
   id            String        @id @default(uuid())
+  patientCode   String        @unique // PT-2041, PT-2042...
   name          String
   age           Int
-  condition     String
-  status        PatientStatus @default(OBSERVATION) 
-  physicianName String        
+  gender        Gender
+  department    String        
+  diagnosis     String        
+  status        PatientStatus @default(OBSERVATION)
   admissionDate DateTime      @default(now())
+  dischargeDate DateTime?
+  doctorId      String?
+  doctor        User?         @relation(fields: [doctorId], references: [id])
   bedId         String?       @unique
-  bed           Bed?          @relation(fields: [bedId], references: [id])
+  bed           Bed?          @relation("BedPatient", fields: [bedId], references: [id])
   hospitalId    String
   hospital      Hospital      @relation(fields: [hospitalId], references: [id])
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
