@@ -124,7 +124,7 @@ export const getPatients = async (req: Request, res: Response) => {
     const where: any = {};
     
     if (status && status !== 'All') {
-      where.status = status;
+    where.status = (status as string).toUpperCase(); // ← Stable → STABLE
     }
     
     if (department && department !== 'All') {
