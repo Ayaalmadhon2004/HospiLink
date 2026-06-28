@@ -1,4 +1,11 @@
-const Sidebar = () => {
+import React from 'react';
+
+interface SidebarProps {
+  activeItem: string;
+  onItemClick: (item: string) => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
   const menuItems = [
     { name: 'Overview' },
     { name: 'Patients', badge: '1.2k' },
@@ -25,11 +32,12 @@ const Sidebar = () => {
           Clinical Operations
         </p>
         
-        {menuItems.map((item, index) => {
-          const isActive = index === 0;
+        {menuItems.map((item) => {
+          const isActive = activeItem === item.name;
           return (
             <div
               key={item.name}
+              onClick={() => onItemClick(item.name)}
               className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 ${
                 isActive 
                   ? 'bg-[#2dd4bf]/20 text-[#2dd4bf] border-l-4 border-[#2dd4bf]' 

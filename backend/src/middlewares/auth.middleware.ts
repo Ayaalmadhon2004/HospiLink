@@ -2,14 +2,13 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 export const protect = (req: Request, res: Response, next: NextFunction): void => {
-  const authHeader = req.headers.authorization;
+  // ✅ اقرأ التوكن من الكوكي، مش من Bearer header
+  const token = req.cookies?.token;
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) { // شو الفرق بين الستارت وذ برير ومع ؟؟ هنا يعني 
-    res.status(401).json({ error: 'غير مصرح لك بالوصول: لا يوجد توكن' });
+  if (!token) {
+    res.status(401).json({ error: 'غير مصرح لك بالوصول: لا يوجد توكن في الكوكيز' });
     return;
   }
-
-  const token = authHeader.split(' ')[1];
 
   try {
     if (!process.env.JWT_SECRET) {

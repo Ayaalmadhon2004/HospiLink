@@ -3,7 +3,7 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard'; 
 import PrivateRoute from './components/PrivateRoute';
 import { SignupPage } from "./pages/SignupPage";
-import { PatientsPage } from "./components/PatientsPage";
+import { PatientsPage } from "./pages/PatientsPage";
 
 function App() {
   return (
