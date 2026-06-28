@@ -3,6 +3,7 @@ import LoginPage from './pages/LoginPage';
 import Dashboard from './pages/Dashboard'; 
 import PrivateRoute from './components/PrivateRoute';
 import { SignupPage } from "./pages/SignupPage";
+import { PatientsPage } from "./pages/PatientsPage";
 
 function App() {
   return (
@@ -21,6 +22,9 @@ function App() {
             </PrivateRoute>
           } 
         />
+
+        <Route path="/patients" element={<PatientsPage />} />
+        
       </Routes>
     </Router>
   );

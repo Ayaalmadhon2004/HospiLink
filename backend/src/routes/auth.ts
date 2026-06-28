@@ -2,54 +2,71 @@ import { Router, Request, Response } from 'express';
 import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { protect } from '../middlewares/auth.middleware';
 
 const router = Router();
+// auth.ts (الراوت)
+router.get('/me', protect, async (req: Request, res: Response) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: (req.user as any)?.userId },
+      select: { id: true, name: true, email: true, role: true }
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    res.json({ user });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to get user' });
+  }
+});
 
 router.post('/signup', async (req: Request, res: Response): Promise<any> => {
   try {
     const { name, email, password, role, department, shift, hospitalId } = req.body;
 
     if (!name || !email || !password || !role || !hospitalId) {
-      return res.status(400).json({ error: 'الرجاء ملء الحقول الأساسية: الاسم، البريد، كلمة المرور، الدور، والمستشفى' });
+      return res.status(400).json({ error: 'الرجاء ملء الحقول الأساسية' });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(400).json({ error: 'البريد الإلكتروني مسجل بالفعل في النظام' });
+      return res.status(400).json({ error: 'البريد الإلكتروني مسجل بالفعل' });
     }
 
-    const saltRounds = 12;
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser = await prisma.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
-        role, // DOCTOR, NURSE, ADMIN
+        role,
         department: department || 'General',
         shift: shift || 'Day',
         status: 'Active',
-        hospitalId, // يربط المستخدم بالمستشفى الصحيحة
+        hospitalId,
       },
     });
 
     const token = jwt.sign(
-      { 
-        userId: newUser.id, 
-        email: newUser.email, 
-        role: newUser.role 
-      },
+      { userId: newUser.id, email: newUser.email, role: newUser.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '1d' }
     );
 
+    // ✅ NEW: حط الكوكي!
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     return res.status(201).json({
       message: 'تم إنشاء الحساب بنجاح',
-      token,
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -61,7 +78,7 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
 
   } catch (error) {
     console.error('❌ Signup Error:', error);
-    return res.status(500).json({ error: 'حدث خطأ في السيرفر أثناء إنشاء الحساب' });
+    return res.status(500).json({ error: 'حدث خطأ في السيرفر' });
   }
 });
 
@@ -70,35 +87,35 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      return res.status(400).json({ error: 'الرجاء إدخال البريد الإلكتروني وكلمة المرور' });
+      return res.status(400).json({ error: 'الرجاء إدخال البريد وكلمة المرور' });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
+      return res.status(401).json({ error: 'البريد أو كلمة المرور غير صحيحة' });
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      return res.status(401).json({ error: 'البريد الإلكتروني أو كلمة المرور غير صحيحة' });
+      return res.status(401).json({ error: 'البريد أو كلمة المرور غير صحيحة' });
     }
 
     const token = jwt.sign(
-      { 
-        userId: user.id, 
-        email: user.email, 
-        role: user.role 
-      },
+      { userId: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || 'fallback_secret',
       { expiresIn: '1d' }
     );
 
+    // ✅ NEW: حط الكوكي!
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
     return res.status(200).json({
       message: 'تم تسجيل الدخول بنجاح',
-      token,
       user: {
         id: user.id,
         name: user.name,
@@ -111,8 +128,14 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
 
   } catch (error) {
     console.error('❌ Login Error:', error);
-    return res.status(500).json({ error: 'حدث خطأ في السيرفر أثناء عملية تسجيل الدخول' });
+    return res.status(500).json({ error: 'حدث خطأ في السيرفر' });
   }
+});
+
+// ✅ NEW: Logout route
+router.post('/logout', (req: Request, res: Response) => {
+  res.clearCookie('token');
+  res.json({ success: true, message: 'تم تسجيل الخروج' });
 });
 
 export default router;
