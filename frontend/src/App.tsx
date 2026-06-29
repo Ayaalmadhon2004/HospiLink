@@ -4,6 +4,7 @@ import Dashboard from './pages/Dashboard';
 import PrivateRoute from './components/PrivateRoute';
 import { SignupPage } from "./pages/SignupPage";
 import { PatientsPage } from "./pages/PatientsPage";
+import { PatientDetailPage } from "./pages/PatientDetailPage";
 
 function App() {
   return (
@@ -24,6 +25,8 @@ function App() {
         />
 
         <Route path="/patients" element={<PatientsPage />} />
+
+        <Route path="/patients/:id" element={<PatientDetailPage/>} />
         
       </Routes>
     </Router>
