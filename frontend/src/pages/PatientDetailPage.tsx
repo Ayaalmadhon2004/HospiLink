@@ -1,4 +1,4 @@
-import { useState , useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPatientById, dischargePatient } from '../services/patientService';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut } from 'lucide-react';
@@ -41,11 +41,8 @@ export const PatientDetailPage = () => {
     try {
       await dischargePatient(id);
       setShowDischargeModal(false);
-      // Refresh patient data
       const res = await getPatientById(id);
       setPatient(res.data);
-      // Or navigate back
-      // navigate('/dashboard');
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to discharge patient');
     } finally {
@@ -55,20 +52,20 @@ export const PatientDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <div className="text-slate-400">Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
+        <div className="text-clinic-text/50">Loading...</div>
       </div>
     );
   }
 
   if (error || !patient) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
         <div className="bg-red-50 text-red-600 px-6 py-4 rounded-xl">
           {error || 'Patient not found'}
           <button 
             onClick={() => navigate('/dashboard')}
-            className="block mt-4 text-blue-600 hover:underline"
+            className="block mt-4 text-hospital-navy hover:underline"
           >
             Back to Dashboard
           </button>
@@ -78,11 +75,11 @@ export const PatientDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 p-8">
+    <div className="min-h-screen bg-clinic-bg p-8">
       {/* Back button */}
       <button 
         onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-slate-600 hover:text-slate-800 mb-6 transition"
+        className="flex items-center gap-2 text-clinic-text/70 hover:text-clinic-text mb-6 transition"
       >
         <ArrowLeft size={20} />
         Back
@@ -93,12 +90,12 @@ export const PatientDetailPage = () => {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
           <div className="flex justify-between items-start">
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <User size={32} className="text-blue-600" />
+              <div className="w-16 h-16 bg-hospital-navy/10 rounded-full flex items-center justify-center">
+                <User size={32} className="text-hospital-navy" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-slate-800">{patient.name}</h1>
-                <p className="text-slate-500">{patient.patientCode}</p>
+                <h1 className="text-2xl font-bold text-hospital-navy">{patient.name}</h1>
+                <p className="text-clinic-text/50">{patient.patientCode}</p>
               </div>
             </div>
             <span className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[patient.status as keyof typeof STATUS_COLORS]}`}>
@@ -111,29 +108,29 @@ export const PatientDetailPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Personal Info */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <User size={20} className="text-blue-600" />
-              Personal Info
+            <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
+              <User size={20} className="text-medical-teal" />
+              Personal Information
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-slate-500">Age</span>
-                <span className="font-medium">{patient.age} years</span>
+                <span className="text-clinic-text/50">Age</span>
+                <span className="font-medium text-clinic-text">{patient.age} years</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Gender</span>
-                <span className="font-medium">{patient.gender}</span>
+                <span className="text-clinic-text/50">Gender</span>
+                <span className="font-medium text-clinic-text">{patient.gender}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Admission Date</span>
-                <span className="font-medium">
+                <span className="text-clinic-text/50">Admission Date</span>
+                <span className="font-medium text-clinic-text">
                   {new Date(patient.admissionDate).toLocaleDateString('en-US')}
                 </span>
               </div>
               {patient.dischargeDate && (
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Discharge Date</span>
-                  <span className="font-medium text-green-600">
+                  <span className="text-clinic-text/50">Discharge Date</span>
+                  <span className="font-medium text-medical-teal">
                     {new Date(patient.dischargeDate).toLocaleDateString('en-US')}
                   </span>
                 </div>
@@ -143,55 +140,55 @@ export const PatientDetailPage = () => {
 
           {/* Medical Info */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+            <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
               <Stethoscope size={20} className="text-red-500" />
-              Medical Info
+              Medical Information
             </h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-slate-500">Department</span>
-                <span className="font-medium">{patient.department}</span>
+                <span className="text-clinic-text/50">Department</span>
+                <span className="font-medium text-clinic-text">{patient.department}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Diagnosis</span>
-                <span className="font-medium">{patient.diagnosis}</span>
+                <span className="text-clinic-text/50">Diagnosis</span>
+                <span className="font-medium text-clinic-text">{patient.diagnosis}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-500">Doctor</span>
-                <span className="font-medium">{patient.doctor?.name || 'Not assigned'}</span>
+                <span className="text-clinic-text/50">Attending Physician</span>
+                <span className="font-medium text-clinic-text">{patient.doctor?.name || 'Not assigned'}</span>
               </div>
             </div>
           </div>
 
           {/* Bed Info */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Bed size={20} className="text-green-600" />
-              Bed Info
+            <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
+              <Bed size={20} className="text-medical-teal" />
+              Bed Information
             </h2>
             {patient.bed ? (
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Bed Number</span>
-                  <span className="font-medium">{patient.bed.bedNumber}</span>
+                  <span className="text-clinic-text/50">Bed Number</span>
+                  <span className="font-medium text-clinic-text">{patient.bed.bedNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-500">Ward</span>
-                  <span className="font-medium">{patient.bed.wardName}</span>
+                  <span className="text-clinic-text/50">Ward</span>
+                  <span className="font-medium text-clinic-text">{patient.bed.wardName}</span>
                 </div>
               </div>
             ) : (
-              <p className="text-slate-400">No bed assigned</p>
+              <p className="text-clinic-text/40">No bed assigned</p>
             )}
           </div>
 
-          {/* Vitals (Placeholder) */}
+          {/* Vitals */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-              <Activity size={20} className="text-purple-600" />
+            <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
+              <Activity size={20} className="text-purple-500" />
               Vitals
             </h2>
-            <p className="text-slate-400 text-sm">Coming soon - vitals tracking section</p>
+            <p className="text-clinic-text/40 text-sm">Coming soon - vitals tracking section</p>
           </div>
         </div>
 
@@ -199,12 +196,11 @@ export const PatientDetailPage = () => {
         <div className="flex gap-3">
           <button 
             onClick={() => navigate(`/patients/${id}/edit`)}
-            className="bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition"
+            className="bg-hospital-navy text-white px-6 py-3 rounded-xl hover:bg-hospital-navy/90 transition"
           >
             Edit Patient
           </button>
           
-          {/* Discharge Button - only show if not already discharged */}
           {patient.status !== 'DISCHARGED' && (
             <button 
               onClick={() => setShowDischargeModal(true)}
@@ -219,11 +215,11 @@ export const PatientDetailPage = () => {
 
       {/* Discharge Confirmation Modal */}
       {showDischargeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Confirm Discharge</h2>
-            <p className="text-slate-500 mb-6">
-              Are you sure you want to discharge <strong>{patient.name}</strong>? 
+            <h2 className="text-xl font-bold text-hospital-navy mb-2">Confirm Discharge</h2>
+            <p className="text-clinic-text/50 mb-6">
+              Are you sure you want to discharge <strong className="text-clinic-text">{patient.name}</strong>? 
               This will free the bed and mark the patient as discharged.
             </p>
             
@@ -236,7 +232,7 @@ export const PatientDetailPage = () => {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDischargeModal(false)}
-                className="bg-slate-100 text-slate-700 px-4 py-2 rounded-xl hover:bg-slate-200 transition"
+                className="bg-slate-100 text-clinic-text px-4 py-2 rounded-xl hover:bg-slate-200 transition"
                 disabled={discharging}
               >
                 Cancel
