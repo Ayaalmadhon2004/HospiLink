@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { usePatients } from '../hooks/usePatients';
 import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
+import {  useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -14,6 +15,8 @@ export const PatientsPage = () => {
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);  // ← NEW
+  const navigate = useNavigate(); // ← ضف هاد
+
 
   const { patients, loading, error } = usePatients({
     status: statusFilter === 'All' ? undefined : statusFilter,
@@ -99,7 +102,7 @@ export const PatientsPage = () => {
                 <tr
                   key={patient.id}
                   className="hover:bg-slate-50 transition cursor-pointer"
-                  onClick={() => window.location.href = `/patients/${patient.id}`}
+                  onClick={() => navigate(`/patients/${patient.id}`)}
                 >
                   <td className="px-6 py-4 font-mono text-sm text-slate-600">
                     {patient.patientCode}
