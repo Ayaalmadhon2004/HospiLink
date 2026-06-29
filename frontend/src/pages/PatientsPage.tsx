@@ -24,7 +24,6 @@ export const PatientsPage = () => {
 
   return (
     <div className="p-6">
-      {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-slate-800">Patients</h1>
@@ -38,9 +37,7 @@ export const PatientsPage = () => {
         </Link>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
-        {/* Status Tabs */}
         <div className="flex gap-2">
           {['All', 'Stable', 'Observation', 'Critical', 'Discharged'].map((s) => (
             <button
@@ -57,7 +54,6 @@ export const PatientsPage = () => {
           ))}
         </div>
 
-        {/* Search */}
         <input
           type="text"
           placeholder="Search by name or ID..."

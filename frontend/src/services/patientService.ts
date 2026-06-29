@@ -4,7 +4,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const api = axios.create({
   baseURL: API_URL,
-  withCredentials: true, // ← ضروري! عشان الكوكي يروح مع كل طلب
+  withCredentials: true, 
 });
 
 // ============================================
@@ -86,6 +86,6 @@ export const uploadReport = async (file: File) => {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  });
+  }); // ليش هنا حطيت الكونتنت تايب هنا ؟ وهل مع كل بوست بستخدم الكونتنت تايب ؟؟؟؟
   return response.data;
 };

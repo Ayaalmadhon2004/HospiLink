@@ -8,19 +8,17 @@ import { admitPatientSchema } from '../validators/patient.validator';
 // ============================================
 export const getRecentPatients = async (req: Request, res: Response) => {
   try {
-    // ✅ تحقق إضافي: Prisma شغال؟
-    // ليش: لو فيه مشكلة في الاتصال بـ DB، نعطي error واضح بدل ما يكراش السيرفر
     if (!prisma) {
       throw new Error("Prisma client is not initialized");
     }
 
     const recentPatients = await prisma.patient.findMany({
-      take: 5,           // ← بس 5 مرضى (للـ Overview)
+      take: 5,           
       orderBy: { 
-        admissionDate: 'desc'  // ← الأحدث أولاً
+        admissionDate: 'desc' 
       },
       include: { 
-        bed: true        // ← جيب بيانات السرير كمان
+        bed: true      
       },
     });
 
@@ -46,8 +44,6 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 // بيدخل مريض جديد + بيحجز السرير
 // ============================================
 export const admitPatient = async (req: Request, res: Response) => {
-  // ✅ Validation بـ Zod
-  // ليش: نتأكد إن البيانات صح قبل ما ندخلها DB (نوع، طول، required...)
   const validation = admitPatientSchema.safeParse(req.body);
   
   if (!validation.success) {
@@ -57,11 +53,7 @@ export const admitPatient = async (req: Request, res: Response) => {
   const { name, age, condition, bedId, hospitalId, physicianName } = validation.data;
 
   try {
-    // ✅ Transaction
-    // ليش: لو Patient اتعمل بس Bed ما اتحدثش، بصير بيانات غلط!
-    // Transaction = كل العمليات بتنجح أو كلها بتفشل (Atomic)
     const result = await prisma.$transaction(async (tx) => {
-      // 1. أنشئ المريض
       const newPatient = await tx.patient.create({
         data: { 
           name, 
@@ -74,7 +66,6 @@ export const admitPatient = async (req: Request, res: Response) => {
         }
       });
 
-      // 2. حدّث السرير لـ OCCUPIED
       await tx.bed.update({
         where: { id: bedId },
         data: { status: 'OCCUPIED' }
@@ -95,8 +86,6 @@ export const admitPatient = async (req: Request, res: Response) => {
 // ============================================
 export const uploadReport = async (req: Request, res: Response) => {
   try {
-    // ✅ Multer بيحط الملف في req.file
-    // ليش: بدون Multer، req.file = undefined
     if (!req.file) {
       return res.status(400).json({ success: false, message: 'لم يتم رفع أي ملف' });
     }
@@ -104,7 +93,7 @@ export const uploadReport = async (req: Request, res: Response) => {
     res.status(200).json({ 
       success: true, 
       message: 'تم رفع التقرير بنجاح', 
-      filePath: req.file.path   // ← مسار الملف المحفوظ
+      filePath: req.file.path 
     });
   } catch (error) {
     res.status(500).json({ success: false, message: 'فشل رفع التقرير', error });
@@ -119,8 +108,6 @@ export const getPatients = async (req: Request, res: Response) => {
   try {
     const { status, department, search } = req.query;
     
-    // ✅ Dynamic Where
-    // ليش: نبني الـ query حسب الفلاتر الي جاي من Frontend
     const where: any = {};
     
     if (status && status !== 'All') {
@@ -142,8 +129,6 @@ export const getPatients = async (req: Request, res: Response) => {
       where,
       include: {
         bed: { select: { bedNumber: true, wardName: true } },
-        // ✅ Select بدل include كامل
-        // ليش: ما نجيبش بيانات زيادة (performance)
       },
       orderBy: { admissionDate: 'desc' }
     });
