@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePatients } from '../hooks/usePatients';
-import { Link } from 'react-router-dom';
+import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -9,12 +9,11 @@ const STATUS_COLORS = {
   DISCHARGED: 'bg-gray-100 text-gray-500',
 };
 
-const DEPARTMENTS = ['All', 'Cardiology', 'ICU', 'Surgery', 'Pediatrics', 'Maternity', 'Emergency'];
-
 export const PatientsPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);  // ← NEW
 
   const { patients, loading, error } = usePatients({
     status: statusFilter === 'All' ? undefined : statusFilter,
@@ -30,17 +29,28 @@ export const PatientsPage = () => {
           <h1 className="text-2xl font-bold text-slate-800">Patients</h1>
           <p className="text-slate-500">Admitted patient records</p>
         </div>
-        <Link
-          to="/patients/admit"
-          className="bg-hospital-navy hover:bg-slate-800 text-white px-4 py-2 rounded-xl font-medium transition"
+        
+        {/* Button */}
+        <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
         >
           + Admit Patient
-        </Link>
+        </button>
       </div>
+
+      {/* Modal - OUTSIDE the header div but INSIDE the main p-6 div */}
+      <AdmitPatientModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onAdd={() => {
+          setIsModalOpen(false);
+          // TODO: refresh patients list
+        }} 
+      />
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
-        {/* Status Tabs */}
         <div className="flex gap-2">
           {['All', 'Stable', 'Observation', 'Critical', 'Discharged'].map((s) => (
             <button
@@ -57,7 +67,6 @@ export const PatientsPage = () => {
           ))}
         </div>
 
-        {/* Search */}
         <input
           type="text"
           placeholder="Search by name or ID..."
@@ -122,7 +131,6 @@ export const PatientsPage = () => {
             </tbody>
           </table>
 
-          {/* Pagination (بسيط) */}
           <div className="px-6 py-4 border-t border-slate-100 text-sm text-slate-500">
             Showing {patients.length} patients
           </div>

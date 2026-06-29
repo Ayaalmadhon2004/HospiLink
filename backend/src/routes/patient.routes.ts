@@ -21,7 +21,7 @@ const router = Router();
 router.post(
   '/admit', 
   protect, 
-  authorize('DOCTOR', 'NURSE'), 
+  authorize('DOCTOR', 'NURSE','ADMIN'), 
   logActivity('ADMIT_PATIENT'), 
   admitPatient
 );
