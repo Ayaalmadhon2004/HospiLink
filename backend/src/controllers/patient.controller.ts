@@ -44,39 +44,46 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 // بيدخل مريض جديد + بيحجز السرير
 // ============================================
 export const admitPatient = async (req: Request, res: Response) => {
-  const validation = admitPatientSchema.safeParse(req.body);
-  
-  if (!validation.success) {
-    return res.status(400).json({ success: false, errors: validation.error.errors });
-  }
-
-  const { name, age, condition, bedId, hospitalId, physicianName } = validation.data;
+  const { name, age, gender, department, diagnosis, bedId, hospitalId, doctorId } = req.body;
 
   try {
+    const count = await prisma.patient.count();
+    const patientCode = `PT-${2040 + count + 1}`;
+
     const result = await prisma.$transaction(async (tx) => {
+      // ✅ شيل bedId لو مش موجود
+      const validBedId = bedId ? await tx.bed.findUnique({ where: { id: bedId } }) : null;
+      
       const newPatient = await tx.patient.create({
         data: { 
+          patientCode,
           name, 
-          age, 
-          condition, 
-          bedId, 
+          age: parseInt(age), 
+          gender,
+          department,
+          diagnosis,
+          bedId: validBedId ? bedId : null,  // ← بس لو موجود
           hospitalId,
-          physicianName,
+          doctorId: doctorId || null,
           status: 'OBSERVATION' 
         }
       });
 
-      await tx.bed.update({
-        where: { id: bedId },
-        data: { status: 'OCCUPIED' }
-      });
+      // ✅ حدّث السرير بس لو موجود
+      if (validBedId) {
+        await tx.bed.update({
+          where: { id: bedId },
+          data: { status: 'OCCUPIED' }
+        });
+      }
 
       return newPatient;
     });
 
     res.status(201).json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'فشل إدخال المريض', error });
+  } catch (error: any) {
+    console.error('Admit error:', error);
+    res.status(500).json({ success: false, message: 'فشل إدخال المريض', error: error.message });
   }
 };
 
