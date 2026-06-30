@@ -20,7 +20,7 @@ const LoginPage: React.FC = () => {
       await login(formData);
       navigate('/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error || 'حدث خطأ في تسجيل الدخول');
+      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     }
   };
 

@@ -1,3 +1,4 @@
+// frontend/src/services/bedService.ts
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -8,6 +9,6 @@ const api = axios.create({
 });
 
 export const getAvailableBeds = async () => {
-  const response = await api.get('/beds/available'); // ← هلقيت موجود في Backend؟
+  const response = await api.get('/beds/available');
   return response.data;
 };
