@@ -1,4 +1,3 @@
-// 1. تعريف المصدر والمولد
 datasource db {
   provider = "postgresql"
 }
@@ -16,6 +15,7 @@ model Hospital {
   
   users     User[]
   beds      Bed[]
+  wards     Ward[] 
   patients  Patient[]
 }
 
@@ -43,21 +43,6 @@ model User {
   patients    Patient[]
 }
 
-enum BedStatus {
-  AVAILABLE
-  OCCUPIED
-  CLEANING
-}
-
-model Bed {
-  id          String    @id @default(uuid())
-  bedNumber   String    @unique
-  wardName    String
-  status      BedStatus @default(AVAILABLE)
-  hospitalId  String
-  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient     Patient?  @relation("BedPatient")
-}
 
 model AuditLog {
   id        String   @id @default(uuid())
@@ -102,7 +87,6 @@ model Patient {
   updatedAt     DateTime      @updatedAt
 }
 
-// NEW: Report model
 model Report {
   id         String   @id @default(uuid())
   fileName   String
@@ -114,4 +98,36 @@ model Report {
   createdAt  DateTime @default(now())
   
   @@index([patientId])
+}
+
+model Ward {
+  id         String   @id @default(uuid())
+  name       String   
+  floor      Int?     
+  hospitalId String
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  beds       Bed[]
+}
+
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+model Bed {
+  id          String    @id @default(uuid())
+  bedNumber   String
+  wardId      String
+  ward        Ward      @relation(fields: [wardId], references: [id], onDelete: Cascade)
+  status      BedStatus @default(AVAILABLE)
+  hospitalId  String
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  patient     Patient?  @relation("BedPatient")
+  
+  @@unique([bedNumber, wardId]) 
 }

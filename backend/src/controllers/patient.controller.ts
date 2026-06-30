@@ -1,6 +1,5 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { admitPatientSchema } from '../validators/patient.validator';
 
 // ============================================
 // GET /api/patients/recent
@@ -51,7 +50,6 @@ export const admitPatient = async (req: Request, res: Response) => {
     const patientCode = `PT-${2040 + count + 1}`;
 
     const result = await prisma.$transaction(async (tx) => {
-      // ✅ شيل bedId لو مش موجود
       const validBedId = bedId ? await tx.bed.findUnique({ where: { id: bedId } }) : null;
       
       const newPatient = await tx.patient.create({
@@ -69,7 +67,6 @@ export const admitPatient = async (req: Request, res: Response) => {
         }
       });
 
-      // ✅ حدّث السرير بس لو موجود
       if (validBedId) {
         await tx.bed.update({
           where: { id: bedId },
@@ -100,7 +97,7 @@ export const uploadReport = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const patientId = req.params.id; // ← الآن نستخدم نفس الـ param
+    const patientId = req.params.id;
     
     if (!patientId) {
       return res.status(400).json({ success: false, message: 'Patient ID is required' });
@@ -156,38 +153,30 @@ export const getPatientReports = async (req: Request, res: Response) => {
 // NEW: GET /api/patients
 // بيجيب كل المرضى مع فلاتر (للـ Patients Page)
 // ============================================
-export const getPatients = async (req: Request, res: Response) => {
+export const getPatientById = async (req: Request, res: Response) => {
   try {
-    const { status, department, search } = req.query;
-    
-    const where: any = {};
-    
-    if (status && status !== 'All') {
-    where.status = (status as string).toUpperCase(); // ← Stable → STABLE
-    }
-    
-    if (department && department !== 'All') {
-      where.department = department;
-    }
-    
-    if (search) {
-      where.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { patientCode: { contains: search as string, mode: 'insensitive' } }
-      ];
-    }
+    const { id } = req.params;
 
-    const patients = await prisma.patient.findMany({
-      where,
+    const patient = await prisma.patient.findUnique({
+      where: { id },
       include: {
-        bed: { select: { bedNumber: true, wardName: true } },
-      },
-      orderBy: { admissionDate: 'desc' }
+        bed: { 
+          select: { 
+            bedNumber: true,
+            ward: { select: { name: true } }  // ← NEW
+          } 
+        },
+      }
     });
 
-    res.status(200).json({ success: true, count: patients.length, data: patients });
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
+    }
+
+    res.status(200).json({ success: true, data: patient });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'فشل جلب المرضى', error: error.message });
+    console.error('Get patient error:', error);
+    res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض', error: error.message });
   }
 };
 
