@@ -60,7 +60,7 @@ export const admitPatient = async (req: Request, res: Response) => {
           gender,
           department,
           diagnosis,
-          bedId: validBedId ? bedId : null,  // ← بس لو موجود
+          bedId: validBedId ? bedId : null,
           hospitalId,
           doctorId: doctorId || null,
           status: 'OBSERVATION' 
@@ -88,9 +88,6 @@ export const admitPatient = async (req: Request, res: Response) => {
 // POST /api/patients/:id/reports
 // بيرفع ملف (PDF, Image) للمريض
 // ============================================
-// Add this import if not already
-
-// Update uploadReport
 export const uploadReport = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
@@ -103,7 +100,6 @@ export const uploadReport = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Patient ID is required' });
     }
 
-    // تأكد إن المريض موجود
     const patient = await prisma.patient.findUnique({ where: { id: patientId } });
     if (!patient) {
       return res.status(404).json({ success: false, message: 'Patient not found' });
@@ -126,7 +122,10 @@ export const uploadReport = async (req: Request, res: Response) => {
   }
 };
 
-// Add getPatientReports
+// ============================================
+// GET /api/patients/:id/reports
+// بيجيب تقارير مريض
+// ============================================
 export const getPatientReports = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -150,8 +149,8 @@ export const getPatientReports = async (req: Request, res: Response) => {
 };
 
 // ============================================
-// NEW: GET /api/patients
-// بيجيب كل المرضى مع فلاتر (للـ Patients Page)
+// GET /api/patients/:id
+// بيجيب تفاصيل مريض واحد مع السرير والقسم
 // ============================================
 export const getPatientById = async (req: Request, res: Response) => {
   try {
@@ -163,7 +162,7 @@ export const getPatientById = async (req: Request, res: Response) => {
         bed: { 
           select: { 
             bedNumber: true,
-            ward: { select: { name: true } }  // ← NEW
+            ward: { select: { name: true } }
           } 
         },
       }
@@ -181,33 +180,46 @@ export const getPatientById = async (req: Request, res: Response) => {
 };
 
 // ============================================
-// NEW: GET /api/patients/:id
-// بيجيب تفاصيل مريض واحد (للـ Patient Detail Page)
+// GET /api/patients
+// كل المرضى مع فلاتر
 // ============================================
-export const getPatientById = async (req: Request, res: Response) => {
+export const getPatients = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { status, department, search } = req.query;
 
-    const patient = await prisma.patient.findUnique({
-      where: { id },
+    const where: any = {};
+
+    if (status) where.status = status;
+    if (department) where.department = department;
+    if (search) {
+      where.OR = [
+        { name: { contains: search as string, mode: 'insensitive' } },
+        { patientCode: { contains: search as string, mode: 'insensitive' } },
+      ];
+    }
+
+    const patients = await prisma.patient.findMany({
+      where,
+      orderBy: { admissionDate: 'desc' },
       include: {
-        bed: true,
-        // ✅ ممكن نضيف vitals, reports هون لاحقاً
+        bed: {
+          select: {
+            bedNumber: true,
+            ward: { select: { name: true } }
+          }
+        }
       }
     });
 
-    if (!patient) {
-      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
-    }
-
-    res.status(200).json({ success: true, data: patient });
+    res.status(200).json({ success: true, count: patients.length, data: patients });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض', error: error.message });
+    console.error('Get patients error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch patients', error: error.message });
   }
 };
 
 // ============================================
-// NEW: PUT /api/patients/:id
+// PUT /api/patients/:id
 // بيحدّث بيانات المريض
 // ============================================
 export const updatePatient = async (req: Request, res: Response) => {
@@ -228,14 +240,13 @@ export const updatePatient = async (req: Request, res: Response) => {
 };
 
 // ============================================
-// NEW: PUT /api/patients/:id/discharge
+// PUT /api/patients/:id/discharge
 // بيخرج المريض من المستشفى
 // ============================================
 export const dischargePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    // ✅ لازم نجيب المريض الأول عشان نعرف bedId
     const patient = await prisma.patient.findUnique({
       where: { id },
       include: { bed: true }
@@ -245,9 +256,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'المريض غير موجود' });
     }
 
-    // ✅ Transaction: حدّث المريض + حرّر السرير
     const result = await prisma.$transaction(async (tx) => {
-      // 1. حرّر السرير (لو فيه)
       if (patient.bedId) {
         await tx.bed.update({
           where: { id: patient.bedId },
@@ -255,13 +264,12 @@ export const dischargePatient = async (req: Request, res: Response) => {
         });
       }
 
-      // 2. حدّث المريض
       const updated = await tx.patient.update({
         where: { id },
         data: {
           status: 'DISCHARGED',
           dischargeDate: new Date(),
-          bedId: null  // ← فك الارتباط بالسرير
+          bedId: null
         }
       });
 

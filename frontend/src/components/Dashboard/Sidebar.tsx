@@ -1,62 +1,89 @@
-import React from 'react';
+import { 
+  LayoutDashboard, 
+  Users, 
+  BedDouble, 
+  Stethoscope, 
+  Calendar, 
+  Activity, 
+  AlertTriangle, 
+  Truck,
+  Heart
+} from 'lucide-react';
 
 interface SidebarProps {
   activeItem: string;
   onItemClick: (item: string) => void;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ activeItem, onItemClick }) => {
+const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   const menuItems = [
-    { name: 'Overview' },
-    { name: 'Patients', badge: '1.2k' },
-    { name: 'Beds & Wards' },
-    { name: 'Staff & Shifts' },
-    { name: 'Appointments' },
-    { name: 'Vitals Monitor', badge: '3' },
-    { name: 'Incidents', badge: '7' },
-    { name: 'Dispatch' },
+    { id: 'Overview', label: 'Overview', icon: LayoutDashboard, badge: null },
+    { id: 'Patients', label: 'Patients', icon: Users, badge: '1.2k' },
+    { id: 'Beds & Wards', label: 'Beds & Wards', icon: BedDouble, badge: null },
+    { id: 'Staff & Shifts', label: 'Staff & Shifts', icon: Stethoscope, badge: null },
+    { id: 'Appointments', label: 'Appointments', icon: Calendar, badge: null },
+    { id: 'Vitals Monitor', label: 'Vitals Monitor', icon: Activity, badge: '3' },
+    { id: 'Incidents', label: 'Incidents', icon: AlertTriangle, badge: '7' },
+    { id: 'Dispatch', label: 'Dispatch', icon: Truck, badge: null },
   ];
 
   return (
-    <aside className="w-64 min-h-screen p-6 bg-hospital-navy text-sidebar-text">
-      <div className="flex items-center gap-3 mb-10 px-2">
-        <div className="w-8 h-8 rounded-lg bg-medical-teal flex items-center justify-center shadow-lg">
-          <span className="text-white font-bold">♥</span>
+    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col">
+      {/* Logo */}
+      <div className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center">
+            <Heart className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold">CareSync</h1>
+            <p className="text-xs text-slate-400">Central</p>
+          </div>
         </div>
-        <h2 className="text-xl font-bold tracking-tight text-white font-sans">HospiLink</h2>
       </div>
 
-      {/* القائمة */}
-      <nav className="space-y-1.5">
-        <p className="text-[11px] uppercase tracking-widest text-sidebar-text/60 font-bold mb-4 px-2">
+      {/* Menu */}
+      <nav className="flex-1 px-4 space-y-1">
+        <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-4">
           Clinical Operations
-        </p>
-        
-        {menuItems.map((item) => {
-          const isActive = activeItem === item.name;
-          return (
-            <div
-              key={item.name}
-              onClick={() => onItemClick(item.name)}
-              className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                isActive 
-                  ? 'bg-[#2dd4bf]/20 text-[#2dd4bf] border-l-4 border-[#2dd4bf]' 
-                  : 'text-[#ffffff] hover:text-[#2dd4bf] hover:bg-[#ffffff]/5'
-              }`}
-            >
-              <span className="font-sans text-[14px]">{item.name}</span>
-              
-              {item.badge && (
-                <span className={`text-[10px] px-2 py-0.5 rounded-full ${
-                  isActive ? 'bg-medical-teal/20' : 'bg-white/5'
-                }`}>
-                  {item.badge}
-                </span>
-              )}
-            </div>
-          );
-        })}
+        </div>
+        {menuItems.map((item) => (
+          <button
+            key={item.id}
+            onClick={() => onItemClick(item.id)}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition text-sm ${
+              activeItem === item.id
+                ? 'bg-teal-500/10 text-teal-400 border-l-2 border-teal-500'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+            }`}
+          >
+            <item.icon className="w-5 h-5" />
+            <span className="flex-1 text-left">{item.label}</span>
+            {item.badge && (
+              <span className={`text-xs px-2 py-0.5 rounded-full ${
+                activeItem === item.id 
+                  ? 'bg-teal-500 text-white' 
+                  : 'bg-slate-700 text-slate-300'
+              }`}>
+                {item.badge}
+              </span>
+            )}
+          </button>
+        ))}
       </nav>
+
+      {/* Bottom */}
+      <div className="p-4 border-t border-slate-800">
+        <div className="flex items-center gap-3 px-4 py-3">
+          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">
+            DR
+          </div>
+          <div className="flex-1">
+            <p className="text-sm font-medium">Dr. Rivera</p>
+            <p className="text-xs text-slate-400">Chief of Medicine</p>
+          </div>
+        </div>
+      </div>
     </aside>
   );
 };
