@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { admitPatient } from '../../services/patientService';
 import { getAvailableBeds } from '../../services/bedService';
 import { Bed } from 'lucide-react';
@@ -16,6 +17,7 @@ interface BedOption {
 }
 
 export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalProps) => {
+  const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     name: '',
     age: '',
@@ -28,7 +30,6 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
   const [beds, setBeds] = useState<BedOption[]>([]);
   const [loadingBeds, setLoadingBeds] = useState(false);
   const [error, setError] = useState('');
-  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -48,20 +49,12 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
     }
   };
 
-  if (!isOpen) return null;
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setSubmitting(true);
-    try {
-      await admitPatient({
-        ...formData,
-        age: parseInt(formData.age),
-        bedId: formData.bedId || undefined,
-      });
-      onAdd();
-      onClose();
+  const mutation = useMutation({
+    mutationFn: admitPatient,
+    onSuccess: () => {
+      // Invalidate patients list to trigger refetch
+      queryClient.invalidateQueries({ queryKey: ['patients'] });
+      onAdd(); // Close modal + callback
       // Reset form
       setFormData({
         name: '',
@@ -72,11 +65,22 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
         bedId: '',
         hospitalId: 'e4eb651b-fc3c-4284-a73d-9178e77195d8',
       });
-    } catch (err: any) {
+    },
+    onError: (err: any) => {
       setError(err.response?.data?.message || 'Failed to admit patient');
-    } finally {
-      setSubmitting(false);
-    }
+    },
+  });
+
+  if (!isOpen) return null;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    mutation.mutate({
+      ...formData,
+      age: parseInt(formData.age),
+      bedId: formData.bedId || undefined,
+    });
   };
 
   return (
@@ -139,7 +143,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
             required
           />
 
-          {/* Beds Dropdown - NEW */}
+          {/* Beds Dropdown */}
           <div className="relative">
             <select
               className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none appearance-none bg-white"
@@ -165,16 +169,16 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               type="button"
               onClick={onClose}
               className="bg-slate-100 text-clinic-text px-4 py-2 rounded-xl hover:bg-slate-200 transition"
-              disabled={submitting}
+              disabled={mutation.isPending}
             >
               Cancel
             </button>
             <button
               type="submit"
               className="bg-hospital-navy text-white px-4 py-2 rounded-xl hover:bg-hospital-navy/90 transition disabled:opacity-50"
-              disabled={submitting}
+              disabled={mutation.isPending}
             >
-              {submitting ? 'Admitting...' : 'Admit Patient'}
+              {mutation.isPending ? 'Admitting...' : 'Admit Patient'}
             </button>
           </div>
         </form>

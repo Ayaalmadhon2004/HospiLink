@@ -1,26 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getPatients } from '../services/patientService';
 
-export const usePatients = (filters?: { status?: string; department?: string; search?: string }) => {
-  const [patients, setPatients] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+interface UsePatientsParams {
+  status?: string;
+  department?: string;
+  search?: string;
+}
 
-  useEffect(() => {
-    const fetchPatients = async () => {
-      try {
-        setLoading(true);
-        const res = await getPatients(filters);
-        setPatients(res.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'فشل جلب المرضى');
-      } finally {
-        setLoading(false);
-      }
-    };
+export const usePatients = (params: UsePatientsParams = {}) => {
+  const { status, department, search } = params;
 
-    fetchPatients();
-  }, [filters?.status, filters?.department, filters?.search]);
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['patients', status, department, search],
+    queryFn: () => getPatients({
+      status: status === 'All' ? undefined : status,
+      department: department === 'All' ? undefined : department,
+      search: search || undefined,
+    }),
+  });
 
-  return { patients, loading, error };
+  return {
+    patients: data?.data || [],
+    loading: isLoading,
+    error: error?.message || '',
+    refetch,
+  };
 };

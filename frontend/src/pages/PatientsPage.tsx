@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { usePatients } from '../hooks/usePatients';
 import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
-import {  useNavigate } from 'react-router-dom';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -11,45 +12,44 @@ const STATUS_COLORS = {
 };
 
 export const PatientsPage = () => {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState('All');
-  const [departmentFilter, setDepartmentFilter] = useState('All');
   const [search, setSearch] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);  // ← NEW
-  const navigate = useNavigate(); // ← ضف هاد
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-
-  const { patients, loading, error } = usePatients({
-    status: statusFilter === 'All' ? undefined : statusFilter,
-    department: departmentFilter === 'All' ? undefined : departmentFilter,
+  const { patients, loading, error, refetch } = usePatients({
+    status: statusFilter,
     search: search || undefined,
   });
+
+  const handlePatientAdded = () => {
+    // Invalidate and refetch patients list
+    queryClient.invalidateQueries({ queryKey: ['patients'] });
+    setIsModalOpen(false);
+  };
 
   return (
     <div className="p-6">
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800">Patients</h1>
-          <p className="text-slate-500">Admitted patient records</p>
+          <h1 className="text-2xl font-bold text-hospital-navy">Patients</h1>
+          <p className="text-clinic-text/50">Admitted patient records</p>
         </div>
         
-        {/* Button */}
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+          className="bg-hospital-navy text-white px-4 py-2 rounded-lg hover:bg-hospital-navy/90 transition"
         >
           + Admit Patient
         </button>
       </div>
 
-      {/* Modal - OUTSIDE the header div but INSIDE the main p-6 div */}
       <AdmitPatientModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        onAdd={() => {
-          setIsModalOpen(false);
-          // TODO: refresh patients list
-        }} 
+        onAdd={handlePatientAdded} 
       />
 
       {/* Filters */}
@@ -61,8 +61,8 @@ export const PatientsPage = () => {
               onClick={() => setStatusFilter(s)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                 statusFilter === s
-                  ? 'bg-slate-800 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100'
+                  ? 'bg-hospital-navy text-white'
+                  : 'bg-white text-clinic-text hover:bg-slate-100'
               }`}
             >
               {s}
@@ -75,19 +75,19 @@ export const PatientsPage = () => {
           placeholder="Search by name or ID..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="border border-slate-200 px-4 py-2 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none ml-auto"
+          className="border border-slate-200 px-4 py-2 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none ml-auto"
         />
       </div>
 
       {/* Table */}
       {loading ? (
-        <div className="text-center py-12 text-slate-400">Loading patients...</div>
+        <div className="text-center py-12 text-clinic-text/40">Loading patients...</div>
       ) : error ? (
         <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl">{error}</div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
           <table className="w-full">
-            <thead className="bg-slate-50 text-slate-500 text-sm uppercase">
+            <thead className="bg-slate-50 text-clinic-text/50 text-sm uppercase">
               <tr>
                 <th className="px-6 py-4 text-left font-medium">Patient ID</th>
                 <th className="px-6 py-4 text-left font-medium">Name</th>
@@ -104,15 +104,15 @@ export const PatientsPage = () => {
                   className="hover:bg-slate-50 transition cursor-pointer"
                   onClick={() => navigate(`/patients/${patient.id}`)}
                 >
-                  <td className="px-6 py-4 font-mono text-sm text-slate-600">
+                  <td className="px-6 py-4 font-mono text-sm text-clinic-text/60">
                     {patient.patientCode}
                   </td>
-                  <td className="px-6 py-4 font-medium text-slate-800">
+                  <td className="px-6 py-4 font-medium text-clinic-text">
                     {patient.name}
                   </td>
-                  <td className="px-6 py-4 text-slate-600">{patient.age}</td>
-                  <td className="px-6 py-4 text-slate-600">{patient.department}</td>
-                  <td className="px-6 py-4 text-slate-500 text-sm">
+                  <td className="px-6 py-4 text-clinic-text/70">{patient.age}</td>
+                  <td className="px-6 py-4 text-clinic-text/70">{patient.department}</td>
+                  <td className="px-6 py-4 text-clinic-text/50 text-sm">
                     {new Date(patient.admissionDate).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
@@ -134,7 +134,7 @@ export const PatientsPage = () => {
             </tbody>
           </table>
 
-          <div className="px-6 py-4 border-t border-slate-100 text-sm text-slate-500">
+          <div className="px-6 py-4 border-t border-slate-100 text-sm text-clinic-text/50">
             Showing {patients.length} patients
           </div>
         </div>
