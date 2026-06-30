@@ -6,7 +6,8 @@ import {
   getPatients,        // ← NEW
   getPatientById,     // ← NEW
   updatePatient,      // ← NEW
-  dischargePatient    // ← NEW
+  dischargePatient,    // ← NEW
+  getPatientReports
 } from '../controllers/patient.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
@@ -31,7 +32,7 @@ router.post(
 // رفع تقرير - أي مسجل دخول
 // ============================================
 router.post(
-  '/upload-report', 
+  '/:id/reports', 
   protect, 
   upload.single('reportFile'), 
   logActivity('UPLOAD_REPORT'),
@@ -70,6 +71,9 @@ router.get(
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   getPatientById
 );
+
+router.get('/:id/reports', getPatientReports);
+
 
 // ============================================
 // NEW: PUT /api/patients/:id

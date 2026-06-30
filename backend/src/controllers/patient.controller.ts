@@ -91,19 +91,64 @@ export const admitPatient = async (req: Request, res: Response) => {
 // POST /api/patients/:id/reports
 // بيرفع ملف (PDF, Image) للمريض
 // ============================================
+// Add this import if not already
+
+// Update uploadReport
 export const uploadReport = async (req: Request, res: Response) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ success: false, message: 'لم يتم رفع أي ملف' });
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    res.status(200).json({ 
-      success: true, 
-      message: 'تم رفع التقرير بنجاح', 
-      filePath: req.file.path 
+    const patientId = req.params.id; // ← الآن نستخدم نفس الـ param
+    
+    if (!patientId) {
+      return res.status(400).json({ success: false, message: 'Patient ID is required' });
+    }
+
+    // تأكد إن المريض موجود
+    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    if (!patient) {
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+
+    const report = await prisma.report.create({
+      data: {
+        fileName: req.file.originalname,
+        fileUrl: `/uploads/${req.file.filename}`,
+        fileType: req.file.mimetype,
+        patientId: patientId,
+        uploadedBy: (req.user as any)?.userId,
+      },
     });
-  } catch (error) {
-    res.status(500).json({ success: false, message: 'فشل رفع التقرير', error });
+
+    res.status(201).json({ success: true, message: 'Report uploaded', data: report });
+  } catch (error: any) {
+    console.error('Upload error:', error);
+    res.status(500).json({ success: false, message: 'Failed to upload report', error: error.message });
+  }
+};
+
+// Add getPatientReports
+export const getPatientReports = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const reports = await prisma.report.findMany({
+      where: { patientId: id },
+      orderBy: { createdAt: 'desc' },
+    });
+    
+    res.status(200).json({
+      success: true,
+      count: reports.length,
+      data: reports,
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch reports',
+      error: error.message,
+    });
   }
 };
 

@@ -40,7 +40,7 @@ model User {
   updatedAt   DateTime @updatedAt
 
   hospital    Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patients    Patient[] // ← Doctor's patients
+  patients    Patient[]
 }
 
 enum BedStatus {
@@ -82,7 +82,7 @@ enum Gender {
 
 model Patient {
   id            String        @id @default(uuid())
-  patientCode   String        @unique // PT-2041, PT-2042...
+  patientCode   String        @unique
   name          String
   age           Int
   gender        Gender
@@ -97,6 +97,21 @@ model Patient {
   bed           Bed?          @relation("BedPatient", fields: [bedId], references: [id])
   hospitalId    String
   hospital      Hospital      @relation(fields: [hospitalId], references: [id])
+  reports       Report[]      // ← NEW
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
+}
+
+// NEW: Report model
+model Report {
+  id         String   @id @default(uuid())
+  fileName   String
+  fileUrl    String
+  fileType   String   // PDF, JPG, PNG
+  patientId  String
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  uploadedBy String?  // userId
+  createdAt  DateTime @default(now())
+  
+  @@index([patientId])
 }

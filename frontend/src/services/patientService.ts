@@ -9,7 +9,6 @@ const api = axios.create({
 
 // ============================================
 // GET /api/patients
-// كل المرضى مع فلاتر (status, department, search)
 // ============================================
 export const getPatients = async (params?: { 
   status?: string; 
@@ -22,7 +21,6 @@ export const getPatients = async (params?: {
 
 // ============================================
 // GET /api/patients/recent
-// آخر 5 مرضى (للـ Overview Dashboard)
 // ============================================
 export const getRecentPatients = async () => {
   const response = await api.get('/patients/recent');
@@ -31,7 +29,6 @@ export const getRecentPatients = async () => {
 
 // ============================================
 // GET /api/patients/:id
-// تفاصيل مريض واحد
 // ============================================
 export const getPatientById = async (id: string) => {
   const response = await api.get(`/patients/${id}`);
@@ -40,7 +37,6 @@ export const getPatientById = async (id: string) => {
 
 // ============================================
 // POST /api/patients/admit
-// إدخال مريض جديد
 // ============================================
 export const admitPatient = async (data: {
   name: string;
@@ -58,7 +54,6 @@ export const admitPatient = async (data: {
 
 // ============================================
 // PUT /api/patients/:id
-// تحديث بيانات مريض
 // ============================================
 export const updatePatient = async (id: string, data: any) => {
   const response = await api.put(`/patients/${id}`, data);
@@ -67,7 +62,6 @@ export const updatePatient = async (id: string, data: any) => {
 
 // ============================================
 // PUT /api/patients/:id/discharge
-// تسريح مريض
 // ============================================
 export const dischargePatient = async (id: string) => {
   const response = await api.put(`/patients/${id}/discharge`);
@@ -75,17 +69,26 @@ export const dischargePatient = async (id: string) => {
 };
 
 // ============================================
-// POST /api/patients/upload-report
+// POST /api/patients/:id/reports
 // رفع تقرير (PDF, Image)
 // ============================================
-export const uploadReport = async (file: File) => {
+export const uploadReport = async (file: File, patientId: string) => {
   const formData = new FormData();
   formData.append('reportFile', file);
 
-  const response = await api.post('/patients/upload-report', formData, {
+  const response = await api.post(`/patients/${patientId}/reports`, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
-  }); // ليش هنا حطيت الكونتنت تايب هنا ؟ وهل مع كل بوست بستخدم الكونتنت تايب ؟؟؟؟
+  });
+  return response.data;
+};
+
+// ============================================
+// GET /api/patients/:id/reports
+// جلب تقارير مريض
+// ============================================
+export const getPatientReports = async (patientId: string) => {
+  const response = await api.get(`/patients/${patientId}/reports`);
   return response.data;
 };
