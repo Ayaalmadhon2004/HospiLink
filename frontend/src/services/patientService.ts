@@ -1,11 +1,5 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, 
-});
+// services/patientService.ts
+import { apiFetch, apiGet, apiPost, apiPut } from './api';
 
 // ============================================
 // GET /api/patients
@@ -15,24 +9,28 @@ export const getPatients = async (params?: {
   department?: string; 
   search?: string 
 }) => {
-  const response = await api.get('/patients', { params });
-  return response.data;
+  const queryString = params 
+    ? '?' + new URLSearchParams(params as Record<string, string>).toString() 
+    : '';
+  
+  const res = await apiGet(`/patients${queryString}`);
+  return res.json();
 };
 
 // ============================================
 // GET /api/patients/recent
 // ============================================
 export const getRecentPatients = async () => {
-  const response = await api.get('/patients/recent');
-  return response.data;
+  const res = await apiGet('/patients/recent');
+  return res.json();
 };
 
 // ============================================
 // GET /api/patients/:id
 // ============================================
 export const getPatientById = async (id: string) => {
-  const response = await api.get(`/patients/${id}`);
-  return response.data;
+  const res = await apiGet(`/patients/${id}`);
+  return res.json();
 };
 
 // ============================================
@@ -48,40 +46,41 @@ export const admitPatient = async (data: {
   bedId?: string;
   hospitalId: string;
 }) => {
-  const response = await api.post('/patients/admit', data);
-  return response.data;
+  const res = await apiPost('/patients/admit', data);
+  return res.json();
 };
 
 // ============================================
 // PUT /api/patients/:id
 // ============================================
 export const updatePatient = async (id: string, data: any) => {
-  const response = await api.put(`/patients/${id}`, data);
-  return response.data;
+  const res = await apiPut(`/patients/${id}`, data);
+  return res.json();
 };
 
 // ============================================
 // PUT /api/patients/:id/discharge
 // ============================================
 export const dischargePatient = async (id: string) => {
-  const response = await api.put(`/patients/${id}/discharge`);
-  return response.data;
+  const res = await apiPut(`/patients/${id}/discharge`);
+  return res.json();
 };
 
 // ============================================
 // POST /api/patients/:id/reports
-// رفع تقرير (PDF, Image)
+// رفع تقرير (PDF, Image) - FormData
 // ============================================
 export const uploadReport = async (file: File, patientId: string) => {
   const formData = new FormData();
   formData.append('reportFile', file);
 
-  const response = await api.post(`/patients/${patientId}/reports`, formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
+  const res = await apiFetch(`/patients/${patientId}/reports`, {
+    method: 'POST',
+    body: formData,
+    // ❌ لا تضيف Content-Type هنا! Browser بيضيفه تلقائياً مع boundary
   });
-  return response.data;
+  
+  return res.json();
 };
 
 // ============================================
@@ -89,6 +88,6 @@ export const uploadReport = async (file: File, patientId: string) => {
 // جلب تقارير مريض
 // ============================================
 export const getPatientReports = async (patientId: string) => {
-  const response = await api.get(`/patients/${patientId}/reports`);
-  return response.data;
+  const res = await apiGet(`/patients/${patientId}/reports`);
+  return res.json();
 };

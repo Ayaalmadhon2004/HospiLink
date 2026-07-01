@@ -1,53 +1,40 @@
-import axios from 'axios';
+// services/authService.ts
+import { apiPost, apiGet } from './api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-
-// ✅ instance واحد — مع withCredentials!
-const api = axios.create({
-  baseURL: API_URL,
-  withCredentials: true, // ← ضروري عشان الكوكي يروح!
-});
-
-// خدمة تسجيل الدخول
 export const login = async (credentials: { email: string; password: string }) => {
-  const response = await api.post('/auth/login', credentials);
+  const res = await apiPost('/auth/login', credentials);
+  const data = await res.json();
   
-  // ✅ شيلنا localStorage — الكوكي بيجي من Backend!
-  // Backend بيحط الكوكي أوتوماتيك
+  if (data.success && data.token) {
+    localStorage.setItem('token', data.token);
+  }
   
-  return response.data;
+  return data;
 };
 
-// خدمة إنشاء حساب
 export const signup = async (userData: any) => {
-  const response = await api.post('/auth/signup', userData);
-  return response.data;
+  const res = await apiPost('/auth/signup', userData);
+  return res.json();
 };
 
-// خدمة تسجيل الخروج
 export const logout = async () => {
-  await api.post('/auth/logout'); // ← Backend بيمسح الكوكي
-  
-  // ✅ شيلنا localStorage.removeItem
-  // Backend بيمسح الكوكي أوتوماتيك
-  
+  localStorage.removeItem('token');
   window.location.href = '/login';
 };
 
-// الحصول على بيانات المستخدم الحالي
 export const getCurrentUser = async () => {
   try {
-    const response = await api.get('/auth/me'); // ← من Backend
-    return response.data.user;
+    const res = await apiGet('/auth/me');
+    const data = await res.json();
+    return data.user;
   } catch {
     return null;
   }
 };
 
-// ✅ جديد: التحقق من حالة تسجيل الدخول
 export const isAuthenticated = async () => {
   try {
-    await api.get('/auth/me');
+    await apiGet('/auth/me');
     return true;
   } catch {
     return false;

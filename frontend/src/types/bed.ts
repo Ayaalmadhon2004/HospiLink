@@ -1,6 +1,4 @@
-// Types for frontend - NO Prisma imports!
-
-export type BedStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';
+export type BedStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE'| 'CLEANING';
 
 export interface Bed {
   id: string;
@@ -15,4 +13,9 @@ export interface Bed {
 export interface BedWithDetails extends Bed {
   ward: { name: string };
   patient?: { name: string; id: string } | null;
+}
+
+export interface PatientOption {
+  id: string;
+  name: string;
 }

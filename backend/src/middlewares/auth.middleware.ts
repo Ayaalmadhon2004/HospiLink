@@ -3,12 +3,9 @@ import jwt from 'jsonwebtoken';
 
 export const protect = async (req: Request, res: Response, next: NextFunction) => {
   let token;
-  
-  // من header
-  if (req.headers.authorization?.startsWith('Bearer')) {
+  if (req.headers.authorization?.startsWith('Bearer')) { //  وشو البرير اصلا بشو بفرق عن العادي ليش يعني الهيدر يبدا ب البرير ؟ 
     token = req.headers.authorization.split(' ')[1];
   }
-  // أو من cookie (httpOnly)
   else if (req.cookies?.token) {
     token = req.cookies.token;
   }
