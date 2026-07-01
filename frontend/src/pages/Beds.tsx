@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User } from 'lucide-react';
 
-type BedStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE';
+type BedStatus = 'AVAILABLE' | 'OCCUPIED' | 'MAINTENANCE' | 'CLEANING';
 
 interface Bed {
   id: string;
@@ -49,7 +49,6 @@ const Beds = () => {
       const res = await fetch('/api/patients?status=OBSERVATION');
       const data = await res.json();
       if (data.success) {
-        // فلتر المرضى اللي ما عندهم سرير
         const unassigned = data.data.filter((p: any) => !p.bedId);
         setPatients(unassigned.map((p: any) => ({ id: p.id, name: p.name })));
       }
@@ -75,6 +74,7 @@ const Beds = () => {
     available: beds.filter(b => b.status === 'AVAILABLE').length,
     occupied: beds.filter(b => b.status === 'OCCUPIED').length,
     maintenance: beds.filter(b => b.status === 'MAINTENANCE').length,
+    cleaning: beds.filter(b => b.status === 'CLEANING').length,
   };
 
   const getStatusConfig = (status: BedStatus) => {
@@ -102,6 +102,14 @@ const Beds = () => {
           badge: 'bg-amber-100 text-amber-800',
           label: 'Maintenance',
           dot: 'bg-amber-500'
+        };
+      case 'CLEANING':
+        return {
+          bg: 'bg-blue-50 border-blue-200',
+          text: 'text-blue-700',
+          badge: 'bg-blue-100 text-blue-800',
+          label: 'Cleaning',
+          dot: 'bg-blue-500'
         };
     }
   };
@@ -143,11 +151,11 @@ const Beds = () => {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total Beds</p>
+              <p className="text-sm text-gray-500">Total</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -180,6 +188,17 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
+              <p className="text-sm text-gray-500">Cleaning</p>
+              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.cleaning}</p>
+            </div>
+            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            </div>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl shadow-sm border p-5">
+          <div className="flex items-center justify-between">
+            <div>
               <p className="text-sm text-gray-500">Maintenance</p>
               <p className="text-2xl font-bold text-amber-600 mt-1">{stats.maintenance}</p>
             </div>
@@ -192,8 +211,8 @@ const Beds = () => {
 
       {/* Filters & Search */}
       <div className="flex flex-col sm:flex-row gap-4">
-        <div className="flex gap-2">
-          {(['ALL', 'AVAILABLE', 'OCCUPIED', 'MAINTENANCE'] as const).map((f) => (
+        <div className="flex gap-2 flex-wrap">
+          {(['ALL', 'AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -326,16 +345,33 @@ const BedModal = ({ bed, patients, onClose, onSuccess }: {
   const [wards, setWards] = useState<{ id: string; name: string }[]>([]);
   const [saving, setSaving] = useState(false);
   
-  // For custom dropdowns
   const [showWardDropdown, setShowWardDropdown] = useState(false);
   const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   useEffect(() => {
-    fetch('/api/wards')
-      .then(r => r.json())
-      .then(d => { if (d.success) setWards(d.data); });
-  }, []);
+  const fetchWards = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      console.log('Token from localStorage:', token);
+      
+      const res = await fetch('/api/wards', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+      
+      const data = await res.json();
+      if (data.success) setWards(data.data);
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
+  
+  fetchWards();
+}, []);
 
   useEffect(() => {
     if (selectedPatientId) {
@@ -526,7 +562,7 @@ const BedModal = ({ bed, patients, onClose, onSuccess }: {
               }`}
             >
               <span className={status ? 'text-gray-900' : 'text-gray-400'}>
-                {status === 'AVAILABLE' ? 'Available' : status === 'OCCUPIED' ? 'Occupied' : 'Maintenance'}
+                {status === 'AVAILABLE' ? 'Available' : status === 'OCCUPIED' ? 'Occupied' : status === 'CLEANING' ? 'Cleaning' : 'Maintenance'}
               </span>
               {!selectedPatientId && (
                 <svg className={`w-4 h-4 text-gray-400 transition ${showStatusDropdown ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -537,7 +573,7 @@ const BedModal = ({ bed, patients, onClose, onSuccess }: {
             
             {showStatusDropdown && !selectedPatientId && (
               <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg">
-                {(['AVAILABLE', 'OCCUPIED', 'MAINTENANCE'] as BedStatus[]).map(s => (
+                {(['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE'] as BedStatus[]).map(s => (
                   <button
                     key={s}
                     type="button"
@@ -549,7 +585,7 @@ const BedModal = ({ bed, patients, onClose, onSuccess }: {
                       status === s ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                     }`}
                   >
-                    {s === 'AVAILABLE' ? 'Available' : s === 'OCCUPIED' ? 'Occupied' : 'Maintenance'}
+                    {s === 'AVAILABLE' ? 'Available' : s === 'OCCUPIED' ? 'Occupied' : s === 'CLEANING' ? 'Cleaning' : 'Maintenance'}
                   </button>
                 ))}
               </div>
@@ -590,4 +626,5 @@ const BedModal = ({ bed, patients, onClose, onSuccess }: {
     </div>
   );
 };
+
 export default Beds;

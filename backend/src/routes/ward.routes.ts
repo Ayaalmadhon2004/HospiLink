@@ -1,10 +1,7 @@
 import { Router } from 'express';
-import { getAllWards, getWardById } from '../controllers/ward.controller';
-import { protect, authorize } from '../middlewares/auth.middleware';
+import { getAllWards } from '../controllers/ward.controller';
 
 const router = Router();
-
-router.get('/', protect, getAllWards);
-router.get('/:id', protect, getWardById);
+router.get('/', getAllWards);  // ← شيل protect
 
 export default router;

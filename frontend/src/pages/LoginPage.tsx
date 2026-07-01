@@ -12,17 +12,28 @@ const LoginPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError('');
+const handleLogin = async (credentials: any) => {
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+      credentials: 'include'
+    });
     
-    try {
-      await login(formData);
+    const data = await res.json();
+    
+    if (data.success && data.token) {
+      // ✅ خزن في localStorage
+      localStorage.setItem('token', data.token);
+      
+      // روح للـ dashboard
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
     }
-  };
+  } catch (err) {
+    console.error('Login error:', err);
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">

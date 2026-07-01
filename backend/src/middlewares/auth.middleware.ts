@@ -1,25 +1,28 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
-export const protect = (req: Request, res: Response, next: NextFunction): void => {
-  // ✅ اقرأ التوكن من الكوكي، مش من Bearer header
-  const token = req.cookies?.token;
-
-  if (!token) {
-    res.status(401).json({ error: 'غير مصرح لك بالوصول: لا يوجد توكن في الكوكيز' });
-    return;
+export const protect = async (req: Request, res: Response, next: NextFunction) => {
+  let token;
+  
+  // من header
+  if (req.headers.authorization?.startsWith('Bearer')) {
+    token = req.headers.authorization.split(' ')[1];
   }
-
+  // أو من cookie (httpOnly)
+  else if (req.cookies?.token) {
+    token = req.cookies.token;
+  }
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
   try {
-    if (!process.env.JWT_SECRET) {
-      throw new Error("JWT_SECRET is not defined in environment variables");
-    }
-
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded; 
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!);
+    req.user = decoded;
     next();
   } catch (error) {
-    res.status(403).json({ error: 'التوكن غير صالح أو منتهي الصلاحية' });
+    return res.status(401).json({ error: 'Invalid token' });
   }
 };
 
