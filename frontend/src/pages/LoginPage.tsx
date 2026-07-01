@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { apiPost } from '../services/api'; // ← استورد apiPost
+import { apiPost } from '../services/api';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -14,7 +14,6 @@ const LoginPage: React.FC = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ✅ صح: استخدم FormEvent و apiPost
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
@@ -24,9 +23,10 @@ const LoginPage: React.FC = () => {
       const res = await apiPost('/auth/login', formData);
       const data = await res.json();
       
-      if (data.success && data.token) {
-        localStorage.setItem('token', data.token);
+      // ✅ الـ Backend بيستخدم كوكيز، ما نحتاج نخزن token يدوياً
+      if (data.user) {
         navigate('/dashboard');
+        // أو: window.location.href = '/dashboard';
       } else {
         setError(data.message || 'Login failed');
       }

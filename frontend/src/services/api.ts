@@ -12,6 +12,7 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
     headers,
+    credentials: 'include', // ← أضف هذي! عشان يرسل الكوكيز
   });
 
   if (res.status === 401) {
@@ -29,20 +30,16 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
 };
 
 export const apiGet = (url: string) => apiFetch(url, { method: 'GET' });
-
 export const apiPost = (url: string, body?: any) => 
   apiFetch(url, { 
     method: 'POST', 
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
   });
-
 export const apiPut = (url: string, body?: any) => 
   apiFetch(url, { 
     method: 'PUT', 
     body: body ? JSON.stringify(body) : undefined,
     headers: body ? { 'Content-Type': 'application/json' } : {},
   });
-
-export const apiDelete = (url: string) => 
-  apiFetch(url, { method: 'DELETE' });
+export const apiDelete = (url: string) => apiFetch(url, { method: 'DELETE' });
