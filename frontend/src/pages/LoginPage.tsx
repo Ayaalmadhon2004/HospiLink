@@ -1,26 +1,39 @@
+// pages/LoginPage.tsx
 import React, { useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { login } from '../services/authService';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiPost } from '../services/api';
 
 const LoginPage: React.FC = () => {
   const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
-    
+    setLoading(true);
+
     try {
-      await login(formData);
-      navigate('/dashboard');
+      const res = await apiPost('/auth/login', formData);
+      const data = await res.json();
+      
+      // ✅ الـ Backend بيستخدم كوكيز، ما نحتاج نخزن token يدوياً
+      if (data.user) {
+        navigate('/dashboard');
+        // أو: window.location.href = '/dashboard';
+      } else {
+        setError(data.message || 'Login failed');
+      }
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Login failed. Please check your credentials.');
+      setError(err.message || 'Login failed. Please check your credentials.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,6 +55,7 @@ const LoginPage: React.FC = () => {
             type="email" 
             className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
             placeholder="Email Address" 
+            value={formData.email}
             onChange={handleChange} 
             required 
           />
@@ -50,14 +64,16 @@ const LoginPage: React.FC = () => {
             type="password" 
             className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
             placeholder="Password" 
+            value={formData.password}
             onChange={handleChange} 
             required 
           />
           <button 
             type="submit" 
-            className="w-full bg-hospital-navy hover:bg-slate-800 text-white font-semibold py-3 rounded-xl transition duration-200 mt-2"
+            disabled={loading}
+            className="w-full bg-hospital-navy hover:bg-slate-800 text-white font-semibold py-3 rounded-xl transition duration-200 mt-2 disabled:opacity-50"
           >
-            Login
+            {loading ? 'Logging in...' : 'Login'}
           </button>
         </form>
         

@@ -8,6 +8,7 @@ import patientRoutes from './routes/patient.routes';
 import { errorHandler } from './middlewares/error.middleware'; 
 import path from 'path';
 import bedRoutes from './routes/bed.routes';
+import wardRoutes from './routes/ward.routes';
 
 dotenv.config();
 
@@ -27,6 +28,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/beds', bedRoutes);
+app.use('/api/wards', wardRoutes);
+
 
 // مسار فحص حالة الاتصال
 app.get('/api/health', async (req, res) => {
