@@ -1,5 +1,6 @@
+// components/BedModal.tsx
 import { useEffect, useState } from "react";
-import { apiFetch, apiGet } from '../services/api'; // ← استورد
+import { apiGet, apiPost, apiPut } from '../services/api'; // ← استورد apiPost/apiPut
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
 export const BedModal = ({ bed, patients, onClose, onSuccess }: {
@@ -22,7 +23,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   useEffect(() => {
     const fetchWards = async () => {
       try {
-        const res = await apiGet('/wards'); // ← استخدم apiGet
+        const res = await apiGet('/wards');
         const data = await res.json();
         if (data.success) setWards(data.data);
       } catch (err) {
@@ -40,35 +41,43 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     }
   }, [selectedPatientId, bed]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+ // components/BedModal.tsx
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setSaving(true);
 
-    const url = bed ? `/beds/${bed.id}` : '/beds'; // ← بدون /api لأن apiFetch بيضيفه
-    const method = bed ? 'PUT' : 'POST';
-
-    try {
-      const res = await apiFetch(url, { // ← استخدم apiFetch
-        method,
-        body: JSON.stringify({
-          bedNumber,
-          wardId,
-          status,
-          patientId: selectedPatientId || null
-        }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        onSuccess();
-        onClose();
-      }
-    } catch (error) {
-      console.error('Error saving bed:', error);
-    } finally {
-      setSaving(false);
+  try {
+    const body: any = {
+      bedNumber,
+      wardId,
+      status,
+      hospitalId: "e4eb651b-fc3c-4284-a73d-9178e77195d8", // ← أضف هذي!
+    };
+    
+    if (selectedPatientId) {
+      body.patientId = selectedPatientId;
     }
-  };
-  
+    
+    const res = bed 
+      ? await apiPut(`/beds/${bed.id}`, body)
+      : await apiPost('/beds', body);
+      
+    const data = await res.json();
+    if (data.success) {
+      onSuccess();
+      onClose();
+    } else {
+      console.error('Server error:', data.message);
+      alert('Error: ' + data.message);
+    }
+  } catch (error: any) {
+    console.error('Error saving bed:', error);
+    alert('Error: ' + error.message);
+  } finally {
+    setSaving(false);
+  }
+};
+    
   const selectedWard = wards.find(w => w.id === wardId);
   const selectedPatient = patients.find(p => p.id === selectedPatientId);
 
