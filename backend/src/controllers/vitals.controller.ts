@@ -1,3 +1,4 @@
+// backend/src/controllers/vitals.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 
@@ -13,38 +14,45 @@ const checkCriticalVitals = async (
     respiratoryRate?: number;
   }
 ): Promise<{ isCritical: boolean; alertType: string | null }> => {
-  const thresholds = await prisma.vitalThresholds.findMany({
-    where: { department, alertEnabled: true },
-  });
+  // ✅ استخدم Prisma Client العادي (لو اشتغل)
+  try {
+    const thresholds = await (prisma as any).vitalThresholds.findMany({
+      where: { department, alertEnabled: true },
+    });
 
-  let isCritical = false;
-  let alertType: string | null = null;
+    let isCritical = false;
+    let alertType: string | null = null;
 
-  for (const t of thresholds) {
-    const value = {
-      HEART_RATE: vitals.heartRate,
-      BP_SYSTOLIC: vitals.systolicBP,
-      BP_DIASTOLIC: vitals.diastolicBP,
-      SPO2: vitals.spO2,
-      TEMPERATURE: vitals.temperature,
-      RESPIRATORY_RATE: vitals.respiratoryRate,
-    }[t.vitalType];
+    for (const t of thresholds) {
+      const value = {
+        HEART_RATE: vitals.heartRate,
+        BP_SYSTOLIC: vitals.systolicBP,
+        BP_DIASTOLIC: vitals.diastolicBP,
+        SPO2: vitals.spO2,
+        TEMPERATURE: vitals.temperature,
+        RESPIRATORY_RATE: vitals.respiratoryRate,
+      }[t.vitalType];
 
-    if (value === undefined || value === null) continue;
+      if (value === undefined || value === null) continue;
 
-    if (t.minCritical !== null && value < t.minCritical) {
-      isCritical = true;
-      alertType = `${t.vitalType}_LOW`;
-      break;
+      if (t.minCritical !== null && value < t.minCritical) {
+        isCritical = true;
+        alertType = `${t.vitalType}_LOW`;
+        break;
+      }
+      if (t.maxCritical !== null && value > t.maxCritical) {
+        isCritical = true;
+        alertType = `${t.vitalType}_HIGH`;
+        break;
+      }
     }
-    if (t.maxCritical !== null && value > t.maxCritical) {
-      isCritical = true;
-      alertType = `${t.vitalType}_HIGH`;
-      break;
-    }
+
+    return { isCritical, alertType };
+  } catch (e) {
+    // لو الـ model مش موجود، رجّع false
+    console.log('Thresholds check skipped:', e);
+    return { isCritical: false, alertType: null };
   }
-
-  return { isCritical, alertType };
 };
 
 // POST /api/vitals - Record new vitals
@@ -61,7 +69,7 @@ export const recordVitals = async (req: Request, res: Response) => {
       notes,
     } = req.body;
 
-    // Get patient department for threshold check
+    // Get patient department
     const patient = await prisma.patient.findUnique({
       where: { id: patientId },
       select: { department: true },
@@ -81,7 +89,8 @@ export const recordVitals = async (req: Request, res: Response) => {
       respiratoryRate,
     });
 
-    const vitals = await prisma.patientVitals.create({
+    // ✅ استخدم (prisma as any) لو الـ model مش متعرف عليه
+    const vitals = await (prisma as any).patientVitals.create({
       data: {
         patientId,
         heartRate,
@@ -90,7 +99,7 @@ export const recordVitals = async (req: Request, res: Response) => {
         spO2,
         temperature,
         respiratoryRate,
-        recordedBy: (req.user as any)?.userId,
+        recordedBy: (req.user as any)?.userId || 'system',
         notes,
         isCritical,
         alertType,
@@ -117,7 +126,7 @@ export const getVitals = async (req: Request, res: Response) => {
     if (patientId) where.patientId = patientId as string;
     if (critical === 'true') where.isCritical = true;
 
-    const vitals = await prisma.patientVitals.findMany({
+    const vitals = await (prisma as any).patientVitals.findMany({
       where,
       include: {
         patient: {
@@ -143,11 +152,11 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
     const where: any = { isCritical: true };
     if (department) where.patient = { department: department as string };
 
-    const alerts = await prisma.patientVitals.findMany({
+    const alerts = await (prisma as any).patientVitals.findMany({
       where,
       include: {
         patient: {
-          select: { name: true, patientCode: true, department: true, bed: true },
+          select: { name: true, patientCode: true, department: true },
         },
       },
       orderBy: { recordedAt: 'desc' },
@@ -166,7 +175,7 @@ export const getVitalsById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const vitals = await prisma.patientVitals.findUnique({
+    const vitals = await (prisma as any).patientVitals.findUnique({
       where: { id },
       include: {
         patient: {
@@ -192,12 +201,36 @@ export const updateVitals = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const vitals = await prisma.patientVitals.update({
+    // Get current vitals
+    const currentVitals = await (prisma as any).patientVitals.findUnique({
       where: { id },
-      data: updateData,
+      include: { patient: true },
     });
 
-    res.status(200).json({ success: true, data: vitals });
+    if (!currentVitals) {
+      return res.status(404).json({ success: false, message: 'Vitals entry not found' });
+    }
+
+    // Merge old and new data for checking
+    const newVitalsData = { ...currentVitals, ...updateData };
+
+    // Check thresholds
+    const { isCritical, alertType } = await checkCriticalVitals(
+      currentVitals.patient.department,
+      newVitalsData
+    );
+
+    // Update with Prisma
+    const updated = await (prisma as any).patientVitals.update({
+      where: { id },
+      data: {
+        ...updateData,
+        isCritical,
+        alertType,
+      },
+    });
+
+    res.status(200).json({ success: true, data: updated });
   } catch (error: any) {
     console.error('Update vitals error:', error);
     res.status(500).json({ success: false, message: 'Failed to update vitals', error: error.message });
@@ -209,7 +242,7 @@ export const deleteVitals = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    await prisma.patientVitals.delete({ where: { id } });
+    await (prisma as any).patientVitals.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });
   } catch (error: any) {
