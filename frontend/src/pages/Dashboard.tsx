@@ -6,7 +6,8 @@ import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
 import { getRecentPatients } from '../services/patientService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 import { PatientsPage } from '../pages/PatientsPage';
-import Beds from '../pages/Beds'; // ← NEW
+import Beds from '../pages/Beds';
+import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
 
 const Dashboard = () => {
   const [activeItem, setActiveItem] = useState('Overview');
@@ -30,8 +31,10 @@ const Dashboard = () => {
     switch (activeItem) {
       case 'Patients':
         return <PatientsPage />;
-      case 'Beds & Wards':    // ← NEW
+      case 'Beds & Wards':
         return <Beds />;
+      case 'Vitals Monitor':
+        return <VitalsMonitorPage />;
       case 'Overview':
       default:
         return (
