@@ -9,6 +9,7 @@ import { errorHandler } from './middlewares/error.middleware';
 import path from 'path';
 import bedRoutes from './routes/bed.routes';
 import wardRoutes from './routes/ward.routes';
+import vitalsRoutes from './routes/vitals.routes';
 
 dotenv.config();
 
@@ -29,6 +30,7 @@ app.use('/api/patients', patientRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/beds', bedRoutes);
 app.use('/api/wards', wardRoutes);
+app.use('/api/vitals', vitalsRoutes);
 
 
 // مسار فحص حالة الاتصال

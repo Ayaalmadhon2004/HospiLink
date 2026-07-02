@@ -131,3 +131,48 @@ model Bed {
   
   @@unique([bedNumber, wardId]) 
 }
+
+// Vitals Monitor Models
+model PatientVitals {
+  id          String   @id @default(uuid())
+  patientId   String
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  
+  // Vital readings
+  heartRate       Int?     // BPM
+  systolicBP      Int?     // mmHg
+  diastolicBP     Int?     // mmHg
+  spO2            Float?   // %
+  temperature     Float?   // Celsius
+  respiratoryRate Int?     // breaths/min
+  
+  // Metadata
+  recordedAt  DateTime @default(now())
+  recordedBy String
+  notes      String?
+  
+  // Alerts
+  isCritical Boolean @default(false)
+  alertType  String? // HR_HIGH, HR_LOW, BP_HIGH, BP_LOW, SPO2_LOW, TEMP_HIGH, TEMP_LOW, RR_HIGH, RR_LOW
+  
+  @@index([patientId])
+  @@index([recordedAt])
+  @@index([isCritical])
+}
+
+model VitalThresholds {
+  id          String @id @default(uuid())
+  department  String
+  vitalType   String // HEART_RATE, BP_SYSTOLIC, BP_DIASTOLIC, SPO2, TEMPERATURE, RESPIRATORY_RATE
+  
+  minNormal   Float?
+  maxNormal   Float?
+  minCritical Float?
+  maxCritical Float?
+  
+  // Alert settings
+  alertEnabled Boolean @default(true)
+  autoNotify   Boolean @default(false)
+  
+  @@unique([department, vitalType])
+}
