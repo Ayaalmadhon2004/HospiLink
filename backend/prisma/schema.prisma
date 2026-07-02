@@ -43,7 +43,6 @@ model User {
   patients    Patient[]
 }
 
-
 model AuditLog {
   id        String   @id @default(uuid())
   action    String   
@@ -82,7 +81,8 @@ model Patient {
   bed           Bed?          @relation("BedPatient", fields: [bedId], references: [id])
   hospitalId    String
   hospital      Hospital      @relation(fields: [hospitalId], references: [id])
-  reports       Report[]      // ← NEW
+  reports       Report[]
+  vitals        PatientVitals[]  // ← relation للـ vitals
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 }
@@ -91,10 +91,10 @@ model Report {
   id         String   @id @default(uuid())
   fileName   String
   fileUrl    String
-  fileType   String   // PDF, JPG, PNG
+  fileType   String
   patientId  String
   patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  uploadedBy String?  // userId
+  uploadedBy String?
   createdAt  DateTime @default(now())
   
   @@index([patientId])
@@ -132,28 +132,26 @@ model Bed {
   @@unique([bedNumber, wardId]) 
 }
 
-// Vitals Monitor Models
+// ============ VITALS MODELS ============
+
 model PatientVitals {
-  id          String   @id @default(uuid())
-  patientId   String
-  patient     Patient  @relation(fields: [patientId], references: [id])
+  id              String   @id @default(uuid())
+  patientId       String
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
   
-  // Vital readings
-  heartRate       Int?     // BPM
-  systolicBP      Int?     // mmHg
-  diastolicBP     Int?     // mmHg
-  spO2            Float?   // %
-  temperature     Float?   // Celsius
-  respiratoryRate Int?     // breaths/min
+  heartRate       Int?
+  systolicBP      Int?
+  diastolicBP     Int?
+  spO2            Float?
+  temperature     Float?
+  respiratoryRate Int?
   
-  // Metadata
-  recordedAt  DateTime @default(now())
-  recordedBy String
-  notes      String?
+  recordedAt      DateTime @default(now())
+  recordedBy      String
+  notes           String?
   
-  // Alerts
-  isCritical Boolean @default(false)
-  alertType  String? // HR_HIGH, HR_LOW, BP_HIGH, BP_LOW, SPO2_LOW, TEMP_HIGH, TEMP_LOW, RR_HIGH, RR_LOW
+  isCritical      Boolean  @default(false)
+  alertType       String?
   
   @@index([patientId])
   @@index([recordedAt])
@@ -161,16 +159,15 @@ model PatientVitals {
 }
 
 model VitalThresholds {
-  id          String @id @default(uuid())
-  department  String
-  vitalType   String // HEART_RATE, BP_SYSTOLIC, BP_DIASTOLIC, SPO2, TEMPERATURE, RESPIRATORY_RATE
+  id           String  @id @default(uuid())
+  department   String
+  vitalType    String
   
-  minNormal   Float?
-  maxNormal   Float?
-  minCritical Float?
-  maxCritical Float?
+  minNormal    Float?
+  maxNormal    Float?
+  minCritical  Float?
+  maxCritical  Float?
   
-  // Alert settings
   alertEnabled Boolean @default(true)
   autoNotify   Boolean @default(false)
   

@@ -1,41 +1,58 @@
-// services/authService.ts
+// frontend/src/services/authService.ts
 import { apiPost, apiGet } from './api';
 
+// ============================================
+// LOGIN
+// ============================================
 export const login = async (credentials: { email: string; password: string }) => {
-  const res = await apiPost('/auth/login', credentials);
-  const data = await res.json();
+  // ✅ apiPost بيرجّع JSON مباشرة — ما نحتاج res.json()!
+  const data = await apiPost('/auth/login', credentials);
   
-  if (data.success && data.token) {
-    localStorage.setItem('token', data.token);
-  }
+  // ✅ الكوكيز بتتخزن أوتوماتيك — ما نحتاج localStorage!
+  // (الـ backend بيحط الكوكي في الـ response)
   
   return data;
 };
 
+// ============================================
+// SIGNUP
+// ============================================
 export const signup = async (userData: any) => {
-  const res = await apiPost('/auth/signup', userData);
-  return res.json();
+  return apiPost('/auth/signup', userData);
 };
 
+// ============================================
+// LOGOUT
+// ============================================
 export const logout = async () => {
-  localStorage.removeItem('token');
+  try {
+    await apiPost('/auth/logout');
+  } catch (err) {
+    console.error('Logout error:', err);
+  }
+  // ✅ redirect للـ login
   window.location.href = '/login';
 };
 
+// ============================================
+// GET CURRENT USER
+// ============================================
 export const getCurrentUser = async () => {
   try {
-    const res = await apiGet('/auth/me');
-    const data = await res.json();
-    return data.user;
+    const data = await apiGet('/auth/me');
+    return data.user || null;
   } catch {
     return null;
   }
 };
 
+// ============================================
+// CHECK AUTH
+// ============================================
 export const isAuthenticated = async () => {
   try {
-    await apiGet('/auth/me');
-    return true;
+    const data = await apiGet('/auth/me');
+    return !!data.user;
   } catch {
     return false;
   }

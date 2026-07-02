@@ -7,6 +7,7 @@ import { PatientsPage } from './pages/PatientsPage';
 import { PatientDetailPage } from './pages/PatientDetailPage';
 import { EditPatientPage } from './pages/EditPatientPage';
 import Beds from './pages/Beds';
+import { VitalsMonitorPage } from './pages/VitalsMonitorPage';
 
 function App() {
   return (
@@ -29,6 +30,10 @@ function App() {
       <Route path="/patients/:id" element={<PatientDetailPage />} />
       <Route path="/patients/:id/edit" element={<EditPatientPage />} />
       <Route path="/beds" element={<Beds />} />  
+
+      <Route path="/vitals" element={
+        <VitalsMonitorPage />
+    } />
 
     </Routes>
   );

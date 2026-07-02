@@ -1,3 +1,4 @@
+// backend/src/controllers/patient.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 
@@ -181,40 +182,51 @@ export const getPatientById = async (req: Request, res: Response) => {
 
 // ============================================
 // GET /api/patients
-// كل المرضى مع فلاتر
+// كل المرضى مع فلاتر — ✅ معدل وشغال
 // ============================================
 export const getPatients = async (req: Request, res: Response) => {
   try {
+    // 1. استخراج المتغيرات من الـ Query
     const { status, department, search } = req.query;
 
-    const where: any = {};
+    // 2. بناء كائن شرطي فارغ
+    const whereClause: any = {};
 
-    if (status) where.status = status;
-    if (department) where.department = department;
-    if (search) {
-      where.OR = [
+    // 3. إضافة الشروط فقط إذا كانت القيم صالحة (Valid)
+    if (status && status !== 'undefined' && status !== 'ALL' && status !== '' && status !== 'All') {
+      // ✅ تحويل لـ UPPERCASE عشان يطابق الـ Enum
+      whereClause.status = (status as string).toUpperCase(); 
+    }
+
+    if (department && department !== 'undefined' && department !== 'ALL' && department !== '' && department !== 'All') {
+      whereClause.department = department;
+    }
+
+    if (search && search !== 'undefined' && search !== '') {
+      whereClause.OR = [
         { name: { contains: search as string, mode: 'insensitive' } },
         { patientCode: { contains: search as string, mode: 'insensitive' } },
       ];
     }
 
+    // 4. تنفيذ الاستعلام باستخدام الكائن النظيف
     const patients = await prisma.patient.findMany({
-      where,
+      where: whereClause,
       orderBy: { admissionDate: 'desc' },
       include: {
         bed: {
           select: {
             bedNumber: true,
-            ward: { select: { name: true } }
-          }
-        }
-      }
+            ward: { select: { name: true } },
+          },
+        },
+      },
     });
 
-    res.status(200).json({ success: true, count: patients.length, data: patients });
+    res.status(200).json({ success: true, data: patients });
   } catch (error: any) {
-    console.error('Get patients error:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch patients', error: error.message });
+    console.error("🔥 الخطأ من Prisma:", error);
+    res.status(500).json({ success: false, message: 'فشل جلب المرضى', error: error.message });
   }
 };
 
