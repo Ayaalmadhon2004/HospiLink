@@ -1,18 +1,15 @@
-// services/api.ts
-const API_BASE = '/api';
+// frontend/src/services/api.ts
+const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
-  const token = localStorage.getItem('token');
-  
-  // ابدأ بـ Headers object
   const headers = new Headers();
   
-  // أضف token لو موجود
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`);
+  // ✅ Content-Type للـ JSON
+  if (options.body && !(options.body instanceof FormData)) {
+    headers.set('Content-Type', 'application/json');
   }
-  
-  // دمج headers من options (هذي الأهم!)
+
+  // دمج headers من options
   if (options.headers) {
     const existingHeaders = new Headers(options.headers);
     existingHeaders.forEach((value, key) => {
@@ -22,12 +19,11 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
 
   const res = await fetch(`${API_BASE}${url}`, {
     ...options,
-    headers,  // ← الحين Headers object صحيح
-    credentials: 'include',
+    headers,
+    credentials: 'include', // ← ✅ الكوكي بيروح أوتوماتيك
   });
 
   if (res.status === 401) {
-    localStorage.removeItem('token');
     window.location.href = '/login';
     throw new Error('Unauthorized');
   }
@@ -40,25 +36,28 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
   return res;
 };
 
-export const apiGet = (url: string) => apiFetch(url, { method: 'GET' });
+export const apiGet = async (url: string) => {
+  const res = await apiFetch(url, { method: 'GET' });
+  return res.json();
+};
 
-export const apiPost = (url: string, body?: any) => 
-  apiFetch(url, { 
-    method: 'POST', 
+export const apiPost = async (url: string, body?: any) => {
+  const res = await apiFetch(url, {
+    method: 'POST',
     body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
   });
+  return res.json();
+};
 
-export const apiPut = (url: string, body?: any) => 
-  apiFetch(url, { 
-    method: 'PUT', 
+export const apiPut = async (url: string, body?: any) => {
+  const res = await apiFetch(url, {
+    method: 'PUT',
     body: body ? JSON.stringify(body) : undefined,
-    headers: {
-      'Content-Type': 'application/json',
-    },
   });
+  return res.json();
+};
 
-export const apiDelete = (url: string) => 
-  apiFetch(url, { method: 'DELETE' });
+export const apiDelete = async (url: string) => {
+  const res = await apiFetch(url, { method: 'DELETE' });
+  return res.json();
+};
