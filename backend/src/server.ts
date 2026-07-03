@@ -12,6 +12,7 @@ import wardRoutes from './routes/ward.routes';
 import vitalsRoutes from './routes/vitals.routes';
 import { Server } from 'socket.io';
 import http from 'http';
+import staffRoutes from './routes/staff.routes';
 
 dotenv.config();
 
@@ -27,6 +28,22 @@ io.on('connection', (socket) => {
   console.log('User connected to Vitals stream');
   socket.on('join-room', (patientId) => {
     socket.join(`patient-${patientId}`);
+  });
+});
+
+app.use('/api/staff', staffRoutes);
+
+// In Socket.IO connection:
+io.on('connection', (socket) => {
+  console.log('User connected to Staff stream');
+  
+  socket.on('join-room', (patientId) => {
+    socket.join(`patient-${patientId}`);
+  });
+  
+  // NEW: Join department room for staff updates
+  socket.on('join-department', (department) => {
+    socket.join(`department-${department}`);
   });
 });
 
