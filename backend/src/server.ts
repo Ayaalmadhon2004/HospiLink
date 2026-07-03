@@ -10,11 +10,25 @@ import path from 'path';
 import bedRoutes from './routes/bed.routes';
 import wardRoutes from './routes/ward.routes';
 import vitalsRoutes from './routes/vitals.routes';
+import { Server } from 'socket.io';
+import http from 'http';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: { origin: "http://localhost:5173", credentials: true }
+});
+
+io.on('connection', (socket) => {
+  console.log('User connected to Vitals stream');
+  socket.on('join-room', (patientId) => {
+    socket.join(`patient-${patientId}`);
+  });
+});
 
 app.use(cors({
   origin: "http://localhost:5173",
