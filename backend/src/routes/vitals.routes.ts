@@ -12,8 +12,7 @@ import { logActivity } from '../middlewares/audit.middleware';
 
 const router = Router();
 
-// POST /api/vitals - Record new vitals (DOCTOR, NURSE)
-router.post('/', protect, authorize('DOCTOR', 'NURSE'), logActivity('RECORD_VITALS'), recordVitals);
+router.post('/', protect, authorize('DOCTOR', 'NURSE','ADMIN'), logActivity('RECORD_VITALS'), recordVitals);
 
 // GET /api/vitals - Get vitals list (any authenticated user)
 router.get('/', protect, getVitals);
