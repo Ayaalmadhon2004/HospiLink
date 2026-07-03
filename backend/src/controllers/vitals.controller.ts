@@ -1,6 +1,33 @@
 // backend/src/controllers/vitals.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import { io } from '../server'; // استيراد الـ io من السيرفر
+
+export const createVital = async (req: Request, res: Response) => {
+  try {
+    // تأكد أنك تأخذ البيانات من req.body
+    const { patientId, heartRate, systolicBP, spO2, temperature, respiratoryRate } = req.body;
+    
+    const newVital = await prisma.patientVitals.create({
+      data: {
+        patientId,
+        heartRate,
+        systolicBP,
+        spO2,
+        temperature,
+        respiratoryRate
+      }
+    });
+    
+    // تأكد أن الـ io موجودة وأن المسار صحيح
+    io.to(`patient-${newVital.patientId}`).emit('new-vital', newVital);
+    
+    res.status(201).json({ success: true, data: newVital });
+  } catch (error) {
+    console.error('Create vital error:', error);
+    res.status(500).json({ success: false, message: 'فشل حفظ البيانات' });
+  }
+};
 
 // Helper: Check if vitals are critical based on thresholds
 const checkCriticalVitals = async (

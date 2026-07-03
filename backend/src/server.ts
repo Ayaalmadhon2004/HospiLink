@@ -59,6 +59,6 @@ app.get('/api/health', async (req, res) => {
 
 app.use(errorHandler); 
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 HospiLink Server running on http://localhost:${PORT}`);
 });
