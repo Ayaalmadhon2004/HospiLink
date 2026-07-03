@@ -173,3 +173,33 @@ model VitalThresholds {
   
   @@unique([department, vitalType])
 }
+
+// Add to your existing schema.prisma
+
+model Staff {
+  id          String   @id @default(uuid())
+  name        String
+  email       String   @unique
+  role        String   // DOCTOR, NURSE, ADMIN, SURGEON, etc.
+  department  String
+  avatar      String?
+  phone       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  shifts      Shift[]
+}
+
+model Shift {
+  id          String   @id @default(uuid())
+  staffId     String
+  staff       Staff    @relation(fields: [staffId], references: [id])
+  type        String   // DAY, NIGHT, EVENING, ON_CALL
+  startTime   DateTime
+  endTime     DateTime
+  department  String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
