@@ -1,4 +1,3 @@
-// frontend/src/pages/VitalsMonitorPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Activity, Plus, RefreshCw, ChevronDown } from 'lucide-react';
@@ -40,10 +39,21 @@ interface AlertItem {
   spO2?: number;
 }
 
-// ─── Helper: Ensure array ──────────────────────────────────────────────
+// ─── Helpers ───────────────────────────────────────────────────────────
 const ensureArray = <T,>(value: unknown): T[] => {
   if (Array.isArray(value)) return value as T[];
   return [];
+};
+
+const mergeVitals = (existing: VitalRecord[], incoming: VitalRecord[]): VitalRecord[] => {
+  const combined = [...existing, ...incoming];
+  const seen = new Set<string>();
+  return combined.filter((v) => {
+    if (!v?.id) return false;
+    if (seen.has(v.id)) return false;
+    seen.add(v.id);
+    return true;
+  }).slice(0, 20);
 };
 
 // ─── Component ─────────────────────────────────────────────────────────
@@ -77,14 +87,14 @@ export const VitalsMonitorPage = () => {
 
   // ── Effects ───────────────────────────────────────────────────────────
 
-  /** Update vitals list when a real-time record arrives */
+  /** Socket: add new vital to history without replacing */
   useEffect(() => {
     if (latestVital && selectedPatient) {
       setVitals((prev) => {
         const safePrev = ensureArray<VitalRecord>(prev);
-        const exists = safePrev.some((v) => v?.id === (latestVital as any)?.id);
-        if (exists) return safePrev;
         const newVital = latestVital as VitalRecord;
+        const exists = safePrev.some((v) => v?.id === newVital?.id);
+        if (exists) return safePrev;
         return [newVital, ...safePrev].slice(0, 20);
       });
     }
@@ -110,7 +120,7 @@ export const VitalsMonitorPage = () => {
     }
   }, []);
 
-  /** Fetch historical vitals for selected patient */
+  /** Fetch historical vitals — merge with existing, don't replace */
   const fetchVitals = useCallback(async (patientId: string) => {
     if (!patientId) {
       setVitals([]);
@@ -120,10 +130,11 @@ export const VitalsMonitorPage = () => {
     try {
       const res = await getVitals({ patientId, limit: 20 });
       const data = ensureArray<VitalRecord>(res?.data ?? res);
-      setVitals(data);
+      // ✅ Merge with existing vitals instead of replacing
+      setVitals((prev) => mergeVitals(ensureArray<VitalRecord>(prev), data));
     } catch (err) {
       console.error('Failed to fetch vitals:', err);
-      setVitals([]);
+      // ❌ Don't clear vitals on error
     } finally {
       setLoading(false);
     }
@@ -136,7 +147,11 @@ export const VitalsMonitorPage = () => {
   }, [fetchData]);
 
   useEffect(() => {
-    fetchVitals(selectedPatient);
+    if (selectedPatient) {
+      fetchVitals(selectedPatient);
+    } else {
+      setVitals([]);
+    }
   }, [selectedPatient, fetchVitals]);
 
   // ── Handlers ────────────────────────────────────────────────────────
@@ -147,7 +162,7 @@ export const VitalsMonitorPage = () => {
 
     setSubmitting(true);
     try {
-      await recordVitals({
+      const res = await recordVitals({
         patientId: selectedPatient,
         heartRate: formData.heartRate ? parseInt(formData.heartRate) : undefined,
         systolicBP: formData.systolicBP ? parseInt(formData.systolicBP) : undefined,
@@ -157,6 +172,17 @@ export const VitalsMonitorPage = () => {
         respiratoryRate: formData.respiratoryRate ? parseInt(formData.respiratoryRate) : undefined,
         notes: formData.notes || undefined,
       });
+
+      // ✅ Add the new vital from response directly to state
+      if (res?.data) {
+        setVitals((prev) => {
+          const safePrev = ensureArray<VitalRecord>(prev);
+          const newVital = res.data as VitalRecord;
+          const exists = safePrev.some((v) => v?.id === newVital?.id);
+          if (exists) return safePrev;
+          return [newVital, ...safePrev].slice(0, 20);
+        });
+      }
 
       // Reset form
       setShowForm(false);
@@ -170,8 +196,8 @@ export const VitalsMonitorPage = () => {
         notes: '',
       });
 
-      await fetchVitals(selectedPatient);
-      await fetchData();
+      // ❌ Don't call fetchVitals here — it might replace our new vital!
+      await fetchData(); // Only refresh alerts
     } catch (err: any) {
       alert(err.message || 'Failed to record vitals');
     } finally {
