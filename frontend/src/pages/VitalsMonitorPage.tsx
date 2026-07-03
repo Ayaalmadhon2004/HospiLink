@@ -7,6 +7,9 @@ import { getPatients } from '../services/patientService';
 import { VitalsCard } from '../components/Vitals/VitalsCard';
 import { VitalsChart } from '../components/Vitals/VitalsChart';
 import { AlertsPanel } from '../components/Vitals/AlertsPanel';
+import { useVitalsSocket } from '../hooks/useVitalsSocket';
+
+// ─── Types ─────────────────────────────────────────────────────────────
 
 interface Patient {
   id: string;
@@ -37,8 +40,18 @@ interface AlertItem {
   spO2?: number;
 }
 
+// ─── Helper: Ensure array ──────────────────────────────────────────────
+const ensureArray = <T,>(value: unknown): T[] => {
+  if (Array.isArray(value)) return value as T[];
+  return [];
+};
+
+// ─── Component ─────────────────────────────────────────────────────────
+
 export const VitalsMonitorPage = () => {
   const navigate = useNavigate();
+
+  // ── Core State ──────────────────────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<string>('');
   const [vitals, setVitals] = useState<VitalRecord[]>([]);
@@ -48,6 +61,7 @@ export const VitalsMonitorPage = () => {
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
+  // ── Form State ──────────────────────────────────────────────────────
   const [formData, setFormData] = useState({
     heartRate: '',
     systolicBP: '',
@@ -58,6 +72,25 @@ export const VitalsMonitorPage = () => {
     notes: '',
   });
 
+  // ── Real-time Socket ────────────────────────────────────────────────
+  const latestVital = useVitalsSocket(selectedPatient || '');
+
+  // ── Effects ───────────────────────────────────────────────────────────
+
+  /** Update vitals list when a real-time record arrives */
+  useEffect(() => {
+    if (latestVital && selectedPatient) {
+      setVitals((prev) => {
+        const safePrev = ensureArray<VitalRecord>(prev);
+        const exists = safePrev.some((v) => v?.id === (latestVital as any)?.id);
+        if (exists) return safePrev;
+        const newVital = latestVital as VitalRecord;
+        return [newVital, ...safePrev].slice(0, 20);
+      });
+    }
+  }, [latestVital, selectedPatient]);
+
+  /** Fetch patients + alerts (polling every 30s) */
   const fetchData = useCallback(async () => {
     try {
       setRefreshing(true);
@@ -65,27 +98,34 @@ export const VitalsMonitorPage = () => {
         getPatients(),
         getCriticalAlerts(),
       ]);
-      setPatients(patientsRes.data || patientsRes || []);
-      setAlerts(alertsRes.data || alertsRes || []);
+      setPatients(ensureArray<Patient>(patientsRes?.data ?? patientsRes));
+      setAlerts(ensureArray<AlertItem>(alertsRes?.data ?? alertsRes));
     } catch (err) {
       console.error('Failed to fetch data:', err);
+      setPatients([]);
+      setAlerts([]);
     } finally {
       setRefreshing(false);
       setLoading(false);
     }
   }, []);
 
+  /** Fetch historical vitals for selected patient */
   const fetchVitals = useCallback(async (patientId: string) => {
     if (!patientId) {
       setVitals([]);
       return;
     }
+    setLoading(true);
     try {
       const res = await getVitals({ patientId, limit: 20 });
-      setVitals(res.data || res || []);
+      const data = ensureArray<VitalRecord>(res?.data ?? res);
+      setVitals(data);
     } catch (err) {
       console.error('Failed to fetch vitals:', err);
       setVitals([]);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -98,6 +138,8 @@ export const VitalsMonitorPage = () => {
   useEffect(() => {
     fetchVitals(selectedPatient);
   }, [selectedPatient, fetchVitals]);
+
+  // ── Handlers ────────────────────────────────────────────────────────
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +158,7 @@ export const VitalsMonitorPage = () => {
         notes: formData.notes || undefined,
       });
 
+      // Reset form
       setShowForm(false);
       setFormData({
         heartRate: '',
@@ -126,6 +169,7 @@ export const VitalsMonitorPage = () => {
         respiratoryRate: '',
         notes: '',
       });
+
       await fetchVitals(selectedPatient);
       await fetchData();
     } catch (err: any) {
@@ -137,7 +181,9 @@ export const VitalsMonitorPage = () => {
 
   const latestVitals = vitals[0];
 
-  if (loading) {
+  // ── Render ──────────────────────────────────────────────────────────
+
+  if (loading && patients.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
         <div className="animate-pulse text-clinic-text/50">Loading vitals monitor...</div>
@@ -147,7 +193,7 @@ export const VitalsMonitorPage = () => {
 
   return (
     <div className="min-h-screen bg-clinic-bg p-6 md:p-8">
-      {/* Header */}
+      {/* ── Header ────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-hospital-navy flex items-center gap-2">
@@ -166,12 +212,12 @@ export const VitalsMonitorPage = () => {
         </button>
       </div>
 
-      {/* Alerts Panel */}
+      {/* ── Alerts Panel ──────────────────────────────────────────────── */}
       <div className="mb-6">
         <AlertsPanel alerts={alerts} />
       </div>
 
-      {/* Patient Selector */}
+      {/* ── Patient Selector ──────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
           <div className="relative flex-1">
@@ -187,9 +233,12 @@ export const VitalsMonitorPage = () => {
                 </option>
               ))}
             </select>
-            <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 pointer-events-none" />
+            <ChevronDown
+              size={16}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 pointer-events-none"
+            />
           </div>
-          
+
           {selectedPatient && (
             <button
               onClick={() => setShowForm(!showForm)}
@@ -202,13 +251,15 @@ export const VitalsMonitorPage = () => {
         </div>
       </div>
 
-      {/* Record Form */}
+      {/* ── Record Form ───────────────────────────────────────────────── */}
       {showForm && selectedPatient && (
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6 animate-in fade-in slide-in-from-top-2 duration-200">
           <h3 className="text-lg font-bold text-hospital-navy mb-4">Record New Vitals</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">Heart Rate <span className="text-xs text-clinic-text/30">(60-100)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                Heart Rate <span className="text-xs text-clinic-text/30">(60-100)</span>
+              </label>
               <input
                 type="number"
                 min="0"
@@ -220,7 +271,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">Systolic BP <span className="text-xs text-clinic-text/30">(90-140)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                Systolic BP <span className="text-xs text-clinic-text/30">(90-140)</span>
+              </label>
               <input
                 type="number"
                 min="0"
@@ -232,7 +285,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">Diastolic BP <span className="text-xs text-clinic-text/30">(60-90)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                Diastolic BP <span className="text-xs text-clinic-text/30">(60-90)</span>
+              </label>
               <input
                 type="number"
                 min="0"
@@ -244,7 +299,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">SpO2 <span className="text-xs text-clinic-text/30">(%)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                SpO2 <span className="text-xs text-clinic-text/30">(%)</span>
+              </label>
               <input
                 type="number"
                 min="0"
@@ -257,7 +314,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">Temperature <span className="text-xs text-clinic-text/30">(°C)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                Temperature <span className="text-xs text-clinic-text/30">(°C)</span>
+              </label>
               <input
                 type="number"
                 step="0.1"
@@ -270,7 +329,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div>
-              <label className="block text-sm text-clinic-text/60 mb-1">Respiratory Rate <span className="text-xs text-clinic-text/30">(12-20)</span></label>
+              <label className="block text-sm text-clinic-text/60 mb-1">
+                Respiratory Rate <span className="text-xs text-clinic-text/30">(12-20)</span>
+              </label>
               <input
                 type="number"
                 min="0"
@@ -311,7 +372,7 @@ export const VitalsMonitorPage = () => {
         </div>
       )}
 
-      {/* Current Vitals */}
+      {/* ── Current Vitals Card ───────────────────────────────────────── */}
       {latestVitals && (
         <div className="mb-6">
           <VitalsCard
@@ -327,7 +388,7 @@ export const VitalsMonitorPage = () => {
         </div>
       )}
 
-      {/* No Vitals Message */}
+      {/* ── No Vitals Message ─────────────────────────────────────────── */}
       {selectedPatient && vitals.length === 0 && !showForm && (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center mb-6">
           <Activity size={48} className="text-clinic-text/20 mx-auto mb-3" />
@@ -341,13 +402,33 @@ export const VitalsMonitorPage = () => {
         </div>
       )}
 
-      {/* Charts */}
+      {/* ── Charts ────────────────────────────────────────────────────── */}
       {vitals.length > 1 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <VitalsChart history={vitals} vitalType="heartRate" color="#ef4444" label="Heart Rate (bpm)" />
-          <VitalsChart history={vitals} vitalType="systolicBP" color="#3b82f6" label="Blood Pressure (mmHg)" />
-          <VitalsChart history={vitals} vitalType="spO2" color="#06b6d4" label="SpO2 (%)" />
-          <VitalsChart history={vitals} vitalType="temperature" color="#f97316" label="Temperature (°C)" />
+          <VitalsChart
+            history={vitals}
+            vitalType="heartRate"
+            color="#ef4444"
+            label="Heart Rate (bpm)"
+          />
+          <VitalsChart
+            history={vitals}
+            vitalType="systolicBP"
+            color="#3b82f6"
+            label="Blood Pressure (mmHg)"
+          />
+          <VitalsChart
+            history={vitals}
+            vitalType="spO2"
+            color="#06b6d4"
+            label="SpO2 (%)"
+          />
+          <VitalsChart
+            history={vitals}
+            vitalType="temperature"
+            color="#f97316"
+            label="Temperature (°C)"
+          />
         </div>
       )}
     </div>
