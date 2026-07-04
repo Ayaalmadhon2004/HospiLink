@@ -291,8 +291,45 @@ async function main() {
   }
 
   console.log('✅ Seeding completed successfully!');
-}
 
+  const appointmentsData = [
+    { patientCode: 'PT-2044', staffEmail: 'elena@hospilink.com', type: 'CONSULTATION', scheduledAt: new Date(today.getTime() + 8 * 60 * 60 * 1000), duration: 30, department: 'Cardiology', room: 'C-214', status: 'SCHEDULED' },
+    { patientCode: 'PT-2045', staffEmail: 'carlos@hospilink.com', type: 'SURGERY', scheduledAt: new Date(today.getTime() + 9 * 60 * 60 * 1000), duration: 60, department: 'Surgery', room: 'OR-3', status: 'SCHEDULED' },
+    { patientCode: 'PT-2046', staffEmail: 'elena@hospilink.com', type: 'IMAGING', scheduledAt: new Date(today.getTime() + 10 * 60 * 60 * 1000), duration: 45, department: 'Cardiology', room: 'RAD-1', status: 'SCHEDULED' },
+    { patientCode: 'PT-2047', staffEmail: 'ravi@hospilink.com', type: 'FOLLOW_UP', scheduledAt: new Date(today.getTime() + 11 * 60 * 60 * 1000), duration: 30, department: 'Maternity', room: 'M-119', status: 'SCHEDULED' },
+    { patientCode: 'PT-2048', staffEmail: 'carlos@hospilink.com', type: 'SURGERY', scheduledAt: new Date(today.getTime() + 13 * 60 * 60 * 1000), duration: 90, department: 'Surgery', room: 'OR-1', status: 'SCHEDULED' },
+  ];
+
+  for (const apt of appointmentsData) {
+    const patientId = createdPatients[apt.patientCode];
+    const doctorId = createdStaff[apt.staffEmail];
+    if (!patientId || !doctorId) continue;
+
+    const existing = await prisma.appointment.findFirst({
+      where: {
+        patientId,
+        doctorId,
+        scheduledAt: apt.scheduledAt,
+      },
+    });
+
+    if (!existing) {
+      await prisma.appointment.create({
+        data: {
+          patientId,
+          doctorId,
+          scheduledAt: apt.scheduledAt,
+          type: apt.type,
+          status: apt.status,
+          department: apt.department,
+          room: apt.room,
+          duration: apt.duration,
+        },
+      });
+      console.log(`📅 Created Appointment: ${apt.type} for ${apt.patientCode}`);
+    }
+  }
+}
 main()
   .catch((e) => {
     console.error('❌ Error while seeding:', e);
