@@ -7,7 +7,9 @@ import {
   Activity, 
   AlertTriangle, 
   Truck,
-  Heart
+  Heart,
+  Settings,
+  ChevronRight
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -51,16 +53,18 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           <button
             key={item.id}
             onClick={() => onItemClick(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition text-sm ${
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
               activeItem === item.id
-                ? 'bg-teal-500/10 text-teal-400 border-l-2 border-teal-500'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500 shadow-sm shadow-teal-500/10'
+                : 'text-slate-300 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
             }`}
           >
-            <item.icon className="w-5 h-5" />
-            <span className="flex-1 text-left">{item.label}</span>
+            <item.icon className={`w-5 h-5 transition-colors ${
+              activeItem === item.id ? 'text-teal-400' : 'text-slate-400 group-hover:text-white'
+            }`} />
+            <span className="flex-1 text-left font-medium">{item.label}</span>
             {item.badge && (
-              <span className={`text-xs px-2 py-0.5 rounded-full ${
+              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
                   ? 'bg-teal-500 text-white' 
                   : 'bg-slate-700 text-slate-300'
@@ -68,20 +72,41 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
                 {item.badge}
               </span>
             )}
+            {activeItem === item.id && (
+              <ChevronRight className="w-4 h-4 text-teal-400" />
+            )}
           </button>
         ))}
       </nav>
 
+      {/* Settings */}
+      <div className="px-4 pb-2">
+        <button
+          onClick={() => onItemClick('Settings')}
+          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
+            activeItem === 'Settings'
+              ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500'
+              : 'text-slate-300 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
+          }`}
+        >
+          <Settings className={`w-5 h-5 ${
+            activeItem === 'Settings' ? 'text-teal-400' : 'text-slate-400 group-hover:text-white'
+          }`} />
+          <span className="flex-1 text-left font-medium">Settings</span>
+        </button>
+      </div>
+
       {/* Bottom */}
       <div className="p-4 border-t border-slate-800">
         <div className="flex items-center gap-3 px-4 py-3">
-          <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold">
+          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-sm font-bold text-white">
             DR
           </div>
           <div className="flex-1">
             <p className="text-sm font-medium">Dr. Rivera</p>
             <p className="text-xs text-slate-400">Chief of Medicine</p>
           </div>
+          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
         </div>
       </div>
     </aside>

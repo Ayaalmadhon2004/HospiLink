@@ -4,16 +4,31 @@ import StatCard from '../components/Dashboard/StatCard';
 import RecentPatientsTable from '../components/Dashboard/RecentPatientsTable';
 import { AdmitPatientModal } from '../components/Dashboard/AdmitPatientModal';
 import { getRecentPatients } from '../services/patientService';
+import { getTodaySchedule } from '../services/appointmentsService';
+import { getStaff } from '../services/staffService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 import { PatientsPage } from '../pages/PatientsPage';
 import Beds from '../pages/Beds';
 import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
 import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
+import { AppointmentsPage } from '../pages/AppointmentsPage';
+
+interface TodayAppointment {
+  id: string;
+  scheduledAt: string;
+  type: string;
+  patient: { name: string };
+  doctor: { name: string };
+  room?: string;
+}
 
 const Dashboard = () => {
   const [activeItem, setActiveItem] = useState('Overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [patients, setPatients] = useState<any[]>([]);
+  const [todaySchedule, setTodaySchedule] = useState<TodayAppointment[]>([]);
+  const [staffCount, setStaffCount] = useState(0);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const fetchRecentPatients = useCallback(async () => {
     try {
@@ -24,9 +39,55 @@ const Dashboard = () => {
     }
   }, []);
 
+  const fetchDashboardStats = useCallback(async () => {
+    try {
+      setStatsLoading(true);
+      const [scheduleRes, staffRes] = await Promise.all([
+        getTodaySchedule(),
+        getStaff(),
+      ]);
+
+      setTodaySchedule(scheduleRes?.data?.appointments || []);
+      setStaffCount(staffRes?.data?.length || 0);
+    } catch (err) {
+      console.error("Error fetching dashboard stats:", err);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     fetchRecentPatients();
-  }, [fetchRecentPatients]);
+    fetchDashboardStats();
+  }, [fetchRecentPatients, fetchDashboardStats]);
+
+  const formatTime = (dateStr: string) => {
+    return new Date(dateStr).toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  const getTypeColor = (type: string) => {
+    const colors: Record<string, string> = {
+      SURGERY: 'bg-red-50 text-red-700 border-red-200',
+      CONSULTATION: 'bg-teal-50 text-teal-700 border-teal-200',
+      IMAGING: 'bg-blue-50 text-blue-700 border-blue-200',
+      FOLLOW_UP: 'bg-amber-50 text-amber-700 border-amber-200',
+    };
+    return colors[type] || 'bg-gray-50 text-gray-700';
+  };
+
+  const getTypeDot = (type: string) => {
+    const colors: Record<string, string> = {
+      SURGERY: 'bg-red-500',
+      CONSULTATION: 'bg-teal-500',
+      IMAGING: 'bg-blue-500',
+      FOLLOW_UP: 'bg-amber-500',
+    };
+    return colors[type] || 'bg-gray-400';
+  };
 
   const renderContent = () => {
     switch (activeItem) {
@@ -38,6 +99,8 @@ const Dashboard = () => {
         return <StaffDirectoryPage />;
       case 'Vitals Monitor':
         return <VitalsMonitorPage />;
+      case 'Appointments':
+        return <AppointmentsPage />;
       case 'Overview':
       default:
         return (
@@ -81,7 +144,7 @@ const Dashboard = () => {
               />
               <StatCard 
                 title="Staff On Duty" 
-                value="346" 
+                value={statsLoading ? '...' : staffCount.toString()} 
                 trend="-2" 
                 trendUp={false}
                 icon="staff"
@@ -106,33 +169,51 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Quick Stats - 1 column */}
+              {/* Today's Schedule - 1 column */}
               <div className="space-y-4">
                 <div className="bg-white rounded-xl shadow-sm border p-6">
-                  <h2 className="text-lg font-bold text-gray-900 mb-4">Today's Schedule</h2>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">Morning Rounds</p>
-                        <p className="text-xs text-gray-500">8:00 AM - 10:00 AM</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">Surgery Block</p>
-                        <p className="text-xs text-gray-500">10:30 AM - 2:00 PM</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-amber-50 rounded-lg">
-                      <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">Staff Meeting</p>
-                        <p className="text-xs text-gray-500">3:00 PM - 4:00 PM</p>
-                      </div>
-                    </div>
+                  <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-lg font-bold text-gray-900">Today's Schedule</h2>
+                    <button 
+                      onClick={() => setActiveItem('Appointments')}
+                      className="text-teal-600 text-sm hover:underline"
+                    >
+                      View All
+                    </button>
                   </div>
+                  
+                  {statsLoading ? (
+                    <div className="animate-pulse text-gray-400 text-center py-4">Loading...</div>
+                  ) : todaySchedule.length > 0 ? (
+                    <div className="space-y-3">
+                      {todaySchedule.slice(0, 5).map((apt) => (
+                        <div 
+                          key={apt.id} 
+                          className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${getTypeColor(apt.type)}`}
+                        >
+                          <div className="flex-shrink-0">
+                            <span className={`w-2 h-2 rounded-full ${getTypeDot(apt.type)} block`} />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">
+                              {apt.patient.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {apt.type} · Dr. {apt.doctor.name}
+                              {apt.room && ` · ${apt.room}`}
+                            </p>
+                          </div>
+                          <span className="text-xs font-medium text-gray-600 whitespace-nowrap">
+                            {formatTime(apt.scheduledAt)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-gray-400">
+                      <p className="text-sm">No appointments today</p>
+                    </div>
+                  )}
                 </div>
 
                 <div className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 text-white">
