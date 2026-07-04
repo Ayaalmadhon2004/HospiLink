@@ -203,3 +203,28 @@ model Shift {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
+
+
+// prisma/schema.prisma
+model Appointment {
+  id          String   @id @default(uuid())
+  patientId   String
+  doctorId    String
+  scheduledAt DateTime
+  type        String   // SURGERY, CONSULTATION, IMAGING, FOLLOW_UP, etc.
+  status      String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, IN_PROGRESS
+  department  String
+  room        String?
+  notes       String?
+  duration    Int      @default(30) // minutes
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  patient     Patient  @relation(fields: [patientId], references: [id])
+  doctor      Staff    @relation(fields: [doctorId], references: [id])
+
+  @@index([scheduledAt])
+  @@index([doctorId, scheduledAt])
+  @@index([patientId])
+  @@index([status])
+}

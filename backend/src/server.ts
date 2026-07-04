@@ -13,6 +13,8 @@ import vitalsRoutes from './routes/vitals.routes';
 import staffRoutes from './routes/staff.routes';  // ← NEW
 import { Server } from 'socket.io';
 import http from 'http';
+import appointmentRoutes from './routes/appointments.routes';
+
 
 dotenv.config();
 
@@ -57,7 +59,9 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/beds', bedRoutes);
 app.use('/api/wards', wardRoutes);
 app.use('/api/vitals', vitalsRoutes);
-app.use('/api/staff', staffRoutes);  // ← NEW
+app.use('/api/staff', staffRoutes); 
+app.use('/api/appointments', appointmentRoutes);
+
 
 app.get('/api/health', async (req, res) => {
   try {
