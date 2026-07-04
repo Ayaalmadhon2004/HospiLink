@@ -1,23 +1,29 @@
 // frontend/src/services/staffService.ts
-import api from './api'; // axios instance
+import { apiGet, apiPost, apiPut, apiDelete } from './api';
 
-export const getStaff = (params?: { department?: string; role?: string }) => 
-  api.get('/staff', { params });
+export const getStaff = (params?: { department?: string; role?: string }) => {
+  const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
+  return apiGet(`/staff${query}`);
+};
 
 export const getStaffById = (id: string) => 
-  api.get(`/staff/${id}`);
+  apiGet(`/staff/${id}`);
 
-export const getShifts = (params?: { department?: string; staffId?: string; date?: string }) => 
-  api.get('/staff/shifts', { params });
+export const getShifts = (params?: { department?: string; staffId?: string; date?: string }) => {
+  const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
+  return apiGet(`/staff/shifts${query}`);
+};
 
-export const getShiftTimeline = (date?: string) => 
-  api.get('/staff/shifts/timeline', { params: { date } });
+export const getShiftTimeline = (date?: string) => {
+  const query = date ? `?date=${encodeURIComponent(date)}` : '';
+  return apiGet(`/staff/shifts/timeline${query}`);
+};
 
 export const createShift = (data: any) => 
-  api.post('/staff/shifts', data);
+  apiPost('/staff/shifts', data);
 
 export const updateShift = (id: string, data: any) => 
-  api.put(`/staff/shifts/${id}`, data);
+  apiPut(`/staff/shifts/${id}`, data);
 
 export const deleteShift = (id: string) => 
-  api.delete(`/staff/shifts/${id}`);
+  apiDelete(`/staff/shifts/${id}`);

@@ -10,44 +10,30 @@ const handleError = (res: Response, error: any, message: string) => {
   res.status(500).json({ success: false, message, error: error.message });
 };
 
-// ─── Staff CRUD ────────────────────────────────────────────────────────
-
-// GET /api/staff - Get all staff (with filters)
 export const getStaff = async (req: Request, res: Response) => {
   try {
-    const { department, role, isActive } = req.query;
-
-    const where: any = {};
-    if (department) where.department = department as string;
-    if (role) where.role = role as string;
-    if (isActive !== undefined) where.isActive = isActive === 'true';
-
-    const staff = await prisma.staff.findMany({
-      where,
-      include: {
-        shifts: {
-          where: {
-            startTime: { lte: new Date() },
-            endTime: { gte: new Date() },
-          },
-          take: 1,
-        },
-      },
-      orderBy: { name: 'asc' },
-    });
-
+    // جرب بدون أي where ولا include
+    const staff = await (prisma as any).staff.findMany();
+    console.log('ALL STAFF (no filter):', staff.length, staff);
+    
     res.status(200).json({ success: true, count: staff.length, data: staff });
   } catch (error: any) {
+    console.error('ERROR:', error);
     handleError(res, error, 'Failed to fetch staff');
   }
 };
+
+// ─── Staff CRUD ────────────────────────────────────────────────────────
+
+// GET /api/staff - Get all staff (with filters)
+
 
 // GET /api/staff/:id - Get single staff
 export const getStaffById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const staff = await prisma.staff.findUnique({
+    const staff = await (prisma as any).staff.findUnique({
       where: { id },
       include: {
         shifts: { orderBy: { startTime: 'desc' }, take: 10 },
@@ -69,7 +55,7 @@ export const createStaff = async (req: Request, res: Response) => {
   try {
     const { name, email, role, department, phone, avatar } = req.body;
 
-    const staff = await prisma.staff.create({
+    const staff = await (prisma as any).staff.create({
       data: { name, email, role, department, phone, avatar },
     });
 
@@ -85,7 +71,7 @@ export const updateStaff = async (req: Request, res: Response) => {
     const { id } = req.params;
     const updateData = req.body;
 
-    const staff = await prisma.staff.update({
+    const staff = await (prisma as any).staff.update({
       where: { id },
       data: updateData,
     });
@@ -101,7 +87,7 @@ export const deleteStaff = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    await prisma.staff.delete({ where: { id } });
+    await (prisma as any).staff.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Staff deleted' });
   } catch (error: any) {
@@ -125,7 +111,7 @@ export const getShifts = async (req: Request, res: Response) => {
       where.endTime = { lte: new Date(d.getTime() + 24 * 60 * 60 * 1000) };
     }
 
-    const shifts = await prisma.shift.findMany({
+    const shifts = await (prisma as any).shift.findMany({
       where,
       include: { staff: { select: { name: true, role: true, avatar: true } } },
       orderBy: { startTime: 'asc' },
@@ -142,7 +128,7 @@ export const createShift = async (req: Request, res: Response) => {
   try {
     const { staffId, type, startTime, endTime, department, notes } = req.body;
 
-    const shift = await prisma.shift.create({
+    const shift = await (prisma as any).shift.create({
       data: {
         staffId,
         type,
@@ -169,7 +155,7 @@ export const updateShift = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { type, startTime, endTime, department, notes } = req.body;
 
-    const shift = await prisma.shift.update({
+    const shift = await (prisma as any).shift.update({
       where: { id },
       data: {
         type,
@@ -194,7 +180,7 @@ export const deleteShift = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
-    const shift = await prisma.shift.delete({
+    const shift = await (prisma as any).shift.delete({
       where: { id },
       include: { staff: { select: { name: true, role: true } } },
     });
@@ -215,7 +201,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
     const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
-    const shifts = await prisma.shift.findMany({
+    const shifts = await (prisma as any).shift.findMany({
       where: {
         startTime: { gte: startOfDay },
         endTime: { lte: endOfDay },
@@ -227,7 +213,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
     });
 
     // Group by department
-    const timeline = shifts.reduce((acc: any, shift) => {
+    const timeline = shifts.reduce((acc: any, shift: any) => {
       const dept = shift.department;
       if (!acc[dept]) acc[dept] = [];
       acc[dept].push({

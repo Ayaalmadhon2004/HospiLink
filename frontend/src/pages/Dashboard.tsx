@@ -8,6 +8,7 @@ import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 import { PatientsPage } from '../pages/PatientsPage';
 import Beds from '../pages/Beds';
 import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
+import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
 
 const Dashboard = () => {
   const [activeItem, setActiveItem] = useState('Overview');
@@ -33,6 +34,8 @@ const Dashboard = () => {
         return <PatientsPage />;
       case 'Beds & Wards':
         return <Beds />;
+      case 'Staff & Shifts':
+        return <StaffDirectoryPage />;
       case 'Vitals Monitor':
         return <VitalsMonitorPage />;
       case 'Overview':
@@ -174,7 +177,7 @@ const Dashboard = () => {
           onItemClick={setActiveItem} 
         />
       </div>
-      
+
       <main className="flex-1 overflow-y-auto p-8">
         {renderContent()}
       </main>

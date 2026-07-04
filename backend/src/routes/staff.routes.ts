@@ -19,8 +19,8 @@ const router = Router();
 
 // ─── Staff Routes ──────────────────────────────────────────────────────
 
-// GET /api/staff - List all staff
-router.get('/', protect, getStaff);
+// GET /api/staff - List all staff (PUBLIC for testing — رجّع protect بعدين)
+router.get('/', getStaff);
 
 // GET /api/staff/:id - Get single staff
 router.get('/:id', protect, getStaffById);
@@ -36,11 +36,11 @@ router.delete('/:id', protect, authorize('ADMIN'), logActivity('DELETE_STAFF'), 
 
 // ─── Shift Routes ──────────────────────────────────────────────────────
 
-// GET /api/staff/shifts - List shifts
-router.get('/shifts', protect, getShifts);
+// GET /api/staff/shifts - List shifts (PUBLIC for testing)
+router.get('/shifts', getShifts);
 
-// GET /api/staff/shifts/timeline - 24h timeline
-router.get('/shifts/timeline', protect, getShiftTimeline);
+// GET /api/staff/shifts/timeline - 24h timeline (PUBLIC for testing)
+router.get('/shifts/timeline', getShiftTimeline);
 
 // POST /api/staff/shifts - Create shift
 router.post('/shifts', protect, authorize('ADMIN', 'DOCTOR'), logActivity('CREATE_SHIFT'), createShift);

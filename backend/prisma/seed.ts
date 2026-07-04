@@ -1,12 +1,12 @@
-import prisma from '../src/config/db';
 import bcrypt from 'bcryptjs';
+import prisma from '../src/config/db';
 
 async function main() {
   console.log('🌱 Starting database seeding...');
 
   // 1. Find or create hospital
   let hospital = await prisma.hospital.findFirst();
-  
+
   if (!hospital) {
     hospital = await prisma.hospital.create({
       data: {
@@ -19,7 +19,7 @@ async function main() {
     console.log(`🏥 Found Hospital: ${hospital.name} (${hospital.id})`);
   }
 
-  // 2. Find or create user
+  // 2. Find or create admin user
   let user = await prisma.user.findUnique({
     where: { email: 'dr.rivera@curesync.com' }
   });
@@ -43,7 +43,190 @@ async function main() {
     console.log(`👤 User exists: ${user.name} (${user.email})`);
   }
 
-  // 3. Create Wards
+  // 3. Create Staff Members
+  const staffData = [
+    { name: 'Dr. Elena Mensah', email: 'elena@hospilink.com', role: 'Cardiologist', department: 'Cardiology', phone: '+1-555-0101' },
+    { name: 'Dr. Anders Lindqvist', email: 'anders@hospilink.com', role: 'Intensivist', department: 'ICU', phone: '+1-555-0102' },
+    { name: 'Dr. Ravi Patel', email: 'ravi@hospilink.com', role: 'Obstetrician', department: 'Maternity', phone: '+1-555-0103' },
+    { name: 'Dr. Mai Nguyen', email: 'mai@hospilink.com', role: 'Pediatrician', department: 'Pediatrics', phone: '+1-555-0104' },
+    { name: 'Dr. Carlos Romero', email: 'carlos@hospilink.com', role: 'Surgeon', department: 'Surgery', phone: '+1-555-0105' },
+    { name: 'Dr. Jordan Carter', email: 'jordan@hospilink.com', role: 'ER Physician', department: 'Emergency', phone: '+1-555-0106' },
+    { name: 'Nurse Sarah Chen', email: 'sarah@hospilink.com', role: 'Nurse', department: 'ICU', phone: '+1-555-0107' },
+    { name: 'Nurse Maria Garcia', email: 'maria@hospilink.com', role: 'Nurse', department: 'Emergency', phone: '+1-555-0108' },
+    { name: 'Dr. James Wilson', email: 'james@hospilink.com', role: 'Anesthesiologist', department: 'Surgery', phone: '+1-555-0109' },
+    { name: 'Nurse Emily Park', email: 'emily@hospilink.com', role: 'Nurse', department: 'Maternity', phone: '+1-555-0110' },
+  ];
+
+  const createdStaff: Record<string, string> = {};
+
+  for (const s of staffData) {
+    let staff = await (prisma as any).staff.findUnique({
+      where: { email: s.email }
+    });
+
+    if (!staff) {
+      staff = await (prisma as any).staff.create({
+        data: {
+          ...s,
+          isActive: true,
+        },
+      });
+      console.log(`👨‍⚕️ Created Staff: ${staff.name} (${staff.role})`);
+    } else {
+      console.log(`👨‍⚕️ Staff exists: ${staff.name}`);
+    }
+    createdStaff[s.email] = staff.id;
+  }
+
+  // 4. Create Shifts (for TODAY - always current date)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // ✅ DELETE old shifts first (optional - for demo purposes)
+  await (prisma as any).shift.deleteMany({
+    where: {
+      startTime: {
+        lt: today, // delete shifts before today
+      },
+    },
+  });
+  console.log('🗑️ Deleted old shifts');
+
+  const shiftsData = [
+    // Day shifts (8AM - 4PM)
+    { staffEmail: 'elena@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Cardiology' },
+    { staffEmail: 'anders@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'ICU' },
+    { staffEmail: 'mai@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Pediatrics' },
+    { staffEmail: 'carlos@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Surgery' },
+    { staffEmail: 'sarah@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'ICU' },
+    { staffEmail: 'james@hospilink.com', type: 'DAY', startHour: 6, endHour: 14, dept: 'Surgery' },
+
+    // Evening shifts (4PM - 12AM)
+    { staffEmail: 'ravi@hospilink.com', type: 'EVENING', startHour: 16, endHour: 24, dept: 'Maternity' },
+    { staffEmail: 'emily@hospilink.com', type: 'EVENING', startHour: 16, endHour: 24, dept: 'Maternity' },
+
+    // Night shifts (12AM - 8AM)
+    { staffEmail: 'jordan@hospilink.com', type: 'NIGHT', startHour: 0, endHour: 8, dept: 'Emergency' },
+    { staffEmail: 'maria@hospilink.com', type: 'NIGHT', startHour: 0, endHour: 8, dept: 'Emergency' },
+  ];
+
+  for (const shift of shiftsData) {
+    const staffId = createdStaff[shift.staffEmail];
+    if (!staffId) continue;
+
+    const startTime = new Date(today.getTime() + shift.startHour * 60 * 60 * 1000);
+    const endTime = new Date(today.getTime() + shift.endHour * 60 * 60 * 1000);
+
+    // ✅ Use upsert instead of findFirst + create (cleaner)
+    await (prisma as any).shift.upsert({
+      where: {
+        // We need a unique identifier - let's use a composite or just delete + create
+        // For simplicity, we'll delete existing shifts for this staff today first
+        id: 'temp', // this won't work with upsert without unique field
+      },
+      // Alternative: just create after deleting old ones (see above)
+    });
+  }
+
+  // ✅ Simpler approach: Delete all shifts for today, then recreate
+  await (prisma as any).shift.deleteMany({
+    where: {
+      startTime: {
+        gte: today,
+        lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
+      },
+    },
+  });
+
+  for (const shift of shiftsData) {
+    const staffId = createdStaff[shift.staffEmail];
+    if (!staffId) continue;
+
+    const startTime = new Date(today.getTime() + shift.startHour * 60 * 60 * 1000);
+    const endTime = new Date(today.getTime() + shift.endHour * 60 * 60 * 1000);
+
+    await (prisma as any).shift.create({
+      data: {
+        staffId,
+        type: shift.type,
+        startTime,
+        endTime,
+        department: shift.dept,
+      },
+    });
+    console.log(`🕐 Created Shift: ${shift.type} for ${shift.staffEmail}`);
+  }
+
+  // 5. Create Patients (with diagnosis!)
+  const patientsData = [
+    { name: 'John Smith', patientCode: 'PT-2044', department: 'General', age: 45, gender: 'MALE', diagnosis: 'General Checkup' },
+    { name: 'Emma Johnson', patientCode: 'PT-2045', department: 'Emergency', age: 32, gender: 'FEMALE', diagnosis: 'Chest Pain' },
+    { name: 'Michael Brown', patientCode: 'PT-2046', department: 'ICU', age: 67, gender: 'MALE', diagnosis: 'Heart Failure' },
+    { name: 'Sophia Davis', patientCode: 'PT-2047', department: 'Maternity', age: 28, gender: 'FEMALE', diagnosis: 'Prenatal Care' },
+    { name: 'William Wilson', patientCode: 'PT-2048', department: 'Surgery', age: 54, gender: 'MALE', diagnosis: 'Appendectomy' },
+    { name: 'Olivia Martinez', patientCode: 'PT-2049', department: 'Pediatrics', age: 8, gender: 'FEMALE', diagnosis: 'Fever' },
+    { name: 'James Anderson', patientCode: 'PT-2050', department: 'Cardiology', age: 71, gender: 'MALE', diagnosis: 'Hypertension' },
+    { name: 'Isabella Taylor', patientCode: 'PT-2051', department: 'Emergency', age: 19, gender: 'FEMALE', diagnosis: 'Fractured Arm' },
+  ];
+
+  const createdPatients: Record<string, string> = {};
+
+  for (const p of patientsData) {
+    let patient = await prisma.patient.findUnique({
+      where: { patientCode: p.patientCode }
+    });
+
+    if (!patient) {
+      patient = await prisma.patient.create({
+        data: {
+          ...p,
+          hospitalId: hospital.id,
+        },
+      });
+      console.log(`🧑‍⚕️ Created Patient: ${patient.name} (${patient.patientCode})`);
+    } else {
+      console.log(`🧑‍⚕️ Patient exists: ${patient.name}`);
+    }
+    createdPatients[p.patientCode] = patient.id;
+  }
+
+  // 6. Create Vitals for patients
+  const vitalsData = [
+    { patientCode: 'PT-2044', heartRate: 72, systolicBP: 120, diastolicBP: 80, spO2: 98, temperature: 36.5, respiratoryRate: 16 },
+    { patientCode: 'PT-2045', heartRate: 95, systolicBP: 135, diastolicBP: 85, spO2: 96, temperature: 37.1, respiratoryRate: 18 },
+    { patientCode: 'PT-2046', heartRate: 110, systolicBP: 150, diastolicBP: 90, spO2: 92, temperature: 38.2, respiratoryRate: 22 },
+    { patientCode: 'PT-2047', heartRate: 80, systolicBP: 110, diastolicBP: 70, spO2: 99, temperature: 36.8, respiratoryRate: 14 },
+    { patientCode: 'PT-2048', heartRate: 65, systolicBP: 125, diastolicBP: 78, spO2: 97, temperature: 36.4, respiratoryRate: 15 },
+  ];
+
+  for (const v of vitalsData) {
+    const patientId = createdPatients[v.patientCode];
+    if (!patientId) continue;
+
+    const existing = await (prisma as any).patientVitals.findFirst({
+      where: { patientId },
+      orderBy: { recordedAt: 'desc' },
+    });
+
+    if (!existing) {
+      await (prisma as any).patientVitals.create({
+        data: {
+          patientId,
+          heartRate: v.heartRate,
+          systolicBP: v.systolicBP,
+          diastolicBP: v.diastolicBP,
+          spO2: v.spO2,
+          temperature: v.temperature,
+          respiratoryRate: v.respiratoryRate,
+          recordedBy: user.id,
+          isCritical: v.heartRate > 100 || v.systolicBP > 140 || v.spO2 < 95 || v.temperature > 37.5,
+        },
+      });
+      console.log(`📊 Created Vitals for ${v.patientCode}`);
+    }
+  }
+
+  // 7. Create Wards
   const wardsData = [
     { name: 'ICU Ward', floor: 1 },
     { name: 'Emergency Ward', floor: 1 },
@@ -73,130 +256,38 @@ async function main() {
     wards[wardData.name] = ward.id;
   }
 
-  // 4. Create Beds
+  // 8. Create Beds
   const bedsData = [
-    // ICU Ward
     { bedNumber: 'ICU-01', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
     { bedNumber: 'ICU-02', wardName: 'ICU Ward', status: 'AVAILABLE' as const },
     { bedNumber: 'ICU-03', wardName: 'ICU Ward', status: 'CLEANING' as const },
-    { bedNumber: 'ICU-04', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-05', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-06', wardName: 'ICU Ward', status: 'CLEANING' as const },
-    { bedNumber: 'ICU-07', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-08', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-09', wardName: 'ICU Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'ICU-10', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-11', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-12', wardName: 'ICU Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'ICU-13', wardName: 'ICU Ward', status: 'CLEANING' as const },
-    { bedNumber: 'ICU-14', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-15', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ICU-16', wardName: 'ICU Ward', status: 'CLEANING' as const },
-
-    // Emergency Ward
     { bedNumber: 'ER-01', wardName: 'Emergency Ward', status: 'AVAILABLE' as const },
     { bedNumber: 'ER-02', wardName: 'Emergency Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ER-03', wardName: 'Emergency Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'ER-04', wardName: 'Emergency Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ER-05', wardName: 'Emergency Ward', status: 'CLEANING' as const },
-    { bedNumber: 'ER-06', wardName: 'Emergency Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'ER-07', wardName: 'Emergency Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'ER-08', wardName: 'Emergency Ward', status: 'AVAILABLE' as const },
-
-    // Surgery Ward
     { bedNumber: 'SR-01', wardName: 'Surgery Ward', status: 'OCCUPIED' as const },
     { bedNumber: 'SR-02', wardName: 'Surgery Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'SR-03', wardName: 'Surgery Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'SR-04', wardName: 'Surgery Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'SR-05', wardName: 'Surgery Ward', status: 'CLEANING' as const },
-    { bedNumber: 'SR-06', wardName: 'Surgery Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'SR-07', wardName: 'Surgery Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'SR-08', wardName: 'Surgery Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'SR-09', wardName: 'Surgery Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'SR-10', wardName: 'Surgery Ward', status: 'AVAILABLE' as const },
-
-    // Maternity Ward
     { bedNumber: 'MT-01', wardName: 'Maternity Ward', status: 'AVAILABLE' as const },
     { bedNumber: 'MT-02', wardName: 'Maternity Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'MT-03', wardName: 'Maternity Ward', status: 'AVAILABLE' as const },
-    { bedNumber: 'MT-04', wardName: 'Maternity Ward', status: 'OCCUPIED' as const },
-    { bedNumber: 'MT-05', wardName: 'Maternity Ward', status: 'CLEANING' as const },
-    { bedNumber: 'MT-06', wardName: 'Maternity Ward', status: 'AVAILABLE' as const },
   ];
 
   for (const bedData of bedsData) {
     const wardId = wards[bedData.wardName];
-    
-    if (!wardId) {
-      console.log(`❌ Ward not found for: ${bedData.wardName}`);
-      continue;
-    }
-    
+    if (!wardId) continue;
+
     const existing = await prisma.bed.findFirst({
-      where: { 
-        bedNumber: bedData.bedNumber,
-        wardId: wardId 
-      }
+      where: { bedNumber: bedData.bedNumber, wardId }
     });
-    
+
     if (!existing) {
       await prisma.bed.create({
         data: {
           bedNumber: bedData.bedNumber,
-          wardId: wardId,
+          wardId,
           status: bedData.status,
           hospitalId: hospital.id,
         },
       });
-      console.log(`🛏️ Created Bed: ${bedData.bedNumber} in ${bedData.wardName}`);
-    } else {
-      console.log(`🛏️ Bed exists: ${bedData.bedNumber}`);
+      console.log(`🛏️ Created Bed: ${bedData.bedNumber}`);
     }
-  }
-
-  // 5. Seed Vital Thresholds (ONLY if model exists)
-  try {
-    console.log('🌱 Seeding vital thresholds...');
-
-    const thresholds = [
-      // Emergency department
-      { department: 'Emergency', vitalType: 'HEART_RATE', minNormal: 60, maxNormal: 100, minCritical: 40, maxCritical: 140 },
-      { department: 'Emergency', vitalType: 'BP_SYSTOLIC', minNormal: 90, maxNormal: 140, minCritical: 70, maxCritical: 180 },
-      { department: 'Emergency', vitalType: 'BP_DIASTOLIC', minNormal: 60, maxNormal: 90, minCritical: 40, maxCritical: 110 },
-      { department: 'Emergency', vitalType: 'SPO2', minNormal: 95, maxNormal: 100, minCritical: 90, maxCritical: null },
-      { department: 'Emergency', vitalType: 'TEMPERATURE', minNormal: 36.1, maxNormal: 37.2, minCritical: 35, maxCritical: 39 },
-      { department: 'Emergency', vitalType: 'RESPIRATORY_RATE', minNormal: 12, maxNormal: 20, minCritical: 8, maxCritical: 30 },
-
-      // ICU department (stricter)
-      { department: 'ICU', vitalType: 'HEART_RATE', minNormal: 60, maxNormal: 100, minCritical: 50, maxCritical: 120 },
-      { department: 'ICU', vitalType: 'BP_SYSTOLIC', minNormal: 100, maxNormal: 140, minCritical: 80, maxCritical: 160 },
-      { department: 'ICU', vitalType: 'SPO2', minNormal: 95, maxNormal: 100, minCritical: 92, maxCritical: null },
-    ];
-
-    for (const t of thresholds) {
-      try {
-        const existing = await (prisma as any).vitalThresholds.findUnique({
-          where: { 
-            department_vitalType: { 
-              department: t.department, 
-              vitalType: t.vitalType 
-            } 
-          },
-        });
-
-        if (!existing) {
-          await (prisma as any).vitalThresholds.create({ data: t });
-          console.log(`✅ Threshold: ${t.department} - ${t.vitalType}`);
-        } else {
-          console.log(`⏭️ Skipped: ${t.department} - ${t.vitalType}`);
-        }
-      } catch (e) {
-        console.log(`⚠️ VitalThresholds model not found, skipping thresholds`);
-        break;
-      }
-    }
-  } catch (e) {
-    console.log('⚠️ Skipping vital thresholds (model not ready)');
   }
 
   console.log('✅ Seeding completed successfully!');

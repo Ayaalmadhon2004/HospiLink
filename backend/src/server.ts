@@ -1,18 +1,18 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser'; // ← ضروري!
+import cookieParser from 'cookie-parser';
 import prisma from './config/db';
 import authRoutes from './routes/auth';
-import patientRoutes from './routes/patient.routes'; 
-import { errorHandler } from './middlewares/error.middleware'; 
+import patientRoutes from './routes/patient.routes';
+import { errorHandler } from './middlewares/error.middleware';
 import path from 'path';
 import bedRoutes from './routes/bed.routes';
 import wardRoutes from './routes/ward.routes';
 import vitalsRoutes from './routes/vitals.routes';
+import staffRoutes from './routes/staff.routes';  // ← NEW
 import { Server } from 'socket.io';
 import http from 'http';
-import staffRoutes from './routes/staff.routes';
 
 dotenv.config();
 
@@ -25,46 +25,40 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-  console.log('User connected to Vitals stream');
+  console.log('User connected to HospiLink stream');
+
   socket.on('join-room', (patientId) => {
     socket.join(`patient-${patientId}`);
   });
-});
 
-app.use('/api/staff', staffRoutes);
-
-// In Socket.IO connection:
-io.on('connection', (socket) => {
-  console.log('User connected to Staff stream');
-  
-  socket.on('join-room', (patientId) => {
-    socket.join(`patient-${patientId}`);
-  });
-  
   // NEW: Join department room for staff updates
   socket.on('join-department', (department) => {
     socket.join(`department-${department}`);
+    console.log(`Socket joined department: ${department}`);
+  });
+
+  socket.on('leave-department', (department) => {
+    socket.leave(`department-${department}`);
+    console.log(`Socket left department: ${department}`);
   });
 });
 
 app.use(cors({
   origin: "http://localhost:5173",
-  credentials: true          // ← وحدة بس!
+  credentials: true
 }));
 
 app.use(express.json());
-app.use(cookieParser());     // ← ضروري عشان تقرأ الكوكيز!
+app.use(cookieParser());
 
-// المسارات
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/beds', bedRoutes);
 app.use('/api/wards', wardRoutes);
 app.use('/api/vitals', vitalsRoutes);
+app.use('/api/staff', staffRoutes);  // ← NEW
 
-
-// مسار فحص حالة الاتصال
 app.get('/api/health', async (req, res) => {
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -74,8 +68,12 @@ app.get('/api/health', async (req, res) => {
   }
 });
 
-app.use(errorHandler); 
+app.use(errorHandler);
 
+// ✅ صح: server.listen مش app.listen
 server.listen(PORT, () => {
   console.log(`🚀 HospiLink Server running on http://localhost:${PORT}`);
 });
+
+// ✅ Export io للـ controllers
+export { io };
