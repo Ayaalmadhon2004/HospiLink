@@ -13,9 +13,8 @@ export const getAppointments = async (req: Request, res: Response) => {
   try {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
-    const where: any = {};
+    const where: any = {}; // ليش انا حاطة الوير مادام فاضي ممكن ما نحطه اصلا 
     
-    // ✅ تأكد إن القيمة مش فاضية
     if (date) {
       const d = new Date(date as string);
       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
@@ -28,7 +27,7 @@ export const getAppointments = async (req: Request, res: Response) => {
     if (type && type !== '') where.type = type as string;
     if (department && department !== '') where.department = department as string;
 
-    console.log('Appointments WHERE:', where); // debug
+    console.log('Appointments WHERE:', where); 
 
     const appointments = await prisma.appointment.findMany({
       where,
@@ -130,7 +129,8 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
   try {
     const {
-      patientId,
+      patientName,      // ← جديد
+      patientCode,      // ← جديد
       doctorId,
       scheduledAt,
       type,
@@ -138,8 +138,31 @@ export const createAppointment = async (req: Request, res: Response) => {
       department,
       room,
       notes,
-      duration, // in minutes
+      duration,
     } = req.body;
+
+    // ✅ Find or create patient
+    let patient = await prisma.patient.findUnique({
+      where: { patientCode },
+    });
+
+    // في createAppointment controller:
+
+if (!patient) {
+  // Create new patient
+  patient = await prisma.patient.create({
+    data: {
+      name: patientName,
+      patientCode: patientCode || `PT-${Date.now()}`,
+      department: department || 'General',
+      age: 0,
+      gender: 'MALE',
+      diagnosis: 'Pending',  // ← أضيفي ده!
+      hospitalId: (await prisma.hospital.findFirst())?.id || '',
+    },
+  });
+  console.log('🧑‍⚕️ Created new patient:', patient.name);
+}
 
     // Check for conflicts
     const appointmentStart = new Date(scheduledAt);
@@ -167,7 +190,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     const appointment = await prisma.appointment.create({
       data: {
-        patientId,
+        patientId: patient.id,  // ← استخدم الـ patient ID
         doctorId,
         scheduledAt: appointmentStart,
         type,
@@ -183,7 +206,6 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    // Emit real-time update
     io.emit('appointment-created', appointment);
 
     res.status(201).json({ success: true, data: appointment });

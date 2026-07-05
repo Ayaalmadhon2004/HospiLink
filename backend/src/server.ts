@@ -14,6 +14,8 @@ import staffRoutes from './routes/staff.routes';  // ← NEW
 import { Server } from 'socket.io';
 import http from 'http';
 import appointmentRoutes from './routes/appointments.routes';
+import incidentRoutes from './routes/incidents.routes';
+
 
 
 dotenv.config();
@@ -33,7 +35,6 @@ io.on('connection', (socket) => {
     socket.join(`patient-${patientId}`);
   });
 
-  // NEW: Join department room for staff updates
   socket.on('join-department', (department) => {
     socket.join(`department-${department}`);
     console.log(`Socket joined department: ${department}`);
@@ -44,6 +45,8 @@ io.on('connection', (socket) => {
     console.log(`Socket left department: ${department}`);
   });
 });
+
+/* هنا السوكيت اساسية عشان هيك حطينها بملف السيرفر ؟ */
 
 app.use(cors({
   origin: "http://localhost:5173",
@@ -61,6 +64,8 @@ app.use('/api/wards', wardRoutes);
 app.use('/api/vitals', vitalsRoutes);
 app.use('/api/staff', staffRoutes); 
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/incidents', incidentRoutes);
+
 
 
 app.get('/api/health', async (req, res) => {
@@ -74,10 +79,8 @@ app.get('/api/health', async (req, res) => {
 
 app.use(errorHandler);
 
-// ✅ صح: server.listen مش app.listen
 server.listen(PORT, () => {
   console.log(`🚀 HospiLink Server running on http://localhost:${PORT}`);
 });
 
-// ✅ Export io للـ controllers
 export { io };
