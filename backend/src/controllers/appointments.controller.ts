@@ -14,17 +14,21 @@ export const getAppointments = async (req: Request, res: Response) => {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
     const where: any = {};
+    
+    // ✅ تأكد إن القيمة مش فاضية
     if (date) {
       const d = new Date(date as string);
       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
       const endOfDay = new Date(d.setHours(23, 59, 59, 999));
       where.scheduledAt = { gte: startOfDay, lte: endOfDay };
     }
-    if (doctorId) where.doctorId = doctorId as string;
-    if (patientId) where.patientId = patientId as string;
-    if (status) where.status = status as string;
-    if (type) where.type = type as string;
-    if (department) where.department = department as string;
+    if (doctorId && doctorId !== '') where.doctorId = doctorId as string;
+    if (patientId && patientId !== '') where.patientId = patientId as string;
+    if (status && status !== '') where.status = status as string;
+    if (type && type !== '') where.type = type as string;
+    if (department && department !== '') where.department = department as string;
+
+    console.log('Appointments WHERE:', where); // debug
 
     const appointments = await prisma.appointment.findMany({
       where,
@@ -40,7 +44,6 @@ export const getAppointments = async (req: Request, res: Response) => {
     handleError(res, error, 'Failed to fetch appointments');
   }
 };
-
 // ─── GET /api/appointments/today ───────────────────────────────────────
 export const getTodaySchedule = async (req: Request, res: Response) => {
   try {
