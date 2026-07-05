@@ -78,65 +78,32 @@ async function main() {
     createdStaff[s.email] = staff.id;
   }
 
-  // 4. Create Shifts (for TODAY - always current date)
+  // 4. Create Shifts (for TODAY)
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // ✅ DELETE old shifts first (optional - for demo purposes)
+  // Delete old shifts
   await (prisma as any).shift.deleteMany({
     where: {
       startTime: {
-        lt: today, // delete shifts before today
+        lt: today,
       },
     },
   });
   console.log('🗑️ Deleted old shifts');
 
   const shiftsData = [
-    // Day shifts (8AM - 4PM)
     { staffEmail: 'elena@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Cardiology' },
     { staffEmail: 'anders@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'ICU' },
     { staffEmail: 'mai@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Pediatrics' },
     { staffEmail: 'carlos@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'Surgery' },
     { staffEmail: 'sarah@hospilink.com', type: 'DAY', startHour: 8, endHour: 16, dept: 'ICU' },
     { staffEmail: 'james@hospilink.com', type: 'DAY', startHour: 6, endHour: 14, dept: 'Surgery' },
-
-    // Evening shifts (4PM - 12AM)
     { staffEmail: 'ravi@hospilink.com', type: 'EVENING', startHour: 16, endHour: 24, dept: 'Maternity' },
     { staffEmail: 'emily@hospilink.com', type: 'EVENING', startHour: 16, endHour: 24, dept: 'Maternity' },
-
-    // Night shifts (12AM - 8AM)
     { staffEmail: 'jordan@hospilink.com', type: 'NIGHT', startHour: 0, endHour: 8, dept: 'Emergency' },
     { staffEmail: 'maria@hospilink.com', type: 'NIGHT', startHour: 0, endHour: 8, dept: 'Emergency' },
   ];
-
-  for (const shift of shiftsData) {
-    const staffId = createdStaff[shift.staffEmail];
-    if (!staffId) continue;
-
-    const startTime = new Date(today.getTime() + shift.startHour * 60 * 60 * 1000);
-    const endTime = new Date(today.getTime() + shift.endHour * 60 * 60 * 1000);
-
-    // ✅ Use upsert instead of findFirst + create (cleaner)
-    await (prisma as any).shift.upsert({
-      where: {
-        // We need a unique identifier - let's use a composite or just delete + create
-        // For simplicity, we'll delete existing shifts for this staff today first
-        id: 'temp', // this won't work with upsert without unique field
-      },
-      // Alternative: just create after deleting old ones (see above)
-    });
-  }
-
-  // ✅ Simpler approach: Delete all shifts for today, then recreate
-  await (prisma as any).shift.deleteMany({
-    where: {
-      startTime: {
-        gte: today,
-        lt: new Date(today.getTime() + 24 * 60 * 60 * 1000),
-      },
-    },
-  });
 
   for (const shift of shiftsData) {
     const staffId = createdStaff[shift.staffEmail];
@@ -157,7 +124,7 @@ async function main() {
     console.log(`🕐 Created Shift: ${shift.type} for ${shift.staffEmail}`);
   }
 
-  // 5. Create Patients (with diagnosis!)
+  // 5. Create Patients
   const patientsData = [
     { name: 'John Smith', patientCode: 'PT-2044', department: 'General', age: 45, gender: 'MALE', diagnosis: 'General Checkup' },
     { name: 'Emma Johnson', patientCode: 'PT-2045', department: 'Emergency', age: 32, gender: 'FEMALE', diagnosis: 'Chest Pain' },
@@ -290,20 +257,70 @@ async function main() {
     }
   }
 
-  console.log('✅ Seeding completed successfully!');
-
+  // ✅ 9. CREATE APPOINTMENTS (for TODAY)
+  console.log('📅 Creating appointments...');
+  
   const appointmentsData = [
-    { patientCode: 'PT-2044', staffEmail: 'elena@hospilink.com', type: 'CONSULTATION', scheduledAt: new Date(today.getTime() + 8 * 60 * 60 * 1000), duration: 30, department: 'Cardiology', room: 'C-214', status: 'SCHEDULED' },
-    { patientCode: 'PT-2045', staffEmail: 'carlos@hospilink.com', type: 'SURGERY', scheduledAt: new Date(today.getTime() + 9 * 60 * 60 * 1000), duration: 60, department: 'Surgery', room: 'OR-3', status: 'SCHEDULED' },
-    { patientCode: 'PT-2046', staffEmail: 'elena@hospilink.com', type: 'IMAGING', scheduledAt: new Date(today.getTime() + 10 * 60 * 60 * 1000), duration: 45, department: 'Cardiology', room: 'RAD-1', status: 'SCHEDULED' },
-    { patientCode: 'PT-2047', staffEmail: 'ravi@hospilink.com', type: 'FOLLOW_UP', scheduledAt: new Date(today.getTime() + 11 * 60 * 60 * 1000), duration: 30, department: 'Maternity', room: 'M-119', status: 'SCHEDULED' },
-    { patientCode: 'PT-2048', staffEmail: 'carlos@hospilink.com', type: 'SURGERY', scheduledAt: new Date(today.getTime() + 13 * 60 * 60 * 1000), duration: 90, department: 'Surgery', room: 'OR-1', status: 'SCHEDULED' },
+    { 
+      patientCode: 'PT-2044', 
+      staffEmail: 'elena@hospilink.com', 
+      type: 'CONSULTATION', 
+      scheduledAt: new Date(today.getTime() + 8 * 60 * 60 * 1000), // 8:00 AM
+      duration: 30, 
+      department: 'Cardiology', 
+      room: 'C-214', 
+      status: 'SCHEDULED' 
+    },
+    { 
+      patientCode: 'PT-2045', 
+      staffEmail: 'carlos@hospilink.com', 
+      type: 'SURGERY', 
+      scheduledAt: new Date(today.getTime() + 9 * 60 * 60 * 1000), // 9:00 AM
+      duration: 60, 
+      department: 'Surgery', 
+      room: 'OR-3', 
+      status: 'SCHEDULED' 
+    },
+    { 
+      patientCode: 'PT-2046', 
+      staffEmail: 'elena@hospilink.com', 
+      type: 'IMAGING', 
+      scheduledAt: new Date(today.getTime() + 10 * 60 * 60 * 1000), // 10:00 AM
+      duration: 45, 
+      department: 'Cardiology', 
+      room: 'RAD-1', 
+      status: 'SCHEDULED' 
+    },
+    { 
+      patientCode: 'PT-2047', 
+      staffEmail: 'ravi@hospilink.com', 
+      type: 'FOLLOW_UP', 
+      scheduledAt: new Date(today.getTime() + 11 * 60 * 60 * 1000), // 11:00 AM
+      duration: 30, 
+      department: 'Maternity', 
+      room: 'M-119', 
+      status: 'SCHEDULED' 
+    },
+    { 
+      patientCode: 'PT-2048', 
+      staffEmail: 'carlos@hospilink.com', 
+      type: 'SURGERY', 
+      scheduledAt: new Date(today.getTime() + 13 * 60 * 60 * 1000), // 1:00 PM
+      duration: 90, 
+      department: 'Surgery', 
+      room: 'OR-1', 
+      status: 'SCHEDULED' 
+    },
   ];
 
   for (const apt of appointmentsData) {
     const patientId = createdPatients[apt.patientCode];
     const doctorId = createdStaff[apt.staffEmail];
-    if (!patientId || !doctorId) continue;
+    
+    if (!patientId || !doctorId) {
+      console.log(`⚠️ Skipping appointment: patient=${apt.patientCode} or doctor=${apt.staffEmail} not found`);
+      continue;
+    }
 
     const existing = await prisma.appointment.findFirst({
       where: {
@@ -326,10 +343,15 @@ async function main() {
           duration: apt.duration,
         },
       });
-      console.log(`📅 Created Appointment: ${apt.type} for ${apt.patientCode}`);
+      console.log(`📅 Created Appointment: ${apt.type} for ${apt.patientCode} at ${apt.scheduledAt.toLocaleTimeString()}`);
+    } else {
+      console.log(`📅 Appointment exists: ${apt.type} for ${apt.patientCode}`);
     }
   }
+
+  console.log('✅ Seeding completed successfully!');
 }
+
 main()
   .catch((e) => {
     console.error('❌ Error while seeding:', e);

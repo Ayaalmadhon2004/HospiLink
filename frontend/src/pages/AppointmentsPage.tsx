@@ -54,6 +54,10 @@ export const AppointmentsPage = () => {
         getUpcomingAppointments(),
       ]);
 
+    console.log('🔥 TODAY RES:', todayRes);           // شوفي ده
+    console.log('🔥 TODAY RES.data:', todayRes?.data); // شوفي ده
+    console.log('🔥 UPCOMING RES:', upcomingRes); 
+
       setTodaySchedule(todayRes?.data || { appointments: [], schedule: {} });
       setUpcoming(upcomingRes?.data || []);
     } catch (err) {
