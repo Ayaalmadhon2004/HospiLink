@@ -12,6 +12,7 @@ import Beds from '../pages/Beds';
 import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
 import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
+import { IncidentsPage } from './IncidentsPage';
 
 interface TodayAppointment {
   id: string;
@@ -101,6 +102,8 @@ const Dashboard = () => {
         return <VitalsMonitorPage />;
       case 'Appointments':
         return <AppointmentsPage />;
+      case 'Incidents':
+        return <IncidentsPage />;
       case 'Overview':
       default:
         return (

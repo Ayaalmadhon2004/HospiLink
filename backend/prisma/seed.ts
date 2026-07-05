@@ -350,6 +350,60 @@ async function main() {
   }
 
   console.log('✅ Seeding completed successfully!');
+
+   const incidentsData = [
+    {
+      code: 'INC-0091',
+      title: 'Multi-vehicle collision — Highway 9',
+      description: 'Mass casualty event involving 12 vehicles',
+      type: 'MASS_CASUALTY',
+      severity: 'CRITICAL',
+      status: 'ACTIVE',
+      location: 'ER Bay 1-3',
+      teams: 4,
+      progress: 62,
+      triageLevel: 'RED',
+      reportedBy: 'EMS-001',
+    },
+    {
+      code: 'INC-0092',
+      title: 'Industrial chemical exposure',
+      description: 'Chlorine gas leak at manufacturing plant',
+      type: 'CHEMICAL',
+      severity: 'CRITICAL',
+      status: 'ACTIVE',
+      location: 'Decon Unit',
+      teams: 3,
+      progress: 40,
+      triageLevel: 'RED',
+      reportedBy: 'HazMat-01',
+    },
+    {
+      code: 'INC-0093',
+      title: 'Structure fire — residential block',
+      description: 'Apartment complex fire with multiple casualties',
+      type: 'FIRE',
+      severity: 'ELEVATED',
+      status: 'ACTIVE',
+      location: 'Triage Tent A',
+      teams: 2,
+      progress: 75,
+      triageLevel: 'YELLOW',
+      reportedBy: 'Fire-03',
+    },
+  ];
+
+  for (const inc of incidentsData) {
+    const existing = await prisma.incident.findUnique({
+      where: { code: inc.code },
+    });
+
+    if (!existing) {
+      await prisma.incident.create({ data: inc });
+      console.log(`🚨 Created Incident: ${inc.code} — ${inc.title}`);
+    } else {
+      console.log(`🚨 Incident exists: ${inc.code}`);
+    }
 }
 
 main()
