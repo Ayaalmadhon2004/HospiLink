@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Clock, User, Stethoscope, MapPin, Plus, Search, Filter } from 'lucide-react';
 import { getTodaySchedule, getUpcomingAppointments, getAppointments } from '../services/appointmentsService';
 import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
+import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
 
 interface Appointment {
   id: string;
@@ -43,6 +44,7 @@ export const AppointmentsPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const latestUpdate = useAppointmentsSocket();
 
@@ -112,10 +114,19 @@ export const AppointmentsPage = () => {
           </h1>
           <p className="text-gray-500 text-sm">Daily schedule and bookings</p>
         </div>
-        <button className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition">
-          <Plus size={16} />
-          New Appointment
-        </button>
+        <button 
+            onClick={() => setIsModalOpen(true)}
+            className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
+          >
+            <Plus size={16} />
+            New Appointment
+          </button>
+
+          <NewAppointmentModal
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSuccess={fetchData}
+          />
       </div>
 
       {/* Today's Schedule */}
@@ -230,6 +241,7 @@ export const AppointmentsPage = () => {
               <p>No upcoming appointments</p>
             </div>
           )}
+
         </div>
       </div>
     </div>
