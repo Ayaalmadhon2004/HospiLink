@@ -12,7 +12,6 @@ const handleError = (res: Response, error: any, message: string) => {
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
-    // جرب بدون أي where ولا include
     const staff = await (prisma as any).staff.findMany();
     console.log('ALL STAFF (no filter):', staff.length, staff);
     
@@ -24,8 +23,6 @@ export const getStaff = async (req: Request, res: Response) => {
 };
 
 // ─── Staff CRUD ────────────────────────────────────────────────────────
-
-// GET /api/staff - Get all staff (with filters)
 
 
 // GET /api/staff/:id - Get single staff

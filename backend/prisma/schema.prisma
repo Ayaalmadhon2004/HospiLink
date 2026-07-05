@@ -229,3 +229,25 @@ model Appointment {
   @@index([patientId])
   @@index([status])
 }
+
+model Incident {
+  id          String   @id @default(uuid())
+  code        String   @unique // INC-0091
+  title       String
+  description String?
+  type        String   // MASS_CASUALTY, CHEMICAL, FIRE, STRUCTURAL, etc.
+  severity    String   // CRITICAL, ELEVATED, MODERATE, LOW
+  status      String   @default("ACTIVE") // ACTIVE, CONTAINED, RESOLVED
+  location    String
+  teams       Int      @default(1)
+  progress    Int      @default(0) // 0-100
+  triageLevel String?  // RED, YELLOW, GREEN, BLACK
+  reportedBy  String
+  resolvedAt  DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
+}

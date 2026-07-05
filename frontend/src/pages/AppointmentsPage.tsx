@@ -56,9 +56,9 @@ export const AppointmentsPage = () => {
         getUpcomingAppointments(),
       ]);
 
-    console.log('🔥 TODAY RES:', todayRes);           // شوفي ده
-    console.log('🔥 TODAY RES.data:', todayRes?.data); // شوفي ده
-    console.log('🔥 UPCOMING RES:', upcomingRes); 
+    console.log(' TODAY RES:', todayRes);           // شوفي ده
+    console.log('TODAY RES.data:', todayRes?.data); // شوفي ده
+    console.log('UPCOMING RES:', upcomingRes); 
 
       setTodaySchedule(todayRes?.data || { appointments: [], schedule: {} });
       setUpcoming(upcomingRes?.data || []);
@@ -87,13 +87,13 @@ export const AppointmentsPage = () => {
 
   const filteredUpcoming = upcoming.filter((apt) => {
     const matchesSearch = 
-      apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.doctor.name.toLowerCase().includes(searchQuery.toLowerCase());
+    apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    apt.doctor.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = !selectedType || apt.type === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const appointmentTypes = [...new Set(upcoming.map((a) => a.type))];
+  const appointmentTypes = [...new Set(upcoming.map((a) => a.type))]; // شو هاد السطر بساوي ؟
 
   if (loading) {
     return (

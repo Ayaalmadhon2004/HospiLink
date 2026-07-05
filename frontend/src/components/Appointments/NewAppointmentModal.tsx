@@ -50,40 +50,46 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess }: NewAppointme
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
-    try {
-      const scheduledAt = new Date(`${formData.scheduledDate}T${formData.scheduledTime}`);
-      
-      await createAppointment({
-        ...formData,
-        scheduledAt: scheduledAt.toISOString(),
-        status: 'SCHEDULED',
-      });
+  try {
+    // ✅ صحّحي الـ Date format
+    const [year, month, day] = formData.scheduledDate.split('-');
+    const [hours, minutes] = formData.scheduledTime.split(':');
+    
+    const scheduledAt = new Date(
+      parseInt(year),
+      parseInt(month) - 1, // months are 0-indexed
+      parseInt(day),
+      parseInt(hours),
+      parseInt(minutes)
+    );
 
-      onSuccess();
-      onClose();
-      // Reset form
-      setFormData({
-        patientName: '',
-        patientCode: '',
-        doctorId: '',
-        type: 'CONSULTATION',
-        scheduledDate: '',
-        scheduledTime: '',
-        duration: 30,
-        department: '',
-        room: '',
-        notes: '',
-      });
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to create appointment');
-    } finally {
-      setLoading(false);
-    }
-  };
+    console.log('Creating appointment for:', scheduledAt.toISOString()); // debug
+
+    await createAppointment({
+      patientName: formData.patientName,
+      patientCode: formData.patientCode,
+      doctorId: formData.doctorId,
+      scheduledAt: scheduledAt.toISOString(),
+      type: formData.type,
+      status: 'SCHEDULED',
+      department: formData.department,
+      room: formData.room,
+      notes: formData.notes,
+      duration: formData.duration,
+    });
+
+    onSuccess();
+    onClose();
+  } catch (err: any) {
+    setError(err.response?.data?.message || 'Failed to create appointment');
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
