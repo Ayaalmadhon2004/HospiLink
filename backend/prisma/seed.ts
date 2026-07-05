@@ -393,7 +393,7 @@ async function main() {
     },
   ];
 
-  for (const inc of incidentsData) {
+    for (const inc of incidentsData) {
     const existing = await prisma.incident.findUnique({
       where: { code: inc.code },
     });
@@ -404,6 +404,9 @@ async function main() {
     } else {
       console.log(`🚨 Incident exists: ${inc.code}`);
     }
+  }
+
+  console.log('✅ Seeding completed successfully!');
 }
 
 main()
