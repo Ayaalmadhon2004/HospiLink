@@ -1,33 +1,41 @@
+// src/server.ts
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import prisma from './config/db';
+import { Server } from 'socket.io';
+import http from 'http';
+import path from 'path';
+
+// Routes
 import authRoutes from './routes/auth';
 import patientRoutes from './routes/patient.routes';
-import { errorHandler } from './middlewares/error.middleware';
-import path from 'path';
 import bedRoutes from './routes/bed.routes';
 import wardRoutes from './routes/ward.routes';
 import vitalsRoutes from './routes/vitals.routes';
-import staffRoutes from './routes/staff.routes';  // ← NEW
-import { Server } from 'socket.io';
-import http from 'http';
+import staffRoutes from './routes/staff.routes';
 import appointmentRoutes from './routes/appointments.routes';
-import incidentRoutes from './routes/incidents.routes';
+import dispatchRoutes from './routes/dispatch.routes'; // ← NEW
 
-
+// Middlewares
+import { errorHandler } from './middlewares/error.middleware';
+import { setupDispatchSockets } from './middlewares/dispatch.socket'; // ← NEW
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
-
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: { origin: "http://localhost:5173", credentials: true }
 });
 
+// 🔥 إعداد سوكيت الديسباتش
+setupDispatchSockets(io);
+
+// Socket الأساسية (الموجودة)
 io.on('connection', (socket) => {
   console.log('User connected to HospiLink stream');
 
@@ -46,8 +54,6 @@ io.on('connection', (socket) => {
   });
 });
 
-/* هنا السوكيت اساسية عشان هيك حطينها بملف السيرفر ؟ */
-
 app.use(cors({
   origin: "http://localhost:5173",
   credentials: true
@@ -56,17 +62,16 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
+// API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/beds', bedRoutes);
 app.use('/api/wards', wardRoutes);
 app.use('/api/vitals', vitalsRoutes);
-app.use('/api/staff', staffRoutes); 
+app.use('/api/staff', staffRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/incidents', incidentRoutes);
-
-
+app.use('/api/dispatch', dispatchRoutes); // ← NEW
 
 app.get('/api/health', async (req, res) => {
   try {
