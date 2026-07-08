@@ -2,13 +2,25 @@
 import { Request, Response } from 'express';
 import { io } from '../server';
 import prisma from '../config/db';
-import { handleError } from '../utils/errorHandler';
+
+// ❌ شيلي هاد — errorHandler هو middleware مش function
+// import { errorHandler } from '../middlewares/error.middleware';
+
+// ✅ استبدليه بـ helper function بسيط
+const handleError = (res: Response, error: any, message: string, statusCode: number = 500) => {
+  console.error(`[Dispatch Error] ${message}:`, error);
+  res.status(statusCode).json({
+    success: false,
+    message,
+    error: error?.message || 'Unknown error'
+  });
+};
 
 // GET /api/dispatch/units — كل الوحدات
 export const getAllUnits = async (req: Request, res: Response) => {
   try {
     const units = await prisma.dispatchUnit.findMany({
-      include: { crew: true, currentCall: true },
+      include: { currentCall: true },
       orderBy: { unitCode: 'asc' }
     });
     res.status(200).json({ success: true, data: units });
@@ -24,7 +36,7 @@ export const getActiveUnits = async (req: Request, res: Response) => {
       where: {
         status: { not: 'OFF_DUTY' }
       },
-      include: { crew: true, currentCall: true }
+      include: { currentCall: true }
     });
     res.status(200).json({ success: true, data: units });
   } catch (error: any) {
@@ -47,7 +59,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
         currentCallId: callId,
         lastUpdated: new Date()
       },
-      include: { crew: true, currentCall: true }
+      include: { currentCall: true }
     });
 
     // 🔥 بث التحديث لكل المشتركين

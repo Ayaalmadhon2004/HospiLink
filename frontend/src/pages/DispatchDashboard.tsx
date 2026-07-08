@@ -1,6 +1,6 @@
 // frontend/src/pages/Dispatch/DispatchDashboard.tsx
 import React, { useEffect, useState } from 'react';
-import { useDispatchSocket } from '../../hooks/useDispatchSocket';
+import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 
