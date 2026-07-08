@@ -251,3 +251,67 @@ model Incident {
   @@index([severity])
   @@index([createdAt])
 }
+
+// prisma/schema.prisma
+// أضيفي هدول للـ schema الموجود
+
+model DispatchUnit {
+  id          String      @id @default(uuid())
+  unitCode    String      @unique           // AMB-04, AMB-09
+  unitType    UnitType
+  status      UnitStatus  @default(AVAILABLE)
+  location    String?     // JSON string: {"lat": 0, "lng": 0}
+  eta         Int?        // minutes
+  department  String      @default("ER")
+  crew        String[]    // ["Crew Alpha", "Nurse John"]
+  currentCallId String?   @unique
+  currentCall DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
+  lastUpdated DateTime    @updatedAt
+  createdAt   DateTime    @default(now())
+}
+
+model DispatchCall {
+  id           String      @id @default(uuid())
+  type         String                          // "Cardiac arrest", "MVC"
+  location     String
+  priority     Priority    @default(MEDIUM)
+  status       CallStatus  @default(PENDING)
+  notes        String?
+  assignedUnitId String?   @unique
+  assignedUnit   DispatchUnit? @relation("UnitCall")
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+enum UnitType {
+  AMBULANCE
+  PARAMEDIC
+  HELICOPTER
+  FIRE_TRUCK
+  POLICE
+}
+
+enum UnitStatus {
+  AVAILABLE
+  EN_ROUTE
+  ON_SCENE
+  TRANSPORTING
+  AT_HOSPITAL
+  OFF_DUTY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CallStatus {
+  PENDING
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  COMPLETED
+  CANCELLED
+}
