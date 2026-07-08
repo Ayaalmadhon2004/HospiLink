@@ -315,3 +315,35 @@ enum CallStatus {
   COMPLETED
   CANCELLED
 }
+
+// prisma/schema.prisma
+// أضيفي هاد الموديل للـ schema
+
+model UserSettings {
+  id                String   @id @default(uuid())
+  userId            String   @unique
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notifications
+  criticalVitalsAlerts Boolean @default(true)
+  incidentEscalations  Boolean @default(true)
+  shiftReminders       Boolean @default(false)
+  dispatchAlerts       Boolean @default(true)
+  appointmentReminders Boolean @default(true)
+
+  // Security & Display
+  twoFactorAuth        Boolean @default(false)
+  autoLockIdleSessions Boolean @default(true)
+  compactDensity       Boolean @default(false)
+
+  // Display
+  theme                String   @default("light") // light, dark, system
+  language             String   @default("en")
+  timezone             String   @default("UTC")
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+// عدلي الـ User model — أضيفي:
+// settings UserSettings?
