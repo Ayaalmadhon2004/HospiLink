@@ -405,8 +405,59 @@ async function main() {
       console.log(`🚨 Incident exists: ${inc.code}`);
     }
   }
+const units = await prisma.dispatchUnit.createMany({
+    data: [
+      {
+        unitCode: 'AMB-04',
+        unitType: 'AMBULANCE',
+        status: 'EN_ROUTE',
+        department: 'ER',
+        crew: ['Crew Alpha'],
+        eta: 4,
+      },
+      {
+        unitCode: 'AMB-09',
+        unitType: 'AMBULANCE',
+        status: 'ON_SCENE',
+        department: 'ER',
+        crew: ['Crew Bravo'],
+      },
+      {
+        unitCode: 'AMB-12',
+        unitType: 'AMBULANCE',
+        status: 'AVAILABLE',
+        department: 'ER',
+        crew: ['Crew Charlie'],
+      },
+      {
+        unitCode: 'PAR-01',
+        unitType: 'PARAMEDIC',
+        status: 'AVAILABLE',
+        department: 'ICU',
+        crew: ['Paramedic Smith'],
+      },
+    ],
+  });
 
-  console.log('✅ Seeding completed successfully!');
+  // إنشاء نداءات
+  const calls = await prisma.dispatchCall.createMany({
+    data: [
+      {
+        type: 'Cardiac arrest',
+        location: '14 Elm St',
+        priority: 'CRITICAL',
+        status: 'ASSIGNED',
+      },
+      {
+        type: 'MVC',
+        location: 'Highway 9 mile 22',
+        priority: 'HIGH',
+        status: 'ASSIGNED',
+      },
+    ],
+  });
+
+  console.log('✅ Dispatch seed data created');
 }
 
 main()

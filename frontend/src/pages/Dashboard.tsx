@@ -13,6 +13,7 @@ import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
 import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
 import { IncidentsPage } from './IncidentsPage';
+import DispatchDashboard from './DispatchDashboard';
 
 interface TodayAppointment {
   id: string;
@@ -104,6 +105,8 @@ const Dashboard = () => {
         return <AppointmentsPage />;
       case 'Incidents':
         return <IncidentsPage />;
+      case 'Dispatch':
+        return <DispatchDashboard/>;
       case 'Overview':
       default:
         return (
