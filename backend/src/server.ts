@@ -16,7 +16,8 @@ import wardRoutes from './routes/ward.routes';
 import vitalsRoutes from './routes/vitals.routes';
 import staffRoutes from './routes/staff.routes';
 import appointmentRoutes from './routes/appointments.routes';
-import dispatchRoutes from './routes/dispatch.routes'; // ← NEW
+import dispatchRoutes from './routes/dispatch.routes';
+import incidentRoutes from './routes/incidents.routes'; 
 
 // Middlewares
 import { errorHandler } from './middlewares/error.middleware';
@@ -74,7 +75,7 @@ app.use('/api/staff', staffRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/dispatch', dispatchRoutes);
 app.use('/api/settings', settingsRoutes);
-
+app.use('/api/incidents', incidentRoutes); 
 
 app.get('/api/health', async (req, res) => {
   try {

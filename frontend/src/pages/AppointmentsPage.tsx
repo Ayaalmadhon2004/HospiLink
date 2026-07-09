@@ -1,6 +1,7 @@
+// pages/AppointmentsPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Clock, User, Stethoscope, MapPin, Plus, Search, Filter } from 'lucide-react';
-import { getTodaySchedule, getUpcomingAppointments, getAppointments } from '../services/appointmentsService';
+import { apiGet } from '../services/api';
 import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
 import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
 
@@ -52,13 +53,9 @@ export const AppointmentsPage = () => {
     try {
       setLoading(true);
       const [todayRes, upcomingRes] = await Promise.all([
-        getTodaySchedule(),
-        getUpcomingAppointments(),
+        apiGet('/appointments/today'),
+        apiGet('/appointments/upcoming'),
       ]);
-
-    console.log(' TODAY RES:', todayRes);           // شوفي ده
-    console.log('TODAY RES.data:', todayRes?.data); // شوفي ده
-    console.log('UPCOMING RES:', upcomingRes); 
 
       setTodaySchedule(todayRes?.data || { appointments: [], schedule: {} });
       setUpcoming(upcomingRes?.data || []);
@@ -87,13 +84,13 @@ export const AppointmentsPage = () => {
 
   const filteredUpcoming = upcoming.filter((apt) => {
     const matchesSearch = 
-    apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    apt.doctor.name.toLowerCase().includes(searchQuery.toLowerCase());
+      apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.doctor.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesType = !selectedType || apt.type === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const appointmentTypes = [...new Set(upcoming.map((a) => a.type))]; // شو هاد السطر بساوي ؟
+  const appointmentTypes = [...new Set(upcoming.map((a) => a.type))];
 
   if (loading) {
     return (
@@ -115,18 +112,18 @@ export const AppointmentsPage = () => {
           <p className="text-gray-500 text-sm">Daily schedule and bookings</p>
         </div>
         <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
-          >
-            <Plus size={16} />
-            New Appointment
-          </button>
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
+        >
+          <Plus size={16} />
+          New Appointment
+        </button>
 
-          <NewAppointmentModal
-            isOpen={isModalOpen}
-            onClose={() => setIsModalOpen(false)}
-            onSuccess={fetchData}
-          />
+        <NewAppointmentModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          onSuccess={fetchData}
+        />
       </div>
 
       {/* Today's Schedule */}
@@ -241,7 +238,6 @@ export const AppointmentsPage = () => {
               <p>No upcoming appointments</p>
             </div>
           )}
-
         </div>
       </div>
     </div>

@@ -6,7 +6,7 @@ export const getIncidents = (params?: { status?: string; severity?: string; type
   return apiGet(`/incidents${query}`);
 };
 
-export const getActiveIncidents = () => apiGet('/incidents/active');
+export const getActiveIncidents = () => apiGet('/incidents?status=ACTIVE');
 
 export const getIncidentById = (id: string) => apiGet(`/incidents/${id}`);
 

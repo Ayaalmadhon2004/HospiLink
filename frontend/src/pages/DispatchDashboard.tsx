@@ -2,9 +2,9 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { apiGet } from '../services/api'; // ← استخدمي apiGet
 
-const API_URL = import.meta.env.VITE_API_URL;
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'; // ← Fallback
 
 interface DispatchUnit {
   id: string;
@@ -28,14 +28,14 @@ const DispatchDashboard: React.FC = () => {
 
   const [units, setUnits] = useState<DispatchUnit[]>([]);
 
-  // جلب الوحدات من API
+  // ✅ استخدمي apiGet
   const { data: unitsData } = useQuery({
     queryKey: ['dispatch-units'],
     queryFn: async () => {
-      const res = await axios.get(`${API_URL}/dispatch/units/active`, { withCredentials: true });
-      return res.data.data;
+      const res = await apiGet('/dispatch/units/active');
+      return res?.data || []; // ← return array مش undefined
     },
-    refetchInterval: 30000 // fallback كل 30 ثانية
+    refetchInterval: 30000
   });
 
   useEffect(() => {

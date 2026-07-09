@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
-import { apiFetch, apiGet, apiDelete } from '../services/api'; // ← استورد
+import { apiGet, apiDelete } from '../services/api';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
 const Beds = () => {
@@ -16,10 +16,9 @@ const Beds = () => {
 
   const fetchBeds = useCallback(async () => {
     try {
-      const res = await apiGet('/beds'); // ← استخدم apiGet
-      const data = await res.json();
+      const data = await apiGet('/beds');
       if (data.success) setBeds(data.data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching beds:', err);
     } finally {
       setLoading(false);
@@ -28,13 +27,12 @@ const Beds = () => {
 
   const fetchPatients = useCallback(async () => {
     try {
-      const res = await apiGet('/patients?status=OBSERVATION'); // ← استخدم apiGet
-      const data = await res.json();
+      const data = await apiGet('/patients?status=OBSERVATION');
       if (data.success) {
         const unassigned = data.data.filter((p: any) => !p.bedId);
         setPatients(unassigned.map((p: any) => ({ id: p.id, name: p.name })));
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching patients:', err);
     }
   }, []);
@@ -99,10 +97,9 @@ const Beds = () => {
   const deleteBed = async (id: string) => {
     if (!confirm('Are you sure you want to delete this bed?')) return;
     try {
-      const res = await apiDelete(`/beds/${id}`); // ← استخدم apiDelete
-      const data = await res.json();
+      const data = await apiDelete(`/beds/${id}`);
       if (data.success) fetchBeds();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting bed:', error);
     }
   };

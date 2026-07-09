@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AlertTriangle, Users, MapPin, Clock, Plus, Search, Filter, Activity } from 'lucide-react';
-import { getActiveIncidents, updateIncidentStatus } from '../services/incidentsService';
+import {  getIncidents, updateIncidentStatus } from '../services/incidentsService';
 import { useIncidentsSocket } from '../hooks/useIncidentsSocket';
 
 interface Incident {
@@ -43,8 +43,8 @@ export const IncidentsPage = () => {
   const fetchIncidents = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await getActiveIncidents();
-      setIncidents(res?.data?.all || []);
+      const res = await getIncidents(); 
+      setIncidents(res?.data || []); 
     } catch (err) {
       console.error('Failed to fetch incidents:', err);
     } finally {

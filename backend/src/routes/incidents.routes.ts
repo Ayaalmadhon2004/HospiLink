@@ -13,8 +13,11 @@ import { logActivity } from '../middlewares/audit.middleware';
 
 const router = Router();
 
-router.get('/', protect, getIncidents);
+// ✅ الـ specific routes الأول!
 router.get('/active', protect, getActiveIncidents);
+
+// بعدين الـ general routes
+router.get('/', protect, getIncidents);
 router.get('/:id', protect, getIncidentById);
 router.post('/', protect, authorize('ADMIN', 'DOCTOR', 'NURSE'), logActivity('CREATE_INCIDENT'), createIncident);
 router.put('/:id', protect, authorize('ADMIN', 'DOCTOR'), logActivity('UPDATE_INCIDENT'), updateIncident);
