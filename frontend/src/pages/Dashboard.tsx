@@ -14,6 +14,8 @@ import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
 import { AppointmentsPage } from '../pages/AppointmentsPage';
 import { IncidentsPage } from './IncidentsPage';
 import DispatchDashboard from './DispatchDashboard';
+import { Settings } from 'lucide-react';
+import SettingsPage from './SettingsPage';
 
 interface TodayAppointment {
   id: string;
@@ -107,6 +109,8 @@ const Dashboard = () => {
         return <IncidentsPage />;
       case 'Dispatch':
         return <DispatchDashboard/>;
+      case 'Settings':
+        return <SettingsPage/>
       case 'Overview':
       default:
         return (

@@ -1,3 +1,4 @@
+// prisma/seed.ts
 import bcrypt from 'bcryptjs';
 import prisma from '../src/config/db';
 
@@ -43,7 +44,34 @@ async function main() {
     console.log(`👤 User exists: ${user.name} (${user.email})`);
   }
 
-  // 3. Create Staff Members
+  // 3. Create UserSettings for admin
+  const existingSettings = await prisma.userSettings.findUnique({
+    where: { userId: user.id }
+  });
+
+  if (!existingSettings) {
+    await prisma.userSettings.create({
+      data: {
+        userId: user.id,
+        criticalVitalsAlerts: true,
+        incidentEscalations: true,
+        shiftReminders: false,
+        dispatchAlerts: true,
+        appointmentReminders: true,
+        twoFactorAuth: false,
+        autoLockIdleSessions: true,
+        compactDensity: false,
+        theme: 'light',
+        language: 'en',
+        timezone: 'UTC',
+      },
+    });
+    console.log(`⚙️ Created UserSettings for: ${user.name}`);
+  } else {
+    console.log(`⚙️ UserSettings exists for: ${user.name}`);
+  }
+
+  // 4. Create Staff Members
   const staffData = [
     { name: 'Dr. Elena Mensah', email: 'elena@hospilink.com', role: 'Cardiologist', department: 'Cardiology', phone: '+1-555-0101' },
     { name: 'Dr. Anders Lindqvist', email: 'anders@hospilink.com', role: 'Intensivist', department: 'ICU', phone: '+1-555-0102' },
@@ -60,12 +88,12 @@ async function main() {
   const createdStaff: Record<string, string> = {};
 
   for (const s of staffData) {
-    let staff = await (prisma as any).staff.findUnique({
+    let staff = await prisma.staff.findUnique({
       where: { email: s.email }
     });
 
     if (!staff) {
-      staff = await (prisma as any).staff.create({
+      staff = await prisma.staff.create({
         data: {
           ...s,
           isActive: true,
@@ -78,12 +106,11 @@ async function main() {
     createdStaff[s.email] = staff.id;
   }
 
-  // 4. Create Shifts (for TODAY)
+  // 5. Create Shifts
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // Delete old shifts
-  await (prisma as any).shift.deleteMany({
+  await prisma.shift.deleteMany({
     where: {
       startTime: {
         lt: today,
@@ -112,7 +139,7 @@ async function main() {
     const startTime = new Date(today.getTime() + shift.startHour * 60 * 60 * 1000);
     const endTime = new Date(today.getTime() + shift.endHour * 60 * 60 * 1000);
 
-    await (prisma as any).shift.create({
+    await prisma.shift.create({
       data: {
         staffId,
         type: shift.type,
@@ -124,16 +151,16 @@ async function main() {
     console.log(`🕐 Created Shift: ${shift.type} for ${shift.staffEmail}`);
   }
 
-  // 5. Create Patients
+  // 6. Create Patients
   const patientsData = [
-    { name: 'John Smith', patientCode: 'PT-2044', department: 'General', age: 45, gender: 'MALE', diagnosis: 'General Checkup' },
-    { name: 'Emma Johnson', patientCode: 'PT-2045', department: 'Emergency', age: 32, gender: 'FEMALE', diagnosis: 'Chest Pain' },
-    { name: 'Michael Brown', patientCode: 'PT-2046', department: 'ICU', age: 67, gender: 'MALE', diagnosis: 'Heart Failure' },
-    { name: 'Sophia Davis', patientCode: 'PT-2047', department: 'Maternity', age: 28, gender: 'FEMALE', diagnosis: 'Prenatal Care' },
-    { name: 'William Wilson', patientCode: 'PT-2048', department: 'Surgery', age: 54, gender: 'MALE', diagnosis: 'Appendectomy' },
-    { name: 'Olivia Martinez', patientCode: 'PT-2049', department: 'Pediatrics', age: 8, gender: 'FEMALE', diagnosis: 'Fever' },
-    { name: 'James Anderson', patientCode: 'PT-2050', department: 'Cardiology', age: 71, gender: 'MALE', diagnosis: 'Hypertension' },
-    { name: 'Isabella Taylor', patientCode: 'PT-2051', department: 'Emergency', age: 19, gender: 'FEMALE', diagnosis: 'Fractured Arm' },
+    { name: 'John Smith', patientCode: 'PT-2044', department: 'General', age: 45, gender: 'MALE' as const, diagnosis: 'General Checkup' },
+    { name: 'Emma Johnson', patientCode: 'PT-2045', department: 'Emergency', age: 32, gender: 'FEMALE' as const, diagnosis: 'Chest Pain' },
+    { name: 'Michael Brown', patientCode: 'PT-2046', department: 'ICU', age: 67, gender: 'MALE' as const, diagnosis: 'Heart Failure' },
+    { name: 'Sophia Davis', patientCode: 'PT-2047', department: 'Maternity', age: 28, gender: 'FEMALE' as const, diagnosis: 'Prenatal Care' },
+    { name: 'William Wilson', patientCode: 'PT-2048', department: 'Surgery', age: 54, gender: 'MALE' as const, diagnosis: 'Appendectomy' },
+    { name: 'Olivia Martinez', patientCode: 'PT-2049', department: 'Pediatrics', age: 8, gender: 'FEMALE' as const, diagnosis: 'Fever' },
+    { name: 'James Anderson', patientCode: 'PT-2050', department: 'Cardiology', age: 71, gender: 'MALE' as const, diagnosis: 'Hypertension' },
+    { name: 'Isabella Taylor', patientCode: 'PT-2051', department: 'Emergency', age: 19, gender: 'FEMALE' as const, diagnosis: 'Fractured Arm' },
   ];
 
   const createdPatients: Record<string, string> = {};
@@ -157,7 +184,7 @@ async function main() {
     createdPatients[p.patientCode] = patient.id;
   }
 
-  // 6. Create Vitals for patients
+  // 7. Create Vitals
   const vitalsData = [
     { patientCode: 'PT-2044', heartRate: 72, systolicBP: 120, diastolicBP: 80, spO2: 98, temperature: 36.5, respiratoryRate: 16 },
     { patientCode: 'PT-2045', heartRate: 95, systolicBP: 135, diastolicBP: 85, spO2: 96, temperature: 37.1, respiratoryRate: 18 },
@@ -170,13 +197,13 @@ async function main() {
     const patientId = createdPatients[v.patientCode];
     if (!patientId) continue;
 
-    const existing = await (prisma as any).patientVitals.findFirst({
+    const existing = await prisma.patientVitals.findFirst({
       where: { patientId },
       orderBy: { recordedAt: 'desc' },
     });
 
     if (!existing) {
-      await (prisma as any).patientVitals.create({
+      await prisma.patientVitals.create({
         data: {
           patientId,
           heartRate: v.heartRate,
@@ -193,7 +220,7 @@ async function main() {
     }
   }
 
-  // 7. Create Wards
+  // 8. Create Wards
   const wardsData = [
     { name: 'ICU Ward', floor: 1 },
     { name: 'Emergency Ward', floor: 1 },
@@ -223,7 +250,7 @@ async function main() {
     wards[wardData.name] = ward.id;
   }
 
-  // 8. Create Beds
+  // 9. Create Beds
   const bedsData = [
     { bedNumber: 'ICU-01', wardName: 'ICU Ward', status: 'OCCUPIED' as const },
     { bedNumber: 'ICU-02', wardName: 'ICU Ward', status: 'AVAILABLE' as const },
@@ -257,66 +284,66 @@ async function main() {
     }
   }
 
-  // ✅ 9. CREATE APPOINTMENTS (for TODAY)
+  // 10. Create Appointments
   console.log('📅 Creating appointments...');
-  
+
   const appointmentsData = [
-    { 
-      patientCode: 'PT-2044', 
-      staffEmail: 'elena@hospilink.com', 
-      type: 'CONSULTATION', 
-      scheduledAt: new Date(today.getTime() + 8 * 60 * 60 * 1000), // 8:00 AM
-      duration: 30, 
-      department: 'Cardiology', 
-      room: 'C-214', 
-      status: 'SCHEDULED' 
+    {
+      patientCode: 'PT-2044',
+      staffEmail: 'elena@hospilink.com',
+      type: 'CONSULTATION',
+      scheduledAt: new Date(today.getTime() + 8 * 60 * 60 * 1000),
+      duration: 30,
+      department: 'Cardiology',
+      room: 'C-214',
+      status: 'SCHEDULED'
     },
-    { 
-      patientCode: 'PT-2045', 
-      staffEmail: 'carlos@hospilink.com', 
-      type: 'SURGERY', 
-      scheduledAt: new Date(today.getTime() + 9 * 60 * 60 * 1000), // 9:00 AM
-      duration: 60, 
-      department: 'Surgery', 
-      room: 'OR-3', 
-      status: 'SCHEDULED' 
+    {
+      patientCode: 'PT-2045',
+      staffEmail: 'carlos@hospilink.com',
+      type: 'SURGERY',
+      scheduledAt: new Date(today.getTime() + 9 * 60 * 60 * 1000),
+      duration: 60,
+      department: 'Surgery',
+      room: 'OR-3',
+      status: 'SCHEDULED'
     },
-    { 
-      patientCode: 'PT-2046', 
-      staffEmail: 'elena@hospilink.com', 
-      type: 'IMAGING', 
-      scheduledAt: new Date(today.getTime() + 10 * 60 * 60 * 1000), // 10:00 AM
-      duration: 45, 
-      department: 'Cardiology', 
-      room: 'RAD-1', 
-      status: 'SCHEDULED' 
+    {
+      patientCode: 'PT-2046',
+      staffEmail: 'elena@hospilink.com',
+      type: 'IMAGING',
+      scheduledAt: new Date(today.getTime() + 10 * 60 * 60 * 1000),
+      duration: 45,
+      department: 'Cardiology',
+      room: 'RAD-1',
+      status: 'SCHEDULED'
     },
-    { 
-      patientCode: 'PT-2047', 
-      staffEmail: 'ravi@hospilink.com', 
-      type: 'FOLLOW_UP', 
-      scheduledAt: new Date(today.getTime() + 11 * 60 * 60 * 1000), // 11:00 AM
-      duration: 30, 
-      department: 'Maternity', 
-      room: 'M-119', 
-      status: 'SCHEDULED' 
+    {
+      patientCode: 'PT-2047',
+      staffEmail: 'ravi@hospilink.com',
+      type: 'FOLLOW_UP',
+      scheduledAt: new Date(today.getTime() + 11 * 60 * 60 * 1000),
+      duration: 30,
+      department: 'Maternity',
+      room: 'M-119',
+      status: 'SCHEDULED'
     },
-    { 
-      patientCode: 'PT-2048', 
-      staffEmail: 'carlos@hospilink.com', 
-      type: 'SURGERY', 
-      scheduledAt: new Date(today.getTime() + 13 * 60 * 60 * 1000), // 1:00 PM
-      duration: 90, 
-      department: 'Surgery', 
-      room: 'OR-1', 
-      status: 'SCHEDULED' 
+    {
+      patientCode: 'PT-2048',
+      staffEmail: 'carlos@hospilink.com',
+      type: 'SURGERY',
+      scheduledAt: new Date(today.getTime() + 13 * 60 * 60 * 1000),
+      duration: 90,
+      department: 'Surgery',
+      room: 'OR-1',
+      status: 'SCHEDULED'
     },
   ];
 
   for (const apt of appointmentsData) {
     const patientId = createdPatients[apt.patientCode];
     const doctorId = createdStaff[apt.staffEmail];
-    
+
     if (!patientId || !doctorId) {
       console.log(`⚠️ Skipping appointment: patient=${apt.patientCode} or doctor=${apt.staffEmail} not found`);
       continue;
@@ -343,15 +370,14 @@ async function main() {
           duration: apt.duration,
         },
       });
-      console.log(`📅 Created Appointment: ${apt.type} for ${apt.patientCode} at ${apt.scheduledAt.toLocaleTimeString()}`);
+      console.log(`📅 Created Appointment: ${apt.type} for ${apt.patientCode}`);
     } else {
       console.log(`📅 Appointment exists: ${apt.type} for ${apt.patientCode}`);
     }
   }
 
-  console.log('✅ Seeding completed successfully!');
-
-   const incidentsData = [
+  // 11. Create Incidents
+  const incidentsData = [
     {
       code: 'INC-0091',
       title: 'Multi-vehicle collision — Highway 9',
@@ -393,7 +419,7 @@ async function main() {
     },
   ];
 
-    for (const inc of incidentsData) {
+  for (const inc of incidentsData) {
     const existing = await prisma.incident.findUnique({
       where: { code: inc.code },
     });
@@ -405,7 +431,9 @@ async function main() {
       console.log(`🚨 Incident exists: ${inc.code}`);
     }
   }
-const units = await prisma.dispatchUnit.createMany({
+
+  // 12. Create Dispatch Units
+  const units = await prisma.dispatchUnit.createMany({
     data: [
       {
         unitCode: 'AMB-04',
@@ -438,8 +466,9 @@ const units = await prisma.dispatchUnit.createMany({
       },
     ],
   });
+  console.log(`🚑 Created ${units.count} dispatch units`);
 
-  // إنشاء نداءات
+  // 13. Create Dispatch Calls
   const calls = await prisma.dispatchCall.createMany({
     data: [
       {
@@ -456,8 +485,9 @@ const units = await prisma.dispatchUnit.createMany({
       },
     ],
   });
+  console.log(`📞 Created ${calls.count} dispatch calls`);
 
-  console.log('✅ Dispatch seed data created');
+  console.log('✅ Seeding completed successfully!');
 }
 
 main()

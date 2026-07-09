@@ -7,13 +7,13 @@ import {
   updateDisplay,
 } from '../controllers/settings.controller';
 import { protect } from '../middlewares/auth.middleware';
+import { logActivity } from '../middlewares/audit.middleware';
 
 const router = Router();
 
-// كل الـ routes محمية
 router.get('/', protect, getUserSettings);
-router.put('/notifications', protect, updateNotifications);
-router.put('/security', protect, updateSecurity);
-router.put('/display', protect, updateDisplay);
+router.put('/notifications', protect, logActivity('UPDATE_NOTIFICATIONS'), updateNotifications);
+router.put('/security', protect, logActivity('UPDATE_SECURITY'), updateSecurity);
+router.put('/display', protect, logActivity('UPDATE_DISPLAY'), updateDisplay);
 
 export default router;

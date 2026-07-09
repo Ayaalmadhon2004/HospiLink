@@ -14,7 +14,11 @@ const handleError = (res: Response, error: any, message: string, statusCode: num
 // GET /api/settings — جلب إعدادات المستخدم
 export const getUserSettings = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id; // من الـ auth middleware
+    const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
 
     let settings = await prisma.userSettings.findUnique({
       where: { userId }
@@ -23,7 +27,7 @@ export const getUserSettings = async (req: Request, res: Response) => {
     // إذا ما عندها إعدادات، أنشئي defaults
     if (!settings) {
       settings = await prisma.userSettings.create({
-        data: { userId: userId! }
+        data: { userId }
       });
     }
 
@@ -58,6 +62,11 @@ export const getUserSettings = async (req: Request, res: Response) => {
 export const updateNotifications = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
     const {
       criticalVitalsAlerts,
       incidentEscalations,
@@ -67,7 +76,7 @@ export const updateNotifications = async (req: Request, res: Response) => {
     } = req.body;
 
     const settings = await prisma.userSettings.upsert({
-      where: { userId: userId! },
+      where: { userId },
       update: {
         criticalVitalsAlerts,
         incidentEscalations,
@@ -76,7 +85,7 @@ export const updateNotifications = async (req: Request, res: Response) => {
         appointmentReminders,
       },
       create: {
-        userId: userId!,
+        userId,
         criticalVitalsAlerts,
         incidentEscalations,
         shiftReminders,
@@ -95,17 +104,22 @@ export const updateNotifications = async (req: Request, res: Response) => {
 export const updateSecurity = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
     const { twoFactorAuth, autoLockIdleSessions, compactDensity } = req.body;
 
     const settings = await prisma.userSettings.upsert({
-      where: { userId: userId! },
+      where: { userId },
       update: {
         twoFactorAuth,
         autoLockIdleSessions,
         compactDensity,
       },
       create: {
-        userId: userId!,
+        userId,
         twoFactorAuth,
         autoLockIdleSessions,
         compactDensity,
@@ -122,13 +136,18 @@ export const updateSecurity = async (req: Request, res: Response) => {
 export const updateDisplay = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
     const { theme, language, timezone } = req.body;
 
     const settings = await prisma.userSettings.upsert({
-      where: { userId: userId! },
+      where: { userId },
       update: { theme, language, timezone },
       create: {
-        userId: userId!,
+        userId,
         theme,
         language,
         timezone,

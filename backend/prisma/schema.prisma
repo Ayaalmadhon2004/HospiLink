@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 datasource db {
   provider = "postgresql"
 }
@@ -5,6 +7,69 @@ datasource db {
 generator client {
   provider = "prisma-client-js"
 }
+
+// ==================== ENUMS ====================
+
+enum Role {
+  ADMIN
+  DOCTOR
+  NURSE
+  DISPATCHER
+}
+
+enum PatientStatus {
+  STABLE
+  OBSERVATION
+  CRITICAL
+  DISCHARGED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+enum BedStatus {
+  AVAILABLE
+  OCCUPIED
+  CLEANING
+  MAINTENANCE
+}
+
+enum UnitType {
+  AMBULANCE
+  PARAMEDIC
+  HELICOPTER
+  FIRE_TRUCK
+  POLICE
+}
+
+enum UnitStatus {
+  AVAILABLE
+  EN_ROUTE
+  ON_SCENE
+  TRANSPORTING
+  AT_HOSPITAL
+  OFF_DUTY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum CallStatus {
+  PENDING
+  ASSIGNED
+  EN_ROUTE
+  ON_SCENE
+  COMPLETED
+  CANCELLED
+}
+
+// ==================== MODELS ====================
 
 model Hospital {
   id        String   @id @default(uuid())
@@ -17,13 +82,6 @@ model Hospital {
   beds     Bed[]
   wards    Ward[]
   patients Patient[]
-}
-
-enum Role {
-  ADMIN
-  DOCTOR
-  NURSE
-  DISPATCHER
 }
 
 model User {
@@ -39,8 +97,35 @@ model User {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  hospital Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   patients Patient[]
+  settings UserSettings?
+}
+
+model UserSettings {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Notifications
+  criticalVitalsAlerts Boolean  @default(true)
+  incidentEscalations  Boolean  @default(true)
+  shiftReminders       Boolean  @default(false)
+  dispatchAlerts       Boolean  @default(true)
+  appointmentReminders Boolean  @default(true)
+
+  // Security & Display
+  twoFactorAuth        Boolean  @default(false)
+  autoLockIdleSessions Boolean  @default(true)
+  compactDensity       Boolean  @default(false)
+
+  // Display
+  theme                String   @default("light")
+  language             String   @default("en")
+  timezone             String   @default("UTC")
+
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 }
 
 model AuditLog {
@@ -52,40 +137,28 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
-enum PatientStatus {
-  STABLE
-  OBSERVATION
-  CRITICAL
-  DISCHARGED
-}
-
-enum Gender {
-  MALE
-  FEMALE
-}
-
 model Patient {
-  id            String          @id @default(uuid())
-  patientCode   String          @unique
+  id            String        @id @default(uuid())
+  patientCode   String        @unique
   name          String
   age           Int
   gender        Gender
   department    String
   diagnosis     String
-  status        PatientStatus   @default(OBSERVATION)
-  admissionDate DateTime        @default(now())
+  status        PatientStatus @default(OBSERVATION)
+  admissionDate DateTime      @default(now())
   dischargeDate DateTime?
   doctorId      String?
-  doctor        User?           @relation(fields: [doctorId], references: [id])
-  bedId         String?         @unique
-  bed           Bed?            @relation("BedPatient", fields: [bedId], references: [id])
+  doctor        User?         @relation(fields: [doctorId], references: [id])
+  bedId         String?       @unique
+  bed           Bed?          @relation("BedPatient", fields: [bedId], references: [id])
   hospitalId    String
-  hospital      Hospital        @relation(fields: [hospitalId], references: [id])
+  hospital      Hospital      @relation(fields: [hospitalId], references: [id])
   reports       Report[]
-  vitals        PatientVitals[] // ← relation للـ vitals
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  vitals        PatientVitals[]
   appointments  Appointment[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 }
 
 model Report {
@@ -113,13 +186,6 @@ model Ward {
   beds Bed[]
 }
 
-enum BedStatus {
-  AVAILABLE
-  OCCUPIED
-  CLEANING
-  MAINTENANCE
-}
-
 model Bed {
   id         String    @id @default(uuid())
   bedNumber  String
@@ -132,8 +198,6 @@ model Bed {
 
   @@unique([bedNumber, wardId])
 }
-
-// ============ VITALS MODELS ============
 
 model PatientVitals {
   id        String  @id @default(uuid())
@@ -175,13 +239,11 @@ model VitalThresholds {
   @@unique([department, vitalType])
 }
 
-// Add to your existing schema.prisma
-
 model Staff {
   id         String   @id @default(uuid())
   name       String
   email      String   @unique
-  role       String // DOCTOR, NURSE, ADMIN, SURGEON, etc.
+  role       String
   department String
   avatar     String?
   phone      String?
@@ -197,7 +259,7 @@ model Shift {
   id         String   @id @default(uuid())
   staffId    String
   staff      Staff    @relation(fields: [staffId], references: [id])
-  type       String // DAY, NIGHT, EVENING, ON_CALL
+  type       String
   startTime  DateTime
   endTime    DateTime
   department String
@@ -206,18 +268,17 @@ model Shift {
   updatedAt  DateTime @updatedAt
 }
 
-// prisma/schema.prisma
 model Appointment {
   id          String   @id @default(uuid())
   patientId   String
   doctorId    String
   scheduledAt DateTime
-  type        String // SURGERY, CONSULTATION, IMAGING, FOLLOW_UP, etc.
-  status      String   @default("SCHEDULED") // SCHEDULED, COMPLETED, CANCELLED, IN_PROGRESS
+  type        String
+  status      String   @default("SCHEDULED")
   department  String
   room        String?
   notes       String?
-  duration    Int      @default(30) // minutes
+  duration    Int      @default(30)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -232,16 +293,16 @@ model Appointment {
 
 model Incident {
   id          String   @id @default(uuid())
-  code        String   @unique // INC-0091
+  code        String   @unique
   title       String
   description String?
-  type        String   // MASS_CASUALTY, CHEMICAL, FIRE, STRUCTURAL, etc.
-  severity    String   // CRITICAL, ELEVATED, MODERATE, LOW
-  status      String   @default("ACTIVE") // ACTIVE, CONTAINED, RESOLVED
+  type        String
+  severity    String
+  status      String   @default("ACTIVE")
   location    String
   teams       Int      @default(1)
-  progress    Int      @default(0) // 0-100
-  triageLevel String?  // RED, YELLOW, GREEN, BLACK
+  progress    Int      @default(0)
+  triageLevel String?
   reportedBy  String
   resolvedAt  DateTime?
   createdAt   DateTime @default(now())
@@ -252,98 +313,30 @@ model Incident {
   @@index([createdAt])
 }
 
-// prisma/schema.prisma
-// أضيفي هدول للـ schema الموجود
-
 model DispatchUnit {
-  id          String      @id @default(uuid())
-  unitCode    String      @unique           // AMB-04, AMB-09
+  id          String       @id @default(uuid())
+  unitCode    String       @unique
   unitType    UnitType
-  status      UnitStatus  @default(AVAILABLE)
-  location    String?     // JSON string: {"lat": 0, "lng": 0}
-  eta         Int?        // minutes
-  department  String      @default("ER")
-  crew        String[]    // ["Crew Alpha", "Nurse John"]
-  currentCallId String?   @unique
-  currentCall DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
-  lastUpdated DateTime    @updatedAt
-  createdAt   DateTime    @default(now())
+  status      UnitStatus   @default(AVAILABLE)
+  location    String?
+  eta         Int?
+  department  String       @default("ER")
+  crew        String[]
+  currentCallId String?    @unique
+  currentCall   DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
+  lastUpdated DateTime     @updatedAt
+  createdAt   DateTime     @default(now())
 }
 
 model DispatchCall {
-  id           String      @id @default(uuid())
-  type         String                          // "Cardiac arrest", "MVC"
+  id           String       @id @default(uuid())
+  type         String
   location     String
-  priority     Priority    @default(MEDIUM)
-  status       CallStatus  @default(PENDING)
+  priority     Priority     @default(MEDIUM)
+  status       CallStatus   @default(PENDING)
   notes        String?
-  assignedUnitId String?   @unique
+  assignedUnitId String?    @unique
   assignedUnit   DispatchUnit? @relation("UnitCall")
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
 }
-
-enum UnitType {
-  AMBULANCE
-  PARAMEDIC
-  HELICOPTER
-  FIRE_TRUCK
-  POLICE
-}
-
-enum UnitStatus {
-  AVAILABLE
-  EN_ROUTE
-  ON_SCENE
-  TRANSPORTING
-  AT_HOSPITAL
-  OFF_DUTY
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum CallStatus {
-  PENDING
-  ASSIGNED
-  EN_ROUTE
-  ON_SCENE
-  COMPLETED
-  CANCELLED
-}
-
-// prisma/schema.prisma
-// أضيفي هاد الموديل للـ schema
-
-model UserSettings {
-  id                String   @id @default(uuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Notifications
-  criticalVitalsAlerts Boolean @default(true)
-  incidentEscalations  Boolean @default(true)
-  shiftReminders       Boolean @default(false)
-  dispatchAlerts       Boolean @default(true)
-  appointmentReminders Boolean @default(true)
-
-  // Security & Display
-  twoFactorAuth        Boolean @default(false)
-  autoLockIdleSessions Boolean @default(true)
-  compactDensity       Boolean @default(false)
-
-  // Display
-  theme                String   @default("light") // light, dark, system
-  language             String   @default("en")
-  timezone             String   @default("UTC")
-
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-}
-
-// عدلي الـ User model — أضيفي:
-// settings UserSettings?
