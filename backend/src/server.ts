@@ -21,6 +21,7 @@ import dispatchRoutes from './routes/dispatch.routes'; // ← NEW
 // Middlewares
 import { errorHandler } from './middlewares/error.middleware';
 import { setupDispatchSockets } from './middlewares/dispatch.socket'; // ← NEW
+import settingsRoutes from './routes/settings.routes';
 
 dotenv.config();
 
@@ -71,7 +72,9 @@ app.use('/api/wards', wardRoutes);
 app.use('/api/vitals', vitalsRoutes);
 app.use('/api/staff', staffRoutes);
 app.use('/api/appointments', appointmentRoutes);
-app.use('/api/dispatch', dispatchRoutes); // ← NEW
+app.use('/api/dispatch', dispatchRoutes);
+app.use('/api/settings', settingsRoutes);
+
 
 app.get('/api/health', async (req, res) => {
   try {
