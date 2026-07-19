@@ -147,8 +147,9 @@ docker-compose up --build
 
 ## Screenshots
 
-> *(Add screenshots here)*
-
+![overview](image.png)
+![patients](image-1.png)
+![beds and Wards](image-2.png)
 ---
 
 ## Contributing
