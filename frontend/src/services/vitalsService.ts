@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://hospi-link-two.vercel.app/api';
+const API_URL = 'https://hospilink-1bfi.onrender.com/api';
 
 const api = axios.create({
   baseURL: API_URL,

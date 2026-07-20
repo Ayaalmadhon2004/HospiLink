@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://hospi-link-two.vercel.app/api',
+  baseURL: 'https://hospilink-1bfi.onrender.com/api',
 });
 
 api.interceptors.request.use((config) => {
