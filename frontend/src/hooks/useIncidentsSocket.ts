@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospilink-1bfi.onrender.com')
+const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
 export const useIncidentsSocket = () => {

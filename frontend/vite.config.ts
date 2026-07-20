@@ -9,7 +9,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'https://hospilink-1bfi.onrender.com',
+        target: 'https://hospi-link-two.vercel.app',
         changeOrigin: true,
       },
     },

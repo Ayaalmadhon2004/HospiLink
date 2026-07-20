@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://hospilink-1bfi.onrender.com/api';
+const API_URL = import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app/api';
 
 export interface NotificationSettings {
   criticalVitalsAlerts: boolean;
