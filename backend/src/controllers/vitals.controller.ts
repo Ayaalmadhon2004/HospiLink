@@ -6,7 +6,7 @@ import { io } from '../server';
 export const createVital = async (req: Request, res: Response) => {
   try {
     const { patientId, heartRate, systolicBP, spO2, temperature, respiratoryRate } = req.body;
-    
+
     const newVital = await prisma.patientVitals.create({
       data: {
         patientId: patientId as string,
@@ -15,11 +15,11 @@ export const createVital = async (req: Request, res: Response) => {
         spO2: Number(spO2),
         temperature: Number(temperature),
         respiratoryRate: Number(respiratoryRate),
-      } as any
+      } as any,
     });
-    
+
     io.to(`patient-${newVital.patientId}`).emit('new-vital', newVital);
-    
+
     res.status(201).json({ success: true, data: newVital });
   } catch (error) {
     console.error('Create vital error:', error);
@@ -126,6 +126,9 @@ export const recordVitals = async (req: Request, res: Response) => {
       } as any,
     });
 
+    // ✅ Emit للـ room تبع المريض
+    io.to(`patient-${patientId}`).emit('new-vital', vitals);
+
     res.status(201).json({
       success: true,
       data: vitals,
@@ -195,7 +198,7 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
 // GET /api/vitals/:id
 export const getVitalsById = async (req: Request, res: Response) => {
   try {
-const { id } = req.params as { id: string }
+    const { id } = req.params as { id: string };
     const vitals = await (prisma as any).patientVitals.findUnique({
       where: { id },
       include: {
@@ -257,7 +260,7 @@ export const updateVitals = async (req: Request, res: Response) => {
 // DELETE /api/vitals/:id
 export const deleteVitals = async (req: Request, res: Response) => {
   try {
-const { id } = req.params as { id: string }
+    const { id } = req.params as { id: string };
     await (prisma as any).patientVitals.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });

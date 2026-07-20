@@ -14,7 +14,7 @@ export const getAppointments = async (req: Request, res: Response) => {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
     const where: any = {};
-    
+
     if (date) {
       const d = new Date(date as string);
       const startOfDay = new Date(d.setHours(0, 0, 0, 0));
@@ -45,9 +45,13 @@ export const getAppointments = async (req: Request, res: Response) => {
 // ─── GET /api/appointments/today ───────────────────────────────────────
 export const getTodaySchedule = async (req: Request, res: Response) => {
   try {
-    // ✅ جيبي كل appointments (مش بس اليوم) — للتجربة
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+
     const appointments = await prisma.appointment.findMany({
       where: {
+        scheduledAt: { gte: startOfDay, lte: endOfDay }, // ✅ بس مواعيد اليوم
         status: { not: 'CANCELLED' },
       },
       include: {
@@ -55,7 +59,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
         doctor: { select: { id: true, name: true, role: true } },
       },
       orderBy: { scheduledAt: 'asc' },
-      take: 50, // ← حددي عدد
+      take: 50,
     });
 
     // Group by hour for timeline view
@@ -100,7 +104,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
 // ─── GET /api/appointments/:id ───────────────────────────────────────
 export const getAppointmentById = async (req: Request, res: Response) => {
   try {
-    const id = req.query.id as string;
+    const id = req.params.id as string; // ✅ استخدم params مش query
 
     const appointment = await prisma.appointment.findUnique({
       where: { id },
@@ -215,7 +219,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 // ─── PUT /api/appointments/:id ───────────────────────────────────────
 export const updateAppointment = async (req: Request, res: Response) => {
   try {
-    const id = req.query.id as string;
+    const id = req.params.id as string; // ✅ استخدم params مش query
 
     const updateData = req.body;
 
@@ -243,7 +247,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 // ─── DELETE /api/appointments/:id ────────────────────────────────────
 export const deleteAppointment = async (req: Request, res: Response) => {
   try {
-    const id = req.query.id as string;
+    const id = req.params.id as string; // ✅ استخدم params مش query
 
     const appointment = await prisma.appointment.update({
       where: { id },

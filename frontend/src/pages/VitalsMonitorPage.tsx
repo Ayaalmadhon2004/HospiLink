@@ -1,3 +1,4 @@
+// pages/VitalsMonitorPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Activity, Plus, RefreshCw, ChevronDown, AlertCircle, X } from 'lucide-react';
 import { getVitals, getCriticalAlerts, recordVitals } from '../services/vitalsService';
@@ -53,18 +54,19 @@ const ensureArray = <T,>(value: unknown): T[] => {
 const mergeVitals = (existing: VitalRecord[], incoming: VitalRecord[]): VitalRecord[] => {
   const combined = [...existing, ...incoming];
   const seen = new Set<string>();
-  return combined.filter((v) => {
-    if (!v?.id) return false;
-    if (seen.has(v.id)) return false;
-    seen.add(v.id);
-    return true;
-  }).slice(0, 20);
+  return combined
+    .filter((v) => {
+      if (!v?.id) return false;
+      if (seen.has(v.id)) return false;
+      seen.add(v.id);
+      return true;
+    })
+    .slice(0, 20);
 };
 
 // ─── Component ─────────────────────────────────────────────────────────
 
 export const VitalsMonitorPage = () => {
-
   // ── Core State ──────────────────────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<string>('');
@@ -78,7 +80,11 @@ export const VitalsMonitorPage = () => {
   // Toast notifications state
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  // Track if this is initial load (don't show toast on first load)
+  // ✅ Refs لمنع الـ loops والـ parallel requests
+  const isFetching = useRef(false);
+  const isFetchingVitals = useRef(false);
+  const lastSocketId = useRef<string | null>(null);
+  const lastFetchTime = useRef<number>(0);
   const isInitialLoad = useRef(true);
 
   // ── Form State ──────────────────────────────────────────────────────
@@ -98,94 +104,118 @@ export const VitalsMonitorPage = () => {
   // ── Toast Helper ────────────────────────────────────────────────────
   const showToast = useCallback((message: string, type: 'error' | 'success') => {
     const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
+    setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 5000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
-  // ── Effects ───────────────────────────────────────────────────────────
+  // ── Fetch Patients + Alerts (مرة واحدة عند التحميل) ───────────────
+  const fetchData = useCallback(
+    async (showErrors = false) => {
+      // ✅ منع parallel requests + throttle (ما يتنادى أكتر من مرة كل 5 ثواني)
+      const now = Date.now();
+      if (isFetching.current || now - lastFetchTime.current < 5000) return;
 
-  /** Socket: add new vital to history without replacing */
-  useEffect(() => {
-    if (latestVital && selectedPatient) {
-      setVitals((prev) => {
-        const safePrev = ensureArray<VitalRecord>(prev);
-        const newVital: VitalRecord = latestVital;
-        const exists = safePrev.some((v) => v?.id === newVital?.id);
-        if (exists) return safePrev;
-        return [newVital, ...safePrev].slice(0, 20);
-      });
-    }
-  }, [latestVital, selectedPatient]);
-
-  /** Fetch patients + alerts — isolated errors, no toast on initial load */
-  const fetchData = useCallback(async (showErrors = false) => {
-    try {
+      isFetching.current = true;
+      lastFetchTime.current = now;
       setRefreshing(true);
 
-      // Fetch patients independently
-      let patientsData: Patient[] = [];
       try {
-        const patientsRes = await getPatients();
-        patientsData = ensureArray<Patient>(patientsRes?.data ?? patientsRes);
-      } catch (err) {
-        console.error('Failed to fetch patients:', err);
-        if (showErrors) showToast('Failed to fetch patients list', 'error');
-      }
-      setPatients(patientsData);
+        // Fetch patients independently
+        let patientsData: Patient[] = [];
+        try {
+          const patientsRes = await getPatients();
+          patientsData = ensureArray<Patient>(patientsRes?.data ?? patientsRes);
+        } catch (err) {
+          console.error('Failed to fetch patients:', err);
+          if (showErrors) showToast('Failed to fetch patients list', 'error');
+        }
+        setPatients(patientsData);
 
-      // Fetch alerts independently (don't block if this fails)
-      let alertsData: AlertItem[] = [];
+        // Fetch alerts independently
+        let alertsData: AlertItem[] = [];
+        try {
+          const alertsRes = await getCriticalAlerts();
+          alertsData = ensureArray<AlertItem>(alertsRes?.data ?? alertsRes);
+        } catch (err) {
+          console.error('Failed to fetch critical alerts:', err);
+        }
+        setAlerts(alertsData);
+      } catch (err) {
+        console.error('Failed to fetch data:', err);
+        if (showErrors) showToast('Failed to fetch vitals data', 'error');
+      } finally {
+        setRefreshing(false);
+        setLoading(false);
+        isInitialLoad.current = false;
+        isFetching.current = false;
+      }
+    },
+    [showToast]
+  );
+
+  // ── Fetch Historical Vitals ───────────────────────────────────────
+  const fetchVitals = useCallback(
+    async (patientId: string) => {
+      if (!patientId) {
+        setVitals([]);
+        return;
+      }
+
+      // ✅ منع parallel requests
+      if (isFetchingVitals.current) return;
+      isFetchingVitals.current = true;
+
+      setLoading(true);
       try {
-        const alertsRes = await getCriticalAlerts();
-        alertsData = ensureArray<AlertItem>(alertsRes?.data ?? alertsRes);
+        const res = await getVitals({ patientId, limit: 20 });
+        const data = ensureArray<VitalRecord>(res?.data ?? res);
+        setVitals((prev) => mergeVitals(ensureArray<VitalRecord>(prev), data));
       } catch (err) {
-        console.error('Failed to fetch critical alerts:', err);
-        // Don't show toast for alerts failure — it's not critical for the page
+        console.error('Failed to fetch vitals:', err);
+      } finally {
+        setLoading(false);
+        isFetchingVitals.current = false;
       }
-      setAlerts(alertsData);
+    },
+    []
+  );
 
-    } catch (err) {
-      console.error('Failed to fetch data:', err);
-      if (showErrors) showToast('Failed to fetch vitals data', 'error');
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-      isInitialLoad.current = false;
-    }
-  }, [showToast]);
-
-  /** Fetch historical vitals — merge with existing, don't replace */
-  const fetchVitals = useCallback(async (patientId: string) => {
-    if (!patientId) {
-      setVitals([]);
-      return;
-    }
-    setLoading(true);
-    try {
-      const res = await getVitals({ patientId, limit: 20 });
-      const data = ensureArray<VitalRecord>(res?.data ?? res);
-      setVitals((prev) => mergeVitals(ensureArray<VitalRecord>(prev), data));
-    } catch (err) {
-      console.error('Failed to fetch vitals:', err);
-      // Don't show toast here — user might just be switching patients
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  // Initial load — no error toasts
+  // ✅ Initial load — مرة واحدة بس
   useEffect(() => {
     fetchData(false);
-    const interval = setInterval(() => fetchData(false), 30000);
-    return () => clearInterval(interval);
+  }, []); // ⬅️ فارغ! ما يتنادىش تاني
+
+  // ✅ Polling كل 30 ثانية — بس لو الصفحة visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) return;
+      // لما ترجع للصفحة، تأكد إنه مر 30 ثانية على الأقل
+      if (Date.now() - lastFetchTime.current > 30000) {
+        fetchData(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const interval = setInterval(() => {
+      if (!document.hidden) {
+        fetchData(false);
+      }
+    }, 30000);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchData]);
 
+  // ✅ Fetch vitals لما يتغير المريض
   useEffect(() => {
     if (selectedPatient) {
       fetchVitals(selectedPatient);
@@ -193,6 +223,24 @@ export const VitalsMonitorPage = () => {
       setVitals([]);
     }
   }, [selectedPatient, fetchVitals]);
+
+  // ✅ Socket: add new vital — بتحقق إنه جديد فعلاً
+  useEffect(() => {
+    if (!latestVital || !selectedPatient) return;
+
+    const vitalId = latestVital.id || JSON.stringify(latestVital);
+    if (vitalId === lastSocketId.current) return; // ⬅️ نفس الـ vital القديم
+
+    lastSocketId.current = vitalId;
+
+    setVitals((prev) => {
+      const safePrev = ensureArray<VitalRecord>(prev);
+      const newVital: VitalRecord = latestVital;
+      const exists = safePrev.some((v) => v?.id === newVital?.id);
+      if (exists) return safePrev;
+      return [newVital, ...safePrev].slice(0, 20);
+    });
+  }, [latestVital, selectedPatient]);
 
   // ── Handlers ────────────────────────────────────────────────────────
 
@@ -262,7 +310,7 @@ export const VitalsMonitorPage = () => {
   return (
     <div className="min-h-screen bg-clinic-bg p-6 md:p-8">
       {/* Toast Notifications */}
-      <div 
+      <div
         className="fixed top-4 right-4 z-50 space-y-2"
         role="region"
         aria-label="Notifications"
@@ -271,8 +319,8 @@ export const VitalsMonitorPage = () => {
           <div
             key={toast.id}
             className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg transition-all ${
-              toast.type === 'error' 
-                ? 'bg-red-50 border border-red-200 text-red-700' 
+              toast.type === 'error'
+                ? 'bg-red-50 border border-red-200 text-red-700'
                 : 'bg-green-50 border border-green-200 text-green-700'
             }`}
             role="alert"
@@ -306,7 +354,11 @@ export const VitalsMonitorPage = () => {
           disabled={refreshing}
           aria-label="Refresh vitals data"
         >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+          <RefreshCw
+            size={16}
+            className={refreshing ? 'animate-spin' : ''}
+            aria-hidden="true"
+          />
           Refresh
         </button>
       </div>
@@ -320,7 +372,9 @@ export const VitalsMonitorPage = () => {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
           <div className="relative flex-1">
-            <label htmlFor="patient-select" className="sr-only">Select Patient</label>
+            <label htmlFor="patient-select" className="sr-only">
+              Select Patient
+            </label>
             <select
               id="patient-select"
               value={selectedPatient}
@@ -357,7 +411,7 @@ export const VitalsMonitorPage = () => {
 
       {/* ── Record Form ───────────────────────────────────────────────── */}
       {showForm && selectedPatient && (
-        <div 
+        <div
           id="vitals-form"
           className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6 animate-in fade-in slide-in-from-top-2 duration-200"
         >
@@ -456,7 +510,9 @@ export const VitalsMonitorPage = () => {
               />
             </div>
             <div className="col-span-2 md:col-span-3">
-              <label htmlFor="notes" className="block text-sm text-clinic-text/60 mb-1">Notes</label>
+              <label htmlFor="notes" className="block text-sm text-clinic-text/60 mb-1">
+                Notes
+              </label>
               <textarea
                 id="notes"
                 value={formData.notes}
@@ -532,12 +588,7 @@ export const VitalsMonitorPage = () => {
             color="#3b82f6"
             label="Blood Pressure (mmHg)"
           />
-          <VitalsChart
-            history={vitals}
-            vitalType="spO2"
-            color="#06b6d4"
-            label="SpO2 (%)"
-          />
+          <VitalsChart history={vitals} vitalType="spO2" color="#06b6d4" label="SpO2 (%)" />
           <VitalsChart
             history={vitals}
             vitalType="temperature"

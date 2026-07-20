@@ -21,11 +21,28 @@ router.get('/upcoming', protect, getUpcomingAppointments);
 
 router.get('/:id', protect, getAppointmentById);
 
-router.post('/', protect, authorize('ADMIN', 'DOCTOR', 'NURSE'), logActivity('CREATE_APPOINTMENT'), createAppointment);
+router.post(
+  '/',
+  protect,
+  authorize('ADMIN', 'DOCTOR', 'NURSE'),
+  logActivity('CREATE_APPOINTMENT'),
+  createAppointment
+);
 
-router.put('/:id', protect, authorize('ADMIN', 'DOCTOR', 'NURSE'), logActivity('UPDATE_APPOINTMENT'), updateAppointment);
+router.put(
+  '/:id',
+  protect,
+  authorize('ADMIN', 'DOCTOR', 'NURSE'),
+  logActivity('UPDATE_APPOINTMENT'),
+  updateAppointment
+);
 
-router.delete('/:id', protect, authorize('ADMIN', 'DOCTOR'), logActivity('DELETE_APPOINTMENT'), deleteAppointment);
+router.delete(
+  '/:id',
+  protect,
+  authorize('ADMIN', 'DOCTOR'),
+  logActivity('DELETE_APPOINTMENT'),
+  deleteAppointment
+);
 
 export default router;
-/** ملف الراوتس من الباك بنربطه بالفرونت بالسرقسس من الفرونت صح ؟ هيك بنربط الجهتين وبنربط لينك الباك بالفرونت من خلال الاي بي اي صحيح */

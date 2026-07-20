@@ -18,7 +18,7 @@ export const getIncidents = async (req: Request, res: Response) => {
   try {
     const { status, severity, type } = req.query;
     const where: any = {};
-    
+
     if (status && status !== '') where.status = status as string;
     if (severity && severity !== '') where.severity = severity as string;
     if (type && type !== '') where.type = type as string;
@@ -26,6 +26,7 @@ export const getIncidents = async (req: Request, res: Response) => {
     const incidents = await prisma.incident.findMany({
       where,
       orderBy: { createdAt: 'desc' },
+      take: 100, // ✅ limit لتجنب كميات ضخمة
     });
 
     res.status(200).json({ success: true, count: incidents.length, data: incidents });
@@ -43,12 +44,13 @@ export const getActiveIncidents = async (req: Request, res: Response) => {
         { severity: 'asc' }, // CRITICAL first
         { createdAt: 'desc' },
       ],
+      take: 50, // ✅ limit
     });
 
     // Group by severity for dashboard
-    const critical = incidents.filter(i => i.severity === 'CRITICAL');
-    const elevated = incidents.filter(i => i.severity === 'ELEVATED');
-    const moderate = incidents.filter(i => i.severity === 'MODERATE');
+    const critical = incidents.filter((i) => i.severity === 'CRITICAL');
+    const elevated = incidents.filter((i) => i.severity === 'ELEVATED');
+    const moderate = incidents.filter((i) => i.severity === 'MODERATE');
 
     res.status(200).json({
       success: true,
@@ -70,11 +72,11 @@ export const getIncidentById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const incident = await prisma.incident.findUnique({ where: { id } });
-    
+
     if (!incident) {
       return res.status(404).json({ success: false, message: 'Incident not found' });
     }
-    
+
     res.status(200).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to fetch incident');
@@ -84,16 +86,8 @@ export const getIncidentById = async (req: Request, res: Response) => {
 // POST /api/incidents
 export const createIncident = async (req: Request, res: Response) => {
   try {
-    const {
-      title,
-      description,
-      type,
-      severity,
-      location,
-      teams,
-      triageLevel,
-      reportedBy,
-    } = req.body;
+    const { title, description, type, severity, location, teams, triageLevel, reportedBy } =
+      req.body;
 
     const code = await generateIncidentCode();
 
