@@ -1,0 +1,11 @@
+# Muraqib Hospital Management System
+# Private dashboard — No indexing allowed
+
+User-agent: *
+Disallow: /
+
+User-agent: Googlebot
+Disallow: /
+
+User-agent: Bingbot
+Disallow: /
