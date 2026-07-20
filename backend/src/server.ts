@@ -39,7 +39,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "wss:", "ws:", "https://hospi-link-liart.vercel.app"],
+      connectSrc: ["'self'", "wss:", "ws:", "https://hospi-link-two.vercel.app"],
       scriptSrc: ["'self'", "'unsafe-inline'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
@@ -61,7 +61,8 @@ app.use(compression({
 // ✅ CORS origins — production + development
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://hospi-link-liart.vercel.app"
+  "https://hospi-link-liart.vercel.app",
+  "https://hospi-link-two.vercel.app"
 ];
 
 // ✅ Rate limiting for auth routes — prevents brute force
