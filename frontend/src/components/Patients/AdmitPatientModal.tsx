@@ -1,3 +1,4 @@
+// components/AdmitPatientModal.tsx
 import { useEffect, useReducer, useMemo, useCallback, useRef } from 'react';
 import { X, Bed, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { admitPatient, getAvailableBeds } from '../../services/patientService';

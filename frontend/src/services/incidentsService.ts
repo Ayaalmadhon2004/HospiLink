@@ -1,5 +1,5 @@
 // frontend/src/services/incidentsService.ts
-import { apiGet, apiPost, apiPut } from './api';
+import { apiGet, apiPost, apiPut, apiDelete } from './api';
 
 export const getIncidents = (params?: { status?: string; severity?: string; type?: string }) => {
   const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
@@ -16,3 +16,5 @@ export const updateIncident = (id: string, data: any) => apiPut(`/incidents/${id
 
 export const updateIncidentStatus = (id: string, status: string, progress?: number) => 
   apiPut(`/incidents/${id}/status`, { status, progress });
+
+export const deleteIncident = (id: string) => apiDelete(`/incidents/${id}`);
