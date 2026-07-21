@@ -83,7 +83,7 @@ export const IncidentsPage = () => {
   useEffect(() => {
     if (!latestUpdate) return;
 
-    const updateId = latestUpdate.id || JSON.stringify(latestUpdate);
+    const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
     if (updateId === lastSocketId.current) return; // ⬅️ نفس الـ update القديم
 
     lastSocketId.current = updateId;

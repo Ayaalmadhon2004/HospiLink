@@ -83,7 +83,7 @@ export const AppointmentsPage = () => {
   useEffect(() => {
     if (!latestUpdate) return;
 
-    const updateId = latestUpdate.id || JSON.stringify(latestUpdate);
+    const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
     if (updateId === lastSocketId.current) return; // ✅ نفس الـ update القديم، تجاهله
 
     lastSocketId.current = updateId as string;
