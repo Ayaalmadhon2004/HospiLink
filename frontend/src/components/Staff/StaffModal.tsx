@@ -1,11 +1,10 @@
-// components/StaffModal.tsx
-import { FormModal } from './Form';
-import { createStaff, updateStaff } from '../services/staffService';
+// components/Staff/StaffModal.tsx
+import { FormModal } from '../Form/FormModal';
+import { createStaff, updateStaff } from '../../services/staffService';
 import {
   staffFields,
-  staffValidationSchema,
   type StaffFormValues,
-} from '../configs/entityConfigs';
+} from '../../configs/entityConfigs';
 
 interface StaffModalProps {
   isOpen: boolean;

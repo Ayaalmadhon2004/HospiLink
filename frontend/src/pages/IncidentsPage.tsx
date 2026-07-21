@@ -8,9 +8,13 @@ import {
   Plus,
   Search,
   Activity,
+  Pencil,
+  Trash2,
 } from 'lucide-react';
-import { getIncidents } from '../services/incidentsService';
+import { getIncidents, deleteIncident } from '../services/incidentsService';
 import { useIncidentsSocket } from '../hooks/useIncidentsSocket';
+import { IncidentModal } from '../components/IncidentModal';
+import { ConfirmModal } from '../components/ConfirmModal';
 
 interface Incident {
   id: string;
@@ -25,6 +29,9 @@ interface Incident {
   progress: number;
   triageLevel?: string;
   createdAt: string;
+  reportedBy?: string;
+  patientId?: string;
+  actionTaken?: string;
 }
 
 const severityColors = {
@@ -47,7 +54,15 @@ export const IncidentsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('');
 
-  // ✅ Refs لمنع الـ loop والـ parallel requests
+  // Modal states
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
+  
+  // Confirm delete
+  const [deleteTarget, setDeleteTarget] = useState<Incident | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Refs
   const isFetching = useRef(false);
   const lastSocketId = useRef<string | null>(null);
   const lastFetchTime = useRef<number>(0);
@@ -55,7 +70,6 @@ export const IncidentsPage = () => {
   const latestUpdate = useIncidentsSocket();
 
   const fetchIncidents = useCallback(async () => {
-    // ✅ منع parallel requests + throttle (5 ثواني)
     const now = Date.now();
     if (isFetching.current || now - lastFetchTime.current < 5000) return;
 
@@ -74,21 +88,47 @@ export const IncidentsPage = () => {
     }
   }, []);
 
-  // ✅ Initial load — مرة واحدة بس
   useEffect(() => {
     fetchIncidents();
-  }, []); // ⬅️ فارغ!
+  }, []);
 
-  // ✅ Socket update — بتحقق إنه جديد فعلاً
   useEffect(() => {
     if (!latestUpdate) return;
-
     const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
-    if (updateId === lastSocketId.current) return; // ⬅️ نفس الـ update القديم
-
+    if (updateId === lastSocketId.current) return;
     lastSocketId.current = updateId;
     fetchIncidents();
   }, [latestUpdate, fetchIncidents]);
+
+  const handleAdd = () => {
+    setEditingIncident(null);
+    setIsModalOpen(true);
+  };
+
+  const handleEdit = (incident: Incident) => {
+    setEditingIncident(incident);
+    setIsModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      await deleteIncident(deleteTarget.id);
+      setDeleteTarget(null);
+      fetchIncidents();
+    } catch (err) {
+      console.error('Failed to delete incident:', err);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleModalSuccess = () => {
+    setIsModalOpen(false);
+    setEditingIncident(null);
+    fetchIncidents();
+  };
 
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch =
@@ -127,11 +167,48 @@ export const IncidentsPage = () => {
           </h1>
           <p className="text-gray-500 text-sm">Active emergency response</p>
         </div>
-        <button className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">
+        <button 
+          onClick={handleAdd}
+          className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
+        >
           <Plus size={16} />
           Report Incident
         </button>
       </div>
+
+      {/* Incident Modal */}
+      <IncidentModal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setEditingIncident(null); }}
+        onSuccess={handleModalSuccess}
+        initialData={editingIncident ? {
+          id: editingIncident.id,
+          type: editingIncident.type,
+          severity: editingIncident.severity,
+          location: editingIncident.location,
+          reportedBy: editingIncident.reportedBy || '',
+          patientId: editingIncident.patientId,
+          description: editingIncident.description || '',
+          actionTaken: editingIncident.actionTaken || '',
+        } : undefined}
+      />
+
+      {/* Confirm Delete Modal */}
+      <ConfirmModal
+        isOpen={!!deleteTarget}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={handleDelete}
+        title="Delete Incident"
+        message={
+          <span>
+            Are you sure you want to delete incident <strong>{deleteTarget?.code}</strong>? 
+            This action cannot be undone.
+          </span>
+        }
+        confirmLabel="Delete"
+        confirmingLabel="Deleting..."
+        tone="danger"
+      />
 
       {/* Code Orange Alert */}
       {incidents.some((i) => i.severity === 'CRITICAL') && (
@@ -149,10 +226,7 @@ export const IncidentsPage = () => {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search incidents..."
@@ -180,24 +254,34 @@ export const IncidentsPage = () => {
           filteredIncidents.map((incident) => (
             <div
               key={incident.id}
-              className="bg-white rounded-xl shadow-sm border p-6"
+              className="bg-white rounded-xl shadow-sm border p-6 group relative"
             >
+              {/* Actions - hover */}
+              <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                <button
+                  onClick={() => handleEdit(incident)}
+                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  title="Edit incident"
+                >
+                  <Pencil size={16} />
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(incident)}
+                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  title="Delete incident"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+
               {/* Header */}
-              <div className="flex items-start justify-between mb-3">
+              <div className="flex items-start justify-between mb-3 pr-20">
                 <div className="flex items-center gap-3">
                   <span className="text-sm text-gray-500 font-mono">
                     {incident.code}
                   </span>
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      severityColors[incident.severity]
-                    }`}
-                  >
-                    <span
-                      className={`w-1.5 h-1.5 rounded-full ${
-                        severityDots[incident.severity]
-                      } inline-block mr-1`}
-                    />
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[incident.severity]}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${severityDots[incident.severity]} inline-block mr-1`} />
                     {incident.severity}
                   </span>
                 </div>

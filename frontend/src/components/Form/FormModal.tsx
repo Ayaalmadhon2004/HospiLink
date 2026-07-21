@@ -2,8 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { FormBanner } from './FormBanner';
-import { FieldRenderer } from './FieldRenderer';
-import type { FormModalProps, FieldConfig } from './types';
+import  {FieldRenderer}  from './FieldRenderer';
+import type { FormModalProps } from './types';
 
 export const FormModal = <T extends Record<string, any>>({
   isOpen,

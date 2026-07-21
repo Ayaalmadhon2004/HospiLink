@@ -358,7 +358,6 @@ const Beds = () => {
         <BedModal
           bed={selectedBed}
           patients={patients}
-          // wards={wards}  ← شلها!
           onClose={() => setShowModal(false)}
           onSuccess={() => { fetchBeds(); fetchPatients(); }}
         />
