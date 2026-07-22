@@ -1,7 +1,8 @@
 // src/middlewares/auth.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import prisma from '../config/db';  // ← أضف هاد
+import prisma from '../config/db';
+import { JWT_SECRET } from '../config/jwt';  // ← ✅ Unified secret
 
 declare global {
   namespace Express {
@@ -36,9 +37,8 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   }
 
   try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as any;
+    const decoded = jwt.verify(token, JWT_SECRET) as any;  // ← ✅ Unified secret
 
-    // ✅ جيب الـ user من DB عشان تاخد الـ role الحقيقي
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
       select: { id: true, email: true, role: true },
@@ -51,7 +51,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     req.user = {
       id: user.id,
       email: user.email,
-      role: user.role,  // ← من DB!
+      role: user.role,
     };
 
     next();

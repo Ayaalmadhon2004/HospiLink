@@ -1,4 +1,4 @@
-// contexts/AuthContext.tsx
+// frontend/src/contexts/AuthContext.tsx
 import { createContext, useContext, useState, useEffect } from 'react';
 import { apiGet } from '../services/api';
 
@@ -7,10 +7,20 @@ interface User {
   name: string;
   email: string;
   role: string;
+  department?: string;
   avatar?: string;
 }
 
-const AuthContext = createContext<any>(null);
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+}
+
+// ✅ Default value مش null — object صحيح
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+});
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
@@ -18,20 +28,20 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const token = localStorage.getItem('token');
-    
-    // لو مافي token — خلص loading على طول
+
+    // ✅ لو مافي token — خلص loading فوراً
     if (!token) {
       setLoading(false);
       return;
     }
 
     apiGet('/auth/me')
-      .then(res => {
-        const userData = res.data?.user || res.data;
+      .then((res: any) => {
+        const userData = res.user || res.data?.user;
         setUser(userData);
       })
-      .catch(() => {
-        // لو فشل — شيل الـ token وخلص
+      .catch((err) => {
+        console.error('Auth error:', err);
         localStorage.removeItem('token');
         setUser(null);
       })

@@ -4,12 +4,11 @@ import prisma from '../config/db';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { protect } from '../middlewares/auth.middleware';
+import { JWT_SECRET } from '../config/jwt';  // ← ✅ Unified secret
 
 const router = Router();
 
-const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret';
-
-// Generate Token
+// Generate Token — uses unified JWT_SECRET
 const generateToken = (userId: string): string => {
   return jwt.sign({ userId }, JWT_SECRET, { expiresIn: '1d' });
 };
@@ -80,7 +79,7 @@ router.post('/signup', async (req: Request, res: Response): Promise<any> => {
     return res.status(201).json({
       success: true,
       message: 'تم إنشاء الحساب بنجاح',
-      token,  // ← ✅ أرجع token
+      token,
       user: {
         id: newUser.id,
         name: newUser.name,
@@ -129,7 +128,7 @@ router.post('/login', async (req: Request, res: Response): Promise<any> => {
     return res.status(200).json({
       success: true,
       message: 'تم تسجيل الدخول بنجاح',
-      token,  // ← ✅ أرجع token
+      token,
       user: {
         id: user.id,
         name: user.name,

@@ -22,8 +22,8 @@ export const api = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
-    || localStorage.getItem('accessToken')
-    || localStorage.getItem('authToken');
+      || localStorage.getItem('accessToken')
+      || localStorage.getItem('authToken');
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -35,18 +35,19 @@ api.interceptors.request.use(
 );
 
 // ============================================
-// RESPONSE INTERCEPTOR
+// RESPONSE INTERCEPTOR — NO hard redirect
 // ============================================
 
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // ✅ شيل الـ token بس — لا تعمل redirect
+      // الـ PrivateRoute/AuthContext بيتعاملوا مع الـ 401
       localStorage.removeItem('token');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('authToken');
-      window.location.href = '/login';
-      return Promise.reject(new Error('Session expired. Please login again.'));
+      // ❌ شيلنا: window.location.href = '/login';
     }
 
     if (error.response?.status === 403) {
@@ -63,7 +64,7 @@ api.interceptors.response.use(
 );
 
 // ============================================
-// MODERN HTTP METHODS (return data directly)
+// MODERN HTTP METHODS
 // ============================================
 
 export const apiGet = async <T = any>(url: string, params?: Record<string, any>): Promise<T> => {
@@ -105,7 +106,7 @@ export const apiUpload = async <T = any>(url: string, formData: FormData): Promi
 };
 
 // ============================================
-// LEGACY COMPATIBILITY (for old code using fetch-style)
+// LEGACY COMPATIBILITY
 // ============================================
 
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
