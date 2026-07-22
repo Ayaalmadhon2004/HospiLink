@@ -1,3 +1,4 @@
+// frontend/src/components/Dashboard/Sidebar.tsx
 import { 
   LayoutDashboard, 
   Users, 
@@ -9,8 +10,11 @@ import {
   Truck,
   Heart,
   Settings,
-  ChevronRight
+  ChevronRight,
+  LogOut,
+  Loader2
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface SidebarProps {
   activeItem: string;
@@ -18,6 +22,8 @@ interface SidebarProps {
 }
 
 const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
+  const { user, loading } = useAuth();
+
   const menuItems = [
     { id: 'Overview', label: 'Overview', icon: LayoutDashboard, badge: null },
     { id: 'Patients', label: 'Patients', icon: Users, badge: '1.2k' },
@@ -28,6 +34,16 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
     { id: 'Incidents', label: 'Incidents', icon: AlertTriangle, badge: '7' },
     { id: 'Dispatch', label: 'Dispatch', icon: Truck, badge: null },
   ];
+
+  // Get initials from user name
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   return (
     <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col">
@@ -96,18 +112,34 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
         </button>
       </div>
 
-      {/* Bottom */}
+      {/* Bottom - Dynamic Profile */}
       <div className="p-4 border-t border-slate-800">
-        <div className="flex items-center gap-3 px-4 py-3">
-          <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-sm font-bold text-white">
-            DR
+        {loading ? (
+          <div className="flex items-center gap-3 px-4 py-3">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+            <span className="text-sm text-slate-400">Loading...</span>
           </div>
-          <div className="flex-1">
-            <p className="text-sm font-medium">Dr. Rivera</p>
-            <p className="text-xs text-slate-400">Chief of Medicine</p>
+        ) : user ? (
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-sm font-bold text-white shrink-0">
+              {getInitials(user.name)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{user.name}</p>
+              <p className="text-xs text-slate-400 truncate">{user.role}</p>
+            </div>
+            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
           </div>
-          <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-        </div>
+        ) : (
+          <div className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-sm font-bold text-slate-400 shrink-0">
+              ?
+            </div>
+            <div className="flex-1">
+              <p className="text-sm text-slate-400">Not logged in</p>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

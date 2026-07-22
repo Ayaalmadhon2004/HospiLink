@@ -1,14 +1,263 @@
-// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
 
 datasource db {
   provider = "postgresql"
 }
 
-generator client {
-  provider = "prisma-client-js"
+model Hospital {
+  id        String    @id @default(uuid())
+  name      String
+  location  String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  beds      Bed[]
+  patients  Patient[]
+  users     User[]
+  wards     Ward[]
 }
 
-// ==================== ENUMS ====================
+model User {
+  id         String        @id @default(uuid())
+  email      String        @unique
+  password   String
+  name       String
+  role       Role          @default(DOCTOR)
+  department String
+  shift      String
+  status     String        @default("OFF_DUTY")
+  hospitalId String
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  patients   Patient[]
+  hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  settings   UserSettings?
+}
+
+model UserSettings {
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  criticalVitalsAlerts Boolean  @default(true)
+  incidentEscalations  Boolean  @default(true)
+  shiftReminders       Boolean  @default(false)
+  dispatchAlerts       Boolean  @default(true)
+  appointmentReminders Boolean  @default(true)
+  twoFactorAuth        Boolean  @default(false)
+  autoLockIdleSessions Boolean  @default(true)
+  compactDensity       Boolean  @default(false)
+  theme                String   @default("light")
+  language             String   @default("en")
+  timezone             String   @default("UTC")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  action    String
+  userId    String
+  entityId  String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model Patient {
+  id            String          @id @default(uuid())
+  name          String
+  age           Int
+  status        PatientStatus   @default(OBSERVATION)
+  admissionDate DateTime        @default(now())
+  bedId         String?         @unique
+  hospitalId    String
+  createdAt     DateTime        @default(now())
+  department    String
+  diagnosis     String
+  dischargeDate DateTime?
+  doctorId      String?
+  gender        Gender
+  patientCode   String          @unique
+  updatedAt     DateTime        @updatedAt
+  appointments  Appointment[]
+  bed           Bed?            @relation("BedPatient", fields: [bedId], references: [id])
+  doctor        User?           @relation(fields: [doctorId], references: [id])
+  hospital      Hospital        @relation(fields: [hospitalId], references: [id])
+  vitals        PatientVitals[]
+  reports       Report[]
+}
+
+model Report {
+  id         String   @id @default(uuid())
+  fileName   String
+  fileUrl    String
+  fileType   String
+  patientId  String
+  uploadedBy String?
+  createdAt  DateTime @default(now())
+  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+}
+
+model Ward {
+  id         String   @id @default(uuid())
+  name       String
+  floor      Int?
+  hospitalId String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  beds       Bed[]
+  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+}
+
+model Bed {
+  id         String    @id @default(uuid())
+  bedNumber  String
+  status     BedStatus @default(AVAILABLE)
+  hospitalId String
+  wardId     String
+  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  ward       Ward      @relation(fields: [wardId], references: [id], onDelete: Cascade)
+  patient    Patient?  @relation("BedPatient")
+
+  @@unique([bedNumber, wardId])
+}
+
+model PatientVitals {
+  id              String   @id @default(uuid())
+  patientId       String
+  heartRate       Int?
+  systolicBP      Int?
+  diastolicBP     Int?
+  spO2            Float?
+  temperature     Float?
+  respiratoryRate Int?
+  recordedAt      DateTime @default(now())
+  recordedBy      String
+  notes           String?
+  isCritical      Boolean  @default(false)
+  alertType       String?
+  patient         Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
+
+  @@index([patientId])
+  @@index([recordedAt])
+  @@index([isCritical])
+}
+
+model VitalThresholds {
+  id           String  @id @default(uuid())
+  department   String
+  vitalType    String
+  minNormal    Float?
+  maxNormal    Float?
+  minCritical  Float?
+  maxCritical  Float?
+  alertEnabled Boolean @default(true)
+  autoNotify   Boolean @default(false)
+
+  @@unique([department, vitalType])
+}
+
+model Staff {
+  id           String        @id @default(uuid())
+  name         String
+  email        String        @unique
+  role         String
+  department   String
+  avatar       String?
+  phone        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  appointments Appointment[]
+  shifts       Shift[]
+}
+
+model Shift {
+  id         String   @id @default(uuid())
+  staffId    String
+  type       String
+  startTime  DateTime
+  endTime    DateTime
+  department String
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  staff      Staff    @relation(fields: [staffId], references: [id])
+}
+
+model Appointment {
+  id          String   @id @default(uuid())
+  patientId   String
+  doctorId    String
+  scheduledAt DateTime
+  type        String
+  status      String   @default("SCHEDULED")
+  department  String
+  room        String?
+  notes       String?
+  duration    Int      @default(30)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  doctor      Staff    @relation(fields: [doctorId], references: [id])
+  patient     Patient  @relation(fields: [patientId], references: [id])
+
+  @@index([scheduledAt])
+  @@index([doctorId, scheduledAt])
+  @@index([patientId])
+  @@index([status])
+}
+
+model Incident {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  title       String
+  description String?
+  type        String
+  severity    String
+  status      String    @default("ACTIVE")
+  location    String
+  teams       Int       @default(1)
+  progress    Int       @default(0)
+  triageLevel String?
+  reportedBy  String
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status])
+  @@index([severity])
+  @@index([createdAt])
+}
+
+model DispatchUnit {
+  id            String        @id @default(uuid())
+  unitCode      String        @unique
+  unitType      UnitType
+  status        UnitStatus    @default(AVAILABLE)
+  location      String?
+  eta           Int?
+  department    String        @default("ER")
+  crew          String[]
+  currentCallId String?       @unique
+  lastUpdated   DateTime      @updatedAt
+  createdAt     DateTime      @default(now())
+  currentCall   DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
+}
+
+model DispatchCall {
+  id             String        @id @default(uuid())
+  type           String
+  location       String
+  priority       Priority      @default(MEDIUM)
+  status         CallStatus    @default(PENDING)
+  notes          String?
+  assignedUnitId String?       @unique
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  assignedUnit   DispatchUnit? @relation("UnitCall")
+}
 
 enum Role {
   ADMIN
@@ -18,9 +267,9 @@ enum Role {
 }
 
 enum PatientStatus {
-  STABLE
   OBSERVATION
   CRITICAL
+  STABLE
   DISCHARGED
 }
 
@@ -67,276 +316,4 @@ enum CallStatus {
   ON_SCENE
   COMPLETED
   CANCELLED
-}
-
-// ==================== MODELS ====================
-
-model Hospital {
-  id        String   @id @default(uuid())
-  name      String
-  location  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users    User[]
-  beds     Bed[]
-  wards    Ward[]
-  patients Patient[]
-}
-
-model User {
-  id         String   @id @default(uuid())
-  email      String   @unique
-  password   String
-  name       String
-  role       Role     @default(DOCTOR)
-  department String
-  shift      String
-  status     String   @default("OFF_DUTY")
-  hospitalId String
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  hospital Hospital    @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patients Patient[]
-  settings UserSettings?
-}
-
-model UserSettings {
-  id                   String   @id @default(uuid())
-  userId               String   @unique
-  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  // Notifications
-  criticalVitalsAlerts Boolean  @default(true)
-  incidentEscalations  Boolean  @default(true)
-  shiftReminders       Boolean  @default(false)
-  dispatchAlerts       Boolean  @default(true)
-  appointmentReminders Boolean  @default(true)
-
-  // Security & Display
-  twoFactorAuth        Boolean  @default(false)
-  autoLockIdleSessions Boolean  @default(true)
-  compactDensity       Boolean  @default(false)
-
-  // Display
-  theme                String   @default("light")
-  language             String   @default("en")
-  timezone             String   @default("UTC")
-
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-}
-
-model AuditLog {
-  id        String   @id @default(uuid())
-  action    String
-  userId    String
-  entityId  String
-  details   String?
-  createdAt DateTime @default(now())
-}
-
-model Patient {
-  id            String        @id @default(uuid())
-  patientCode   String        @unique
-  name          String
-  age           Int
-  gender        Gender
-  department    String
-  diagnosis     String
-  status        PatientStatus @default(OBSERVATION)
-  admissionDate DateTime      @default(now())
-  dischargeDate DateTime?
-  doctorId      String?
-  doctor        User?         @relation(fields: [doctorId], references: [id])
-  bedId         String?       @unique
-  bed           Bed?          @relation("BedPatient", fields: [bedId], references: [id])
-  hospitalId    String
-  hospital      Hospital      @relation(fields: [hospitalId], references: [id])
-  reports       Report[]
-  vitals        PatientVitals[]
-  appointments  Appointment[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-}
-
-model Report {
-  id         String   @id @default(uuid())
-  fileName   String
-  fileUrl    String
-  fileType   String
-  patientId  String
-  patient    Patient  @relation(fields: [patientId], references: [id], onDelete: Cascade)
-  uploadedBy String?
-  createdAt  DateTime @default(now())
-
-  @@index([patientId])
-}
-
-model Ward {
-  id         String   @id @default(uuid())
-  name       String
-  floor      Int?
-  hospitalId String
-  hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  beds Bed[]
-}
-
-model Bed {
-  id         String    @id @default(uuid())
-  bedNumber  String
-  wardId     String
-  ward       Ward      @relation(fields: [wardId], references: [id], onDelete: Cascade)
-  status     BedStatus @default(AVAILABLE)
-  hospitalId String
-  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  patient    Patient?  @relation("BedPatient")
-
-  @@unique([bedNumber, wardId])
-}
-
-model PatientVitals {
-  id        String  @id @default(uuid())
-  patientId String
-  patient   Patient @relation(fields: [patientId], references: [id], onDelete: Cascade)
-
-  heartRate       Int?
-  systolicBP      Int?
-  diastolicBP     Int?
-  spO2            Float?
-  temperature     Float?
-  respiratoryRate Int?
-
-  recordedAt DateTime @default(now())
-  recordedBy String
-  notes      String?
-
-  isCritical Boolean @default(false)
-  alertType  String?
-
-  @@index([patientId])
-  @@index([recordedAt])
-  @@index([isCritical])
-}
-
-model VitalThresholds {
-  id         String @id @default(uuid())
-  department String
-  vitalType  String
-
-  minNormal   Float?
-  maxNormal   Float?
-  minCritical Float?
-  maxCritical Float?
-
-  alertEnabled Boolean @default(true)
-  autoNotify   Boolean @default(false)
-
-  @@unique([department, vitalType])
-}
-
-model Staff {
-  id         String   @id @default(uuid())
-  name       String
-  email      String   @unique
-  role       String
-  department String
-  avatar     String?
-  phone      String?
-  isActive   Boolean  @default(true)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  shifts       Shift[]
-  appointments Appointment[]
-}
-
-model Shift {
-  id         String   @id @default(uuid())
-  staffId    String
-  staff      Staff    @relation(fields: [staffId], references: [id])
-  type       String
-  startTime  DateTime
-  endTime    DateTime
-  department String
-  notes      String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-}
-
-model Appointment {
-  id          String   @id @default(uuid())
-  patientId   String
-  doctorId    String
-  scheduledAt DateTime
-  type        String
-  status      String   @default("SCHEDULED")
-  department  String
-  room        String?
-  notes       String?
-  duration    Int      @default(30)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  patient Patient @relation(fields: [patientId], references: [id])
-  doctor  Staff   @relation(fields: [doctorId], references: [id])
-
-  @@index([scheduledAt])
-  @@index([doctorId, scheduledAt])
-  @@index([patientId])
-  @@index([status])
-}
-
-model Incident {
-  id          String   @id @default(uuid())
-  code        String   @unique
-  title       String
-  description String?
-  type        String
-  severity    String
-  status      String   @default("ACTIVE")
-  location    String
-  teams       Int      @default(1)
-  progress    Int      @default(0)
-  triageLevel String?
-  reportedBy  String
-  resolvedAt  DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@index([status])
-  @@index([severity])
-  @@index([createdAt])
-}
-
-model DispatchUnit {
-  id          String       @id @default(uuid())
-  unitCode    String       @unique
-  unitType    UnitType
-  status      UnitStatus   @default(AVAILABLE)
-  location    String?
-  eta         Int?
-  department  String       @default("ER")
-  crew        String[]
-  currentCallId String?    @unique
-  currentCall   DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
-  lastUpdated DateTime     @updatedAt
-  createdAt   DateTime     @default(now())
-}
-
-model DispatchCall {
-  id           String       @id @default(uuid())
-  type         String
-  location     String
-  priority     Priority     @default(MEDIUM)
-  status       CallStatus   @default(PENDING)
-  notes        String?
-  assignedUnitId String?    @unique
-  assignedUnit   DispatchUnit? @relation("UnitCall")
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
 }

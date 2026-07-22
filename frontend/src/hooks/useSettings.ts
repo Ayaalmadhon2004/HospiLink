@@ -1,8 +1,6 @@
 // frontend/src/hooks/useSettings.ts
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'https://hospilink-1bfi.onrender.com/api';
+import { apiGet, apiPut } from '../services/api';
 
 export interface NotificationSettings {
   criticalVitalsAlerts: boolean;
@@ -39,11 +37,12 @@ const useSettings = () => {
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await axios.get(`${API_URL}/settings`, { withCredentials: true });
-      setSettings(res.data.data);
+      const res = await apiGet<any>('/settings');
+      setSettings(res.data || res);
       setError(null);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to fetch settings');
+      console.error('Settings fetch error:', err);
+      setError(err.message || 'Failed to fetch settings');
     } finally {
       setLoading(false);
     }
@@ -52,39 +51,36 @@ const useSettings = () => {
   // تحديث الإشعارات
   const updateNotifications = async (data: Partial<NotificationSettings>) => {
     try {
-      await axios.put(`${API_URL}/settings/notifications`, data, {
-        withCredentials: true
-      });
+      await apiPut('/settings/notifications', data);
       setSettings(prev => prev ? { ...prev, notifications: { ...prev.notifications, ...data } } : null);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.response?.data?.message };
+      console.error('Update notifications error:', err);
+      return { success: false, error: err.message };
     }
   };
 
   // تحديث الأمان
   const updateSecurity = async (data: Partial<SecuritySettings>) => {
     try {
-      await axios.put(`${API_URL}/settings/security`, data, {
-        withCredentials: true
-      });
+      await apiPut('/settings/security', data);
       setSettings(prev => prev ? { ...prev, security: { ...prev.security, ...data } } : null);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.response?.data?.message };
+      console.error('Update security error:', err);
+      return { success: false, error: err.message };
     }
   };
 
   // تحديث العرض
   const updateDisplay = async (data: Partial<DisplaySettings>) => {
     try {
-      await axios.put(`${API_URL}/settings/display`, data, {
-        withCredentials: true
-      });
+      await apiPut('/settings/display', data);
       setSettings(prev => prev ? { ...prev, display: { ...prev.display, ...data } } : null);
       return { success: true };
     } catch (err: any) {
-      return { success: false, error: err.response?.data?.message };
+      console.error('Update display error:', err);
+      return { success: false, error: err.message };
     }
   };
 

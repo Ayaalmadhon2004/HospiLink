@@ -1,7 +1,8 @@
 // frontend/src/pages/Settings/SettingsPage.tsx
-import React, { useState } from 'react';
+import { useState } from 'react';
 import useSettings from '../hooks/useSettings';
-import { Bell, Shield, Monitor, User } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { Bell, Shield, Monitor, User, Loader2 } from 'lucide-react';
 
 const Toggle: React.FC<{
   enabled: boolean;
@@ -26,12 +27,33 @@ const Toggle: React.FC<{
 );
 
 const SettingsPage: React.FC = () => {
-  const { settings, loading, updateNotifications, updateSecurity } = useSettings();
+  const { user, loading: userLoading } = useAuth();
+  const { settings, loading: settingsLoading, updateNotifications, updateSecurity } = useSettings();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!settings) return <div className="p-8">Failed to load settings</div>;
+  const loading = userLoading || settingsLoading;
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex items-center gap-3 text-gray-400">
+          <Loader2 className="w-5 h-5 animate-spin" />
+          <span>Loading settings...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (!settings) {
+    return (
+      <div className="p-8">
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+          Failed to load settings. Please refresh the page.
+        </div>
+      </div>
+    );
+  }
 
   const handleToggle = async (
     key: string,
@@ -63,7 +85,7 @@ const SettingsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Profile Section */}
+      {/* Profile Section - DYNAMIC */}
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <User className="w-5 h-5 text-teal-600" aria-hidden="true" />
@@ -77,7 +99,7 @@ const SettingsPage: React.FC = () => {
             <input
               id="profile-name"
               type="text"
-              value="Dr. Elena Rivera"
+              value={user?.name || 'Unknown'}
               disabled
               className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
               aria-disabled="true"
@@ -90,7 +112,33 @@ const SettingsPage: React.FC = () => {
             <input
               id="profile-role"
               type="text"
-              value="Chief of Medicine"
+              value={user?.role || 'Unknown'}
+              disabled
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
+              aria-disabled="true"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-2">
+              Email
+            </label>
+            <input
+              id="profile-email"
+              type="email"
+              value={user?.email || 'Unknown'}
+              disabled
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
+              aria-disabled="true"
+            />
+          </div>
+          <div>
+            <label htmlFor="profile-department" className="block text-sm font-medium text-gray-700 mb-2">
+              Department
+            </label>
+            <input
+              id="profile-department"
+              type="text"
+              value={user?.department || 'General'}
               disabled
               className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
               aria-disabled="true"

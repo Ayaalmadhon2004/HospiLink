@@ -1,19 +1,16 @@
-// pages/LoginPage.tsx
-import React, { useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+// frontend/src/pages/Auth/LoginPage.tsx
+import { useState, type FormEvent } from 'react';
+import { Activity } from 'lucide-react';
 import { login } from '../services/authService';
 
-const LoginPage: React.FC = () => {
-  const [formData, setFormData] = useState({ email: '', password: '' });
+export const LoginPage = () => {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    rememberMe: false,
+  });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
-  const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    // Clear error when user starts typing
-    if (error) setError('');
-  };
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -23,7 +20,12 @@ const LoginPage: React.FC = () => {
     try {
       const data = await login(formData);
 
-      if (data.user) {
+      if (data.token && data.user) {
+        // ✅ تخزين الـ token في localStorage
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('user', JSON.stringify(data.user));
+
+        // ✅ توجيه للـ Dashboard
         window.location.href = '/dashboard';
       } else {
         setError(data.message || 'Login failed');
@@ -36,80 +38,76 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
-        <h1 className="text-2xl font-bold text-slate-800 mb-2">Welcome Back</h1>
-        <p className="text-slate-500 mb-6">Enter your credentials to access HospiLink</p>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+        <div className="flex items-center justify-center gap-2 mb-8">
+          <Activity className="text-teal-500" size={32} />
+          <h1 className="text-2xl font-bold text-gray-900">HospiLink</h1>
+        </div>
+
+        <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">
+          Welcome Back
+        </h2>
+        <p className="text-gray-500 text-sm text-center mb-6">
+          Sign in to your account
+        </p>
 
         {error && (
-          <div 
-            className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm"
-            role="alert"
-            aria-live="assertive"
-            id="login-error"
-          >
+          <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+        <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-              Email Address
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
             </label>
-            <input 
-              id="email"
-              name="email" 
-              type="email" 
-              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-              placeholder="you@hospital.com" 
+            <input
+              type="email"
               value={formData.email}
-              onChange={handleChange} 
-              required 
-              autoComplete="email"
-              aria-required="true"
-              aria-invalid={error ? 'true' : 'false'}
-              aria-describedby={error ? 'login-error' : undefined}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              placeholder="doctor@hospital.com"
+              required
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Password
             </label>
-            <input 
-              id="password"
-              name="password" 
-              type="password" 
-              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition"
-              placeholder="Enter your password" 
+            <input
+              type="password"
               value={formData.password}
-              onChange={handleChange} 
-              required 
-              autoComplete="current-password"
-              aria-required="true"
-              aria-invalid={error ? 'true' : 'false'}
+              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+              placeholder="••••••••"
+              required
             />
           </div>
 
-          <button 
-            type="submit" 
+          <div className="flex items-center justify-between">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.rememberMe}
+                onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
+                className="rounded border-gray-300 text-teal-500 focus:ring-teal-500"
+              />
+              <span className="text-sm text-gray-600">Remember me</span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
             disabled={loading}
-            className="w-full bg-hospital-navy hover:bg-slate-800 text-white font-semibold py-3 rounded-xl transition duration-200 mt-2 disabled:opacity-50"
-            aria-label={loading ? 'Logging in, please wait' : 'Login to your account'}
-            aria-busy={loading}
+            className="w-full bg-teal-500 text-white py-2.5 rounded-lg hover:bg-teal-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Logging in...' : 'Login'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
-
-        <p className="text-center text-slate-400 mt-6 text-sm">
-          Don't have an account? 
-          <Link to="/signup" className="text-medical-teal font-medium hover:underline"> Sign Up</Link>
-        </p>
       </div>
     </div>
   );
 };
-
-export default LoginPage;
