@@ -1,12 +1,12 @@
 // pages/StaffDirectoryPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Users, RefreshCw, Search, Plus, Pencil, Trash2
+  Users, RefreshCw, Search, Plus, Pencil, Trash2, AlertTriangle
 } from 'lucide-react';
 import { getStaff, deleteStaff } from '../services/staffService';
 import { useStaffSocket } from '../hooks/useStaffSocket';
 import { StaffModal } from '../components/Staff/StaffModal';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { toast } from 'sonner';
 
 interface StaffMember {
   id: string;
@@ -26,14 +26,13 @@ export const StaffDirectoryPage = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [selectedDept, setSelectedDept] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
-  
+
   // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-  
+
   // Confirm delete
-  const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
-  const [_isDeleting, setIsDeleting] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
   const latestShift = useStaffSocket(selectedDept || 'all');
 
@@ -70,17 +69,30 @@ export const StaffDirectoryPage = () => {
     setIsModalOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setIsDeleting(true);
+  // ✅ FAST DELETE — optimistic update
+  const handleDeleteClick = (id: string, name: string) => {
+    setConfirmDelete({ id, name });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    const { id, name } = confirmDelete;
+
+    // 1. Close dialog immediately
+    setConfirmDelete(null);
+
+    // 2. Remove from local state INSTANTLY (optimistic update)
+    setStaff(prev => prev.filter(s => s.id !== id));
+
+    // 3. Show success toast immediately
+    toast.success(`Staff member ${name} deleted`);
+
+    // 4. Send delete request in background
     try {
-      await deleteStaff(deleteTarget.id);
-      setDeleteTarget(null);
-      fetchStaff();
+      await deleteStaff(id);
     } catch (err) {
-      console.error('Failed to delete staff:', err);
-    } finally {
-      setIsDeleting(false);
+      toast.error(`Failed to delete ${name}`);
+      fetchStaff(); // Refresh to get correct state
     }
   };
 
@@ -110,7 +122,40 @@ export const StaffDirectoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-8 relative">
+      {/* Confirm Delete Dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 text-base">Delete {confirmDelete.name}?</h3>
+                <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
+                  This staff member will be permanently removed. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 justify-end">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition shadow-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
@@ -154,23 +199,6 @@ export const StaffDirectoryPage = () => {
           department: editingStaff.department,
           status: editingStaff.isActive ? 'ACTIVE' : 'INACTIVE',
         } : undefined}
-      />
-
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Staff Member"
-        message={
-          <span>
-            Are you sure you want to delete <strong>{deleteTarget?.name}</strong>? 
-            This action cannot be undone.
-          </span>
-        }
-        confirmLabel="Delete"
-        confirmingLabel="Deleting..."
-        tone="danger"
       />
 
       {/* Filters */}
@@ -257,7 +285,7 @@ export const StaffDirectoryPage = () => {
                       <Pencil size={16} />
                     </button>
                     <button
-                      onClick={() => setDeleteTarget(member)}
+                      onClick={() => handleDeleteClick(member.id, member.name)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title="Delete staff"
                     >
