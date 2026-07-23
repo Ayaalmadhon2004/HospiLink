@@ -1,6 +1,6 @@
 // pages/Beds.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2, X, AlertTriangle } from 'lucide-react';
+import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2, AlertTriangle } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
 import { apiGet, apiDelete } from '../services/api';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ const Beds = () => {
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [_wards, setWards] = useState<Ward[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<{ id: string; bedNumber: string } | null>(null);
 
   const fetchBeds = useCallback(async () => {
     try {
@@ -88,72 +89,36 @@ const Beds = () => {
     }
   };
 
-  // ✅ DELETE — sleek toast confirm dialog
-  const handleDelete = (id: string, bedNumber: string) => {
-    toast.custom(
-      (t) => (
-        <div className="bg-white rounded-xl shadow-xl border border-gray-100 p-5 w-[360px]">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
-              <AlertTriangle className="w-5 h-5 text-rose-500" />
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-gray-900 text-sm">Delete Bed {bedNumber}?</h4>
-              <p className="text-gray-500 text-xs mt-1 leading-relaxed">
-                This bed will be permanently removed. This action cannot be undone.
-              </p>
-            </div>
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="text-gray-400 hover:text-gray-600 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex gap-2 mt-4 justify-end">
-            <button
-              onClick={() => toast.dismiss(t)}
-              className="px-3 py-1.5 text-xs font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={async () => {
-                toast.dismiss(t);
-                setDeletingId(id);
-                try {
-                  const data = await apiDelete(`/beds/${id}`);
-                  if (data.success) {
-                    toast.success(
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center">
-                          <svg className="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
-                        </div>
-                        <span className="text-sm font-medium">Bed {bedNumber} deleted</span>
-                      </div>,
-                      { duration: 3000 }
-                    );
-                    fetchBeds();
-                  } else {
-                    toast.error(data.message || 'Failed to delete bed');
-                  }
-                } catch (error: any) {
-                  toast.error(error.message || 'Error deleting bed');
-                } finally {
-                  setDeletingId(null);
-                }
-              }}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-lg transition shadow-sm"
-            >
-              Delete
-            </button>
-          </div>
-        </div>
-      ),
-      { duration: Infinity, position: 'top-center' }
-    );
+  // ✅ FAST DELETE — remove from state immediately
+  const handleDeleteClick = (id: string, bedNumber: string) => {
+    setConfirmDelete({ id, bedNumber });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete) return;
+    const { id, bedNumber } = confirmDelete;
+
+    // 1. Close dialog immediately
+    setConfirmDelete(null);
+
+    // 2. Remove from local state INSTANTLY (optimistic update)
+    setBeds(prev => prev.filter(b => b.id !== id));
+
+    // 3. Show success toast immediately
+    toast.success(`Bed ${bedNumber} deleted`);
+
+    // 4. Send delete request in background
+    try {
+      const data = await apiDelete(`/beds/${id}`);
+      if (!data.success) {
+        // If server failed, revert and show error
+        toast.error(data.message || 'Failed to delete bed');
+        fetchBeds(); // Refresh to get correct state
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Error deleting bed');
+      fetchBeds(); // Refresh to get correct state
+    }
   };
 
   if (loading) {
@@ -165,7 +130,40 @@ const Beds = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {/* Confirm Delete Dialog */}
+      {confirmDelete && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
+                <AlertTriangle className="w-6 h-6 text-rose-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 text-base">Delete Bed {confirmDelete.bedNumber}?</h3>
+                <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
+                  This bed will be permanently removed from the system. This action cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3 mt-6 justify-end">
+              <button
+                onClick={() => setConfirmDelete(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-4 py-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition shadow-sm"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Beds & Wards</h1>
@@ -281,7 +279,6 @@ const Beds = () => {
           <tbody className="divide-y divide-gray-100">
             {filteredBeds.map((bed) => {
               const config = getStatusConfig(bed.status);
-              const isDeleting = deletingId === bed.id;
               return (
                 <tr key={bed.id} className="hover:bg-gray-50 transition">
                   <td className="px-6 py-4">
@@ -323,15 +320,10 @@ const Beds = () => {
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDelete(bed.id, bed.bedNumber)}
-                        disabled={isDeleting}
-                        className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50"
+                        onClick={() => handleDeleteClick(bed.id, bed.bedNumber)}
+                        className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                       >
-                        {isDeleting ? (
-                          <div className="w-4 h-4 border-2 border-rose-300 border-t-rose-600 rounded-full animate-spin" />
-                        ) : (
-                          <Trash2 className="w-4 h-4" />
-                        )}
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   </td>
