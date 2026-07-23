@@ -203,9 +203,10 @@ export const staffValidationSchema = z.object({
 });
 
 // ─── 5. INCIDENT CONFIG (NEW) ────────────────────────────────────
+// ✅ FIXED: severity values now match API/Incident interface
 export interface IncidentFormValues {
   type: string;
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  severity: 'CRITICAL' | 'ELEVATED' | 'MODERATE' | 'LOW';  // ← متطابق مع API
   location: string;
   reportedBy: string;
   patientId?: string;
@@ -221,11 +222,12 @@ const INCIDENT_TYPE_OPTIONS = [
   { label: 'Other', value: 'OTHER' },
 ];
 
+// ✅ FIXED: severity options match API exactly
 const SEVERITY_OPTIONS = [
-  { label: 'Low', value: 'LOW' },
-  { label: 'Medium', value: 'MEDIUM' },
-  { label: 'High', value: 'HIGH' },
   { label: 'Critical', value: 'CRITICAL' },
+  { label: 'Elevated', value: 'ELEVATED' },
+  { label: 'Moderate', value: 'MODERATE' },
+  { label: 'Low', value: 'LOW' },
 ];
 
 export const incidentFields: FieldConfig<IncidentFormValues>[] = [
@@ -245,9 +247,10 @@ export const incidentFields: FieldConfig<IncidentFormValues>[] = [
   { name: 'actionTaken', label: 'Action Taken', type: 'textarea', rows: 3, placeholder: 'What was done to resolve...' },
 ];
 
+// ✅ FIXED: validation schema matches
 export const incidentValidationSchema = z.object({
   type: requiredString('Incident type'),
-  severity: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']),
+  severity: z.enum(['CRITICAL', 'ELEVATED', 'MODERATE', 'LOW']),
   location: requiredString('Location'),
   reportedBy: requiredString('Reported by'),
   patientId: z.string().optional(),
