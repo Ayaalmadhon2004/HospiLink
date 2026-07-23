@@ -3,8 +3,6 @@ import {
   useEffect, 
   useCallback, 
   useMemo, 
-  lazy, 
-  Suspense,
   memo 
 } from 'react';
 import Sidebar from '../components/Dashboard/Sidebar';
@@ -15,16 +13,15 @@ import { getStaff } from '../services/staffService';
 import { getBeds } from '../services/bedService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 
-// ─── Code Splitting للصفحات الفرعية ───────────────────────────────
-// نستخدم dynamic import مع default export
-const PatientsPage = lazy(() => import('../pages/PatientsPage').then(m => ({ default: m.PatientsPage })));
-const Beds = lazy(() => import('../pages/Beds'));
-const VitalsMonitorPage = lazy(() => import('../pages/VitalsMonitorPage').then(m => ({ default: m.VitalsMonitorPage })));
-const StaffDirectoryPage = lazy(() => import('../pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
-const AppointmentsPage = lazy(() => import('../pages/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })));
-const IncidentsPage = lazy(() => import('./IncidentsPage').then(m => ({ default: m.IncidentsPage })));
-const DispatchDashboard = lazy(() => import('./DispatchDashboard'));
-const SettingsPage = lazy(() => import('./SettingsPage'));
+// ✅ STATIC imports (not lazy) — App.tsx already imports these
+import { PatientsPage } from '../pages/PatientsPage';
+import Beds from '../pages/Beds';
+import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
+import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
+import { AppointmentsPage } from '../pages/AppointmentsPage';
+import { IncidentsPage } from './IncidentsPage';
+import DispatchDashboard from './DispatchDashboard';
+import SettingsPage from './SettingsPage';
 
 // ─── Cookie Helpers ───────────────────────────────────────────────
 const getCookie = (name: string): string => {
@@ -187,15 +184,15 @@ const useDashboardData = () => {
       const patients: Patient[] = Array.isArray(patientsRes) 
         ? patientsRes 
         : patientsRes?.data || [];
-      
+
       const todaySchedule: TodayAppointment[] = Array.isArray(scheduleRes)
         ? scheduleRes
         : scheduleRes?.data?.appointments || [];
-      
+
       const staff: StaffMember[] = Array.isArray(staffRes) 
         ? staffRes 
         : staffRes?.data || [];
-      
+
       const beds: Bed[] = Array.isArray(bedsRes)
         ? bedsRes
         : bedsRes?.data || [];
@@ -206,7 +203,7 @@ const useDashboardData = () => {
 
       // Build department loads
       const deptMap = new Map<string, { current: number; max: number }>();
-      
+
       patients.forEach((p) => {
         const dept = p.department || 'General';
         const existing = deptMap.get(dept) || { current: 0, max: 50 };
@@ -251,9 +248,9 @@ const useDashboardData = () => {
   // Initial load + polling
   useEffect(() => {
     const controller = new AbortController();
-    
+
     fetchData(controller.signal);
-    
+
     const interval = setInterval(() => {
       fetchData(controller.signal);
     }, POLLING_INTERVAL);
@@ -507,13 +504,7 @@ const Dashboard = () => {
         role="main"
         aria-label={`${activeItem} dashboard`}
       >
-        {activeItem === 'Overview' ? (
-          OverviewPanel
-        ) : (
-          <Suspense fallback={<LoadingSpinner />}>
-            {renderContent}
-          </Suspense>
-        )}
+        {activeItem === 'Overview' ? OverviewPanel : renderContent}
       </main>
     </div>
   );
