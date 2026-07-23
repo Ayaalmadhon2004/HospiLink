@@ -60,7 +60,7 @@ export const IncidentsPage = () => {
   
   // Confirm delete
   const [deleteTarget, setDeleteTarget] = useState<Incident | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [_isDeleting, setIsDeleting] = useState(false);
 
   // Refs
   const isFetching = useRef(false);

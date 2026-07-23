@@ -11,7 +11,6 @@ import {
   Heart,
   Settings,
   ChevronRight,
-  LogOut,
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';

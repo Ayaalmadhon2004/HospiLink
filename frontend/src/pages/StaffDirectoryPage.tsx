@@ -33,7 +33,7 @@ export const StaffDirectoryPage = () => {
   
   // Confirm delete
   const [deleteTarget, setDeleteTarget] = useState<StaffMember | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [_isDeleting, setIsDeleting] = useState(false);
 
   const latestShift = useStaffSocket(selectedDept || 'all');
 

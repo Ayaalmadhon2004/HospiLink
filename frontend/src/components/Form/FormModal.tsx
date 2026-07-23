@@ -183,7 +183,7 @@ export const FormModal = <T extends Record<string, any>>({
           />
 
           <div className="grid grid-cols-2 gap-4">
-            {fields.map((field, index) => (
+            {fields.map((field) => (
               <FieldRenderer<T>
                 key={field.name}
                 field={field}

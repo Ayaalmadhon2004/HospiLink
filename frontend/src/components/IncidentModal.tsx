@@ -3,7 +3,6 @@ import { FormModal } from './Form';
 import { apiPost, apiPut } from '../services/api';
 import {
   incidentFields,
-  incidentValidationSchema,
   type IncidentFormValues,
 } from '../configs/entityConfigs';
 

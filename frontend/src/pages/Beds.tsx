@@ -20,7 +20,6 @@ const Beds = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [_wards, setWards] = useState<Ward[]>([]);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; bedNumber: string } | null>(null);
 
   const fetchBeds = useCallback(async () => {

@@ -1,7 +1,7 @@
 // components/ConfirmModal.tsx
 import { useState } from 'react';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
-import type { ConfirmModalProps } from './Form';
+import type { ConfirmModalProps } from './Form/types';
 
 export const ConfirmModal = ({
   isOpen,
