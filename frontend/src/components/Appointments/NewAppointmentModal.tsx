@@ -1,3 +1,4 @@
+// components/NewAppointmentModal.tsx
 import { useState, useEffect } from 'react';
 import { X, Calendar, Clock, User, Stethoscope, MapPin, FileText } from 'lucide-react';
 import { createAppointment } from '../../services/appointmentsService';
@@ -50,46 +51,43 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess }: NewAppointme
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setError('');
+    e.preventDefault();
+    setLoading(true);
+    setError('');
 
-  try {
-    // ✅ صحّحي الـ Date format
-    const [year, month, day] = formData.scheduledDate.split('-');
-    const [hours, minutes] = formData.scheduledTime.split(':');
-    
-    const scheduledAt = new Date(
-      parseInt(year),
-      parseInt(month) - 1, // months are 0-indexed
-      parseInt(day),
-      parseInt(hours),
-      parseInt(minutes)
-    );
+    try {
+      const [year, month, day] = formData.scheduledDate.split('-');
+      const [hours, minutes] = formData.scheduledTime.split(':');
+      
+      const scheduledAt = new Date(
+        parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+        parseInt(hours),
+        parseInt(minutes)
+      );
 
-    console.log('Creating appointment for:', scheduledAt.toISOString()); // debug
+      await createAppointment({
+        patientName: formData.patientName,
+        patientCode: formData.patientCode,
+        doctorId: formData.doctorId,
+        scheduledAt: scheduledAt.toISOString(),
+        type: formData.type,
+        status: 'SCHEDULED',
+        department: formData.department,
+        room: formData.room,
+        notes: formData.notes,
+        duration: formData.duration,
+      });
 
-    await createAppointment({
-      patientName: formData.patientName,
-      patientCode: formData.patientCode,
-      doctorId: formData.doctorId,
-      scheduledAt: scheduledAt.toISOString(),
-      type: formData.type,
-      status: 'SCHEDULED',
-      department: formData.department,
-      room: formData.room,
-      notes: formData.notes,
-      duration: formData.duration,
-    });
-
-    onSuccess();
-    onClose();
-  } catch (err: any) {
-    setError(err.response?.data?.message || 'Failed to create appointment');
-  } finally {
-    setLoading(false);
-  }
-};
+      onSuccess();
+      onClose();
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to create appointment');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
