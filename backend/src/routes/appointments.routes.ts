@@ -1,3 +1,4 @@
+// backend/src/routes/appointments.routes.ts
 import { Router } from 'express';
 import {
   getAppointments,
@@ -14,11 +15,8 @@ import { logActivity } from '../middlewares/audit.middleware';
 const router = Router();
 
 router.get('/', protect, getAppointments);
-
 router.get('/today', protect, getTodaySchedule);
-
 router.get('/upcoming', protect, getUpcomingAppointments);
-
 router.get('/:id', protect, getAppointmentById);
 
 router.post(

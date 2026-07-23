@@ -1,9 +1,12 @@
 // pages/AppointmentsPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Calendar, Clock, Stethoscope, MapPin, Plus, Search } from 'lucide-react';
-import { apiGet } from '../services/api';
+import { Calendar, Clock, Stethoscope, MapPin, Plus, Search, Trash2, Pencil } from 'lucide-react';
+import { apiGet, apiDelete } from '../services/api';
 import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
 import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
+import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { toast } from 'sonner';
 
 interface Appointment {
   id: string;
@@ -30,6 +33,7 @@ const typeColors: Record<string, string> = {
   CONSULTATION: 'bg-teal-100 text-teal-700 border-teal-200',
   IMAGING: 'bg-blue-100 text-blue-700 border-blue-200',
   FOLLOW_UP: 'bg-amber-100 text-amber-700 border-amber-200',
+  LAB_TEST: 'bg-purple-100 text-purple-700 border-purple-200',
 };
 
 const typeDotColors: Record<string, string> = {
@@ -37,78 +41,123 @@ const typeDotColors: Record<string, string> = {
   CONSULTATION: 'bg-teal-500',
   IMAGING: 'bg-blue-500',
   FOLLOW_UP: 'bg-amber-500',
+  LAB_TEST: 'bg-purple-500',
 };
 
 export const AppointmentsPage = () => {
-  const [todaySchedule, setTodaySchedule] = useState<any>(null);
+  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [upcoming, setUpcoming] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  // ✅ Ref لمنع الـ parallel requests والـ loop
+  // Shared CRUD hooks
+  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<Appointment>({
+    queryKey: ['appointments'],
+    deleteFn: (id: string) => apiDelete(`/appointments/${id}`),
+    getItemId: (apt) => apt.id,
+    itemName: 'Appointment',
+  });
+
+  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<Appointment>();
+
   const isFetching = useRef(false);
   const lastSocketId = useRef<string | null>(null);
 
   const latestUpdate = useAppointmentsSocket();
 
   const fetchData = useCallback(async () => {
-    if (isFetching.current) return; // ✅ ما تعمل fetch لو فيه واحد شغّال
+    if (isFetching.current) return;
     isFetching.current = true;
     setLoading(true);
 
     try {
-      const [todayRes, upcomingRes] = await Promise.all([
+      const [todayRes, upcomingRes] = await Promise.allSettled([
         apiGet('/appointments/today'),
         apiGet('/appointments/upcoming'),
       ]);
 
-      setTodaySchedule(todayRes?.data || { appointments: [], schedule: {} });
-      setUpcoming(upcomingRes?.data || []);
+      // ✅ FIX: Handle today's appointments response structure
+      if (todayRes.status === 'fulfilled') {
+        const responseData = todayRes.value?.data;
+        // The API returns { data: { appointments, schedule } }
+        const todayList = responseData?.appointments || responseData || [];
+        setTodayAppointments(Array.isArray(todayList) ? todayList : []);
+        console.log('✅ Today appointments loaded:', todayList.length);
+      } else {
+        console.error('Failed to fetch today appointments:', todayRes.reason);
+        setTodayAppointments([]);
+      }
+
+      // ✅ FIX: Handle upcoming appointments response structure
+      if (upcomingRes.status === 'fulfilled') {
+        const responseData = upcomingRes.value?.data;
+        // The API returns { data: appointments[] }
+        const upcomingList = responseData || [];
+        setUpcoming(Array.isArray(upcomingList) ? upcomingList : []);
+        console.log('✅ Upcoming appointments loaded:', upcomingList.length);
+      } else {
+        console.error('Failed to fetch upcoming appointments:', upcomingRes.reason);
+        setUpcoming([]);
+      }
     } catch (err) {
       console.error('Failed to fetch appointments:', err);
+      toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
       isFetching.current = false;
     }
   }, []);
 
-  // ✅ Initial load بس
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // ✅ Socket update — بتحقق إنه update جديد فعلاً
   useEffect(() => {
     if (!latestUpdate) return;
-
     const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
-    if (updateId === lastSocketId.current) return; // ✅ نفس الـ update القديم، تجاهله
-
+    if (updateId === lastSocketId.current) return;
     lastSocketId.current = updateId as string;
     fetchData();
   }, [latestUpdate, fetchData]);
 
   const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    try {
+      return new Date(dateStr).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return '';
+    }
   };
 
   const filteredUpcoming = upcoming.filter((apt) => {
     const matchesSearch =
-      apt.patient.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      apt.doctor.name.toLowerCase().includes(searchQuery.toLowerCase());
+      apt.patient?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.doctor?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      apt.patient?.patientCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      false;
     const matchesType = !selectedType || apt.type === selectedType;
     return matchesSearch && matchesType;
   });
 
-  const appointmentTypes = [...new Set(upcoming.map((a) => a.type))];
+  const appointmentTypes = [...new Set(upcoming.map((a) => a.type).filter(Boolean))];
+  const hasData = todayAppointments.length > 0 || upcoming.length > 0;
 
-  if (loading && !todaySchedule && upcoming.length === 0) {
+  if (loading && !hasData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="animate-pulse text-gray-400">Loading appointments...</div>
@@ -118,6 +167,15 @@ export const AppointmentsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      <ConfirmDeleteDialog
+        isOpen={!!confirmDelete}
+        name={confirmDelete?.name || ''}
+        itemType="appointment"
+        onCancel={() => {}}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
@@ -128,23 +186,25 @@ export const AppointmentsPage = () => {
           <p className="text-gray-500 text-sm">Daily schedule and bookings</p>
         </div>
         <button
-          onClick={() => setIsModalOpen(true)}
+          onClick={handleAdd}
           className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
         >
           <Plus size={16} />
           New Appointment
         </button>
-
-        <NewAppointmentModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
-          onSuccess={fetchData}
-        />
       </div>
+
+      {/* Modal */}
+      <NewAppointmentModal
+        isOpen={isModalOpen}
+        onClose={handleModalSuccess}
+        onSuccess={() => { fetchData(); handleModalSuccess(); }}
+        editingAppointment={editingItem}
+      />
 
       {/* Today's Schedule */}
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-1">Today's Schedule</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-1">Today&apos;s Schedule</h2>
         <p className="text-gray-500 text-sm mb-4">
           {new Date().toLocaleDateString('en-US', {
             weekday: 'long',
@@ -155,8 +215,8 @@ export const AppointmentsPage = () => {
         </p>
 
         <div className="space-y-3">
-          {todaySchedule?.appointments?.length > 0 ? (
-            todaySchedule.appointments.map((apt: Appointment) => (
+          {todayAppointments.length > 0 ? (
+            todayAppointments.map((apt) => (
               <div
                 key={apt.id}
                 className={`flex items-start gap-4 p-4 rounded-lg border-l-4 ${
@@ -169,19 +229,24 @@ export const AppointmentsPage = () => {
                   </span>
                   <span className="text-xs text-gray-500">{apt.duration}min</span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span
-                      className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`}
-                    />
-                    <span className="font-medium text-gray-900">{apt.patient.name}</span>
-                    <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
+                    <span className="font-medium text-gray-900">{apt.patient?.name || 'Unknown'}</span>
+                    {apt.patient?.patientCode && (
+                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+                    )}
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600">
+                  <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Stethoscope size={14} />
-                      {apt.type} · Dr. {apt.doctor.name}
+                      {apt.type}
                     </span>
+                    {apt.doctor?.name && (
+                      <span className="flex items-center gap-1">
+                        {apt.doctor.name.replace(/^Dr\.\s*/i, '')}
+                      </span>
+                    )}
                     {apt.room && (
                       <span className="flex items-center gap-1">
                         <MapPin size={14} />
@@ -189,6 +254,22 @@ export const AppointmentsPage = () => {
                       </span>
                     )}
                   </div>
+                </div>
+                <div className="flex gap-1 opacity-0 hover:opacity-100 transition">
+                  <button
+                    onClick={() => handleEdit(apt)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(apt.id, `Appointment for ${apt.patient?.name || 'Unknown'}`)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))
@@ -204,8 +285,10 @@ export const AppointmentsPage = () => {
       {/* Upcoming Appointments */}
       <div className="bg-white rounded-xl shadow-sm border p-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Upcoming</h2>
-          <p className="text-gray-500 text-sm">Next appointments today</p>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Upcoming</h2>
+            <p className="text-gray-500 text-sm">Next appointments</p>
+          </div>
         </div>
 
         {/* Filters */}
@@ -240,31 +323,45 @@ export const AppointmentsPage = () => {
             filteredUpcoming.map((apt) => (
               <div
                 key={apt.id}
-                className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 transition"
+                className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 transition group"
               >
                 <div className="flex flex-col items-center min-w-[60px] bg-gray-100 rounded-lg p-2">
+                  <span className="text-xs text-gray-500">{formatDate(apt.scheduledAt)}</span>
                   <span className="text-sm font-bold text-gray-900">
                     {formatTime(apt.scheduledAt)}
                   </span>
                 </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`}
-                    />
-                    <span className="font-medium text-gray-900">{apt.patient.name}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
+                    <span className="font-medium text-gray-900">{apt.patient?.name || 'Unknown'}</span>
+                    {apt.patient?.patientCode && (
+                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+                    )}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    {apt.type} · Dr. {apt.doctor.name} · {apt.department}
+                    {apt.type} &middot; {apt.doctor?.name ? apt.doctor.name.replace(/^Dr\.\s*/i, '') : 'No doctor'} &middot; {apt.department}
                   </div>
                 </div>
-                <span
-                  className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    typeColors[apt.type] || ''
-                  }`}
-                >
+                <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeColors[apt.type] || ''}`}>
                   {apt.type}
                 </span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                  <button
+                    onClick={() => handleEdit(apt)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    title="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(apt.id, `Appointment for ${apt.patient?.name || 'Unknown'}`)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
             ))
           ) : (

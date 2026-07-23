@@ -51,7 +51,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        scheduledAt: { gte: startOfDay, lte: endOfDay }, // ✅ بس مواعيد اليوم
+        scheduledAt: { gte: startOfDay, lte: endOfDay },
         status: { not: 'CANCELLED' },
       },
       include: {
@@ -104,7 +104,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
 // ─── GET /api/appointments/:id ───────────────────────────────────────
 export const getAppointmentById = async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string; // ✅ استخدم params مش query
+    const id = req.params.id as string;
 
     const appointment = await prisma.appointment.findUnique({
       where: { id },
@@ -128,6 +128,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
   try {
     const {
+      patientId,        // ✅ NEW: Existing patient ID from dropdown
       patientName,
       patientCode,
       doctorId,
@@ -146,12 +147,37 @@ export const createAppointment = async (req: Request, res: Response) => {
       return res.status(500).json({ success: false, message: 'No hospital found' });
     }
 
-    // ✅ Find or create patient
-    let patient = await prisma.patient.findUnique({
-      where: { patientCode },
-    });
+    // ✅ PRIORITY 1: Use existing patient by ID (from dropdown)
+    let patient = null;
+    
+    if (patientId) {
+      patient = await prisma.patient.findUnique({
+        where: { id: patientId },
+      });
+      if (patient) {
+        console.log(`✅ Found existing patient by ID: ${patient.name} (${patient.id})`);
+      }
+    }
 
+    // ✅ PRIORITY 2: Find by patientCode
+    if (!patient && patientCode) {
+      patient = await prisma.patient.findUnique({
+        where: { patientCode },
+      });
+      if (patient) {
+        console.log(`✅ Found existing patient by code: ${patient.name}`);
+      }
+    }
+
+    // ✅ PRIORITY 3: Create new patient ONLY if not found
     if (!patient) {
+      if (!patientName) {
+        return res.status(400).json({
+          success: false,
+          message: 'Patient name is required when creating a new patient',
+        });
+      }
+
       patient = await prisma.patient.create({
         data: {
           name: patientName,
@@ -163,7 +189,7 @@ export const createAppointment = async (req: Request, res: Response) => {
           hospitalId: hospital.id,
         },
       });
-      console.log('🧑‍⚕️ Created new patient:', patient.name);
+      console.log('🆕 Created new patient:', patient.name, `(${patient.id})`);
     }
 
     // ✅ Check for conflicts
@@ -219,8 +245,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 // ─── PUT /api/appointments/:id ───────────────────────────────────────
 export const updateAppointment = async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string; // ✅ استخدم params مش query
-
+    const id = req.params.id as string;
     const updateData = req.body;
 
     if (updateData.scheduledAt) {
@@ -247,7 +272,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 // ─── DELETE /api/appointments/:id ────────────────────────────────────
 export const deleteAppointment = async (req: Request, res: Response) => {
   try {
-    const id = req.params.id as string; // ✅ استخدم params مش query
+    const id = req.params.id as string;
 
     const appointment = await prisma.appointment.update({
       where: { id },
