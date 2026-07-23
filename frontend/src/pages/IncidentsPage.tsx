@@ -14,7 +14,8 @@ import {
 import { getIncidents, deleteIncident } from '../services/incidentsService';
 import { useIncidentsSocket } from '../hooks/useIncidentsSocket';
 import { IncidentModal } from '../components/IncidentModal';
-import { ConfirmModal } from '../components/ConfirmModal';
+import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface Incident {
   id: string;
@@ -54,13 +55,15 @@ export const IncidentsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('');
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingIncident, setEditingIncident] = useState<Incident | null>(null);
-  
-  // Confirm delete
-  const [deleteTarget, setDeleteTarget] = useState<Incident | null>(null);
-  const [_isDeleting, setIsDeleting] = useState(false);
+  // ✅ Shared CRUD hooks
+  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<Incident>({
+    queryKey: ['incidents'],
+    deleteFn: (id: string) => deleteIncident(id),
+    getItemId: (inc) => inc.id,
+    itemName: 'Incident',
+  });
+
+  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<Incident>();
 
   // Refs
   const isFetching = useRef(false);
@@ -100,33 +103,8 @@ export const IncidentsPage = () => {
     fetchIncidents();
   }, [latestUpdate, fetchIncidents]);
 
-  const handleAdd = () => {
-    setEditingIncident(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (incident: Incident) => {
-    setEditingIncident(incident);
-    setIsModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    setIsDeleting(true);
-    try {
-      await deleteIncident(deleteTarget.id);
-      setDeleteTarget(null);
-      fetchIncidents();
-    } catch (err) {
-      console.error('Failed to delete incident:', err);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
-
-  const handleModalSuccess = () => {
-    setIsModalOpen(false);
-    setEditingIncident(null);
+  const handleModalSuccessWithRefresh = () => {
+    handleModalSuccess();
     fetchIncidents();
   };
 
@@ -158,6 +136,16 @@ export const IncidentsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      {/* ✅ Shared Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={!!confirmDelete}
+        name={confirmDelete?.name || ''}
+        itemType="incident"
+        onCancel={() => {}}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
+
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
@@ -179,35 +167,18 @@ export const IncidentsPage = () => {
       {/* Incident Modal */}
       <IncidentModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingIncident(null); }}
-        onSuccess={handleModalSuccess}
-        initialData={editingIncident ? {
-          id: editingIncident.id,
-          type: editingIncident.type,
-          severity: editingIncident.severity,
-          location: editingIncident.location,
-          reportedBy: editingIncident.reportedBy || '',
-          patientId: editingIncident.patientId,
-          description: editingIncident.description || '',
-          actionTaken: editingIncident.actionTaken || '',
+        onClose={() => { handleModalSuccess(); }}
+        onSuccess={handleModalSuccessWithRefresh}
+        initialData={editingItem ? {
+          id: editingItem.id,
+          type: editingItem.type,
+          severity: editingItem.severity,
+          location: editingItem.location,
+          reportedBy: editingItem.reportedBy || '',
+          patientId: editingItem.patientId,
+          description: editingItem.description || '',
+          actionTaken: editingItem.actionTaken || '',
         } : undefined}
-      />
-
-      {/* Confirm Delete Modal */}
-      <ConfirmModal
-        isOpen={!!deleteTarget}
-        onClose={() => setDeleteTarget(null)}
-        onConfirm={handleDelete}
-        title="Delete Incident"
-        message={
-          <span>
-            Are you sure you want to delete incident <strong>{deleteTarget?.code}</strong>? 
-            This action cannot be undone.
-          </span>
-        }
-        confirmLabel="Delete"
-        confirmingLabel="Deleting..."
-        tone="danger"
       />
 
       {/* Code Orange Alert */}
@@ -266,7 +237,7 @@ export const IncidentsPage = () => {
                   <Pencil size={16} />
                 </button>
                 <button
-                  onClick={() => setDeleteTarget(incident)}
+                  onClick={() => handleDeleteClick(incident.id, incident.code)}
                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   title="Delete incident"
                 >

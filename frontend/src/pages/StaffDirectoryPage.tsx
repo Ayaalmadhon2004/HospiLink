@@ -1,12 +1,13 @@
 // pages/StaffDirectoryPage.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { 
-  Users, RefreshCw, Search, Plus, Pencil, Trash2, AlertTriangle
+  Users, RefreshCw, Search, Plus, Pencil, Trash2
 } from 'lucide-react';
 import { getStaff, deleteStaff } from '../services/staffService';
 import { useStaffSocket } from '../hooks/useStaffSocket';
 import { StaffModal } from '../components/Staff/StaffModal';
-import { toast } from 'sonner';
+import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 
 interface StaffMember {
   id: string;
@@ -27,12 +28,15 @@ export const StaffDirectoryPage = () => {
   const [selectedDept, setSelectedDept] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Modal states
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  // ✅ Shared CRUD hooks
+  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<StaffMember>({
+    queryKey: ['staff'],
+    deleteFn: (id: string) => deleteStaff(id),
+    getItemId: (member) => member.id,
+    itemName: 'Staff member',
+  });
 
-  // Confirm delete
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<StaffMember>();
 
   const latestShift = useStaffSocket(selectedDept || 'all');
 
@@ -59,49 +63,6 @@ export const StaffDirectoryPage = () => {
     if (latestShift) fetchStaff();
   }, [latestShift, fetchStaff]);
 
-  const handleAdd = () => {
-    setEditingStaff(null);
-    setIsModalOpen(true);
-  };
-
-  const handleEdit = (member: StaffMember) => {
-    setEditingStaff(member);
-    setIsModalOpen(true);
-  };
-
-  // ✅ FAST DELETE — optimistic update
-  const handleDeleteClick = (id: string, name: string) => {
-    setConfirmDelete({ id, name });
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete) return;
-    const { id, name } = confirmDelete;
-
-    // 1. Close dialog immediately
-    setConfirmDelete(null);
-
-    // 2. Remove from local state INSTANTLY (optimistic update)
-    setStaff(prev => prev.filter(s => s.id !== id));
-
-    // 3. Show success toast immediately
-    toast.success(`Staff member ${name} deleted`);
-
-    // 4. Send delete request in background
-    try {
-      await deleteStaff(id);
-    } catch (err) {
-      toast.error(`Failed to delete ${name}`);
-      fetchStaff(); // Refresh to get correct state
-    }
-  };
-
-  const handleModalSuccess = () => {
-    setIsModalOpen(false);
-    setEditingStaff(null);
-    fetchStaff();
-  };
-
   const departments = [...new Set(staff.map((s) => s.department))];
 
   const filteredStaff = staff.filter((s) => {
@@ -123,38 +84,15 @@ export const StaffDirectoryPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8 relative">
-      {/* Confirm Delete Dialog */}
-      {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-6 h-6 text-rose-500" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-base">Delete {confirmDelete.name}?</h3>
-                <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
-                  This staff member will be permanently removed. This action cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6 justify-end">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition shadow-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Shared Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={!!confirmDelete}
+        name={confirmDelete?.name || ''}
+        itemType="staff member"
+        onCancel={() => {}}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -188,16 +126,16 @@ export const StaffDirectoryPage = () => {
       {/* Staff Modal */}
       <StaffModal
         isOpen={isModalOpen}
-        onClose={() => { setIsModalOpen(false); setEditingStaff(null); }}
-        onSuccess={handleModalSuccess}
-        initialData={editingStaff ? {
-          id: editingStaff.id,
-          name: editingStaff.name,
-          email: editingStaff.email,
-          phone: editingStaff.phone || '',
-          role: editingStaff.role,
-          department: editingStaff.department,
-          status: editingStaff.isActive ? 'ACTIVE' : 'INACTIVE',
+        onClose={() => { handleModalSuccess(); }}
+        onSuccess={() => { fetchStaff(); handleModalSuccess(); }}
+        initialData={editingItem ? {
+          id: editingItem.id,
+          name: editingItem.name,
+          email: editingItem.email,
+          phone: editingItem.phone || '',
+          role: editingItem.role,
+          department: editingItem.department,
+          status: editingItem.isActive ? 'ACTIVE' : 'INACTIVE',
         } : undefined}
       />
 

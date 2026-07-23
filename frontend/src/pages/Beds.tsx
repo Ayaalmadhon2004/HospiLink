@@ -1,9 +1,10 @@
 // pages/Beds.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2, AlertTriangle } from 'lucide-react';
+import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
 import { apiGet, apiDelete } from '../services/api';
-import { toast } from 'sonner';
+import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
+import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
 interface Ward {
@@ -14,13 +15,20 @@ interface Ward {
 const Beds = () => {
   const [beds, setBeds] = useState<BedWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [selectedBed, setSelectedBed] = useState<BedWithDetails | null>(null);
   const [filter, setFilter] = useState<'ALL' | BedStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<PatientOption[]>([]);
   const [_wards, setWards] = useState<Ward[]>([]);
-  const [confirmDelete, setConfirmDelete] = useState<{ id: string; bedNumber: string } | null>(null);
+
+  // ✅ Shared CRUD hooks
+  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<BedWithDetails>({
+    queryKey: ['beds'],
+    deleteFn: (id: string) => apiDelete(`/beds/${id}`),
+    getItemId: (bed) => bed.id,
+    itemName: 'Bed',
+  });
+
+  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<BedWithDetails>();
 
   const fetchBeds = useCallback(async () => {
     try {
@@ -88,38 +96,6 @@ const Beds = () => {
     }
   };
 
-  // ✅ FAST DELETE — remove from state immediately
-  const handleDeleteClick = (id: string, bedNumber: string) => {
-    setConfirmDelete({ id, bedNumber });
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete) return;
-    const { id, bedNumber } = confirmDelete;
-
-    // 1. Close dialog immediately
-    setConfirmDelete(null);
-
-    // 2. Remove from local state INSTANTLY (optimistic update)
-    setBeds(prev => prev.filter(b => b.id !== id));
-
-    // 3. Show success toast immediately
-    toast.success(`Bed ${bedNumber} deleted`);
-
-    // 4. Send delete request in background
-    try {
-      const data = await apiDelete(`/beds/${id}`);
-      if (!data.success) {
-        // If server failed, revert and show error
-        toast.error(data.message || 'Failed to delete bed');
-        fetchBeds(); // Refresh to get correct state
-      }
-    } catch (error: any) {
-      toast.error(error.message || 'Error deleting bed');
-      fetchBeds(); // Refresh to get correct state
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -130,38 +106,15 @@ const Beds = () => {
 
   return (
     <div className="space-y-6 relative">
-      {/* Confirm Delete Dialog */}
-      {confirmDelete && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm animate-in fade-in zoom-in duration-200">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-rose-50 flex items-center justify-center flex-shrink-0">
-                <AlertTriangle className="w-6 h-6 text-rose-500" />
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-gray-900 text-base">Delete Bed {confirmDelete.bedNumber}?</h3>
-                <p className="text-gray-500 text-sm mt-1.5 leading-relaxed">
-                  This bed will be permanently removed from the system. This action cannot be undone.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 mt-6 justify-end">
-              <button
-                onClick={() => setConfirmDelete(null)}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleConfirmDelete}
-                className="px-4 py-2 text-sm font-medium text-white bg-rose-500 hover:bg-rose-600 rounded-xl transition shadow-sm"
-              >
-                Delete
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* ✅ Shared Confirm Delete Dialog */}
+      <ConfirmDeleteDialog
+        isOpen={!!confirmDelete}
+        name={confirmDelete?.name || ''}
+        itemType="bed"
+        onCancel={() => {}}
+        onConfirm={handleConfirmDelete}
+        isLoading={isDeleting}
+      />
 
       <div className="flex justify-between items-start">
         <div>
@@ -169,7 +122,7 @@ const Beds = () => {
           <p className="text-gray-500 text-sm mt-1">Manage hospital beds and patient assignments</p>
         </div>
         <button
-          onClick={() => { setSelectedBed(null); setShowModal(true); }}
+          onClick={handleAdd}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition flex items-center gap-2 text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
@@ -313,13 +266,13 @@ const Beds = () => {
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
                       <button
-                        onClick={() => { setSelectedBed(bed); setShowModal(true); }}
+                        onClick={() => handleEdit(bed)}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteClick(bed.id, bed.bedNumber)}
+                        onClick={() => handleDeleteClick(bed.id, `Bed ${bed.bedNumber}`)}
                         className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -339,12 +292,12 @@ const Beds = () => {
         )}
       </div>
 
-      {showModal && (
+      {isModalOpen && (
         <BedModal
-          bed={selectedBed}
+          bed={editingItem}
           patients={patients}
-          onClose={() => setShowModal(false)}
-          onSuccess={() => { fetchBeds(); fetchPatients(); }}
+          onClose={() => handleModalSuccess()}
+          onSuccess={() => { fetchBeds(); fetchPatients(); handleModalSuccess(); }}
         />
       )}
     </div>
