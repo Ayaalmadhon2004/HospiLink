@@ -3,10 +3,10 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
-import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';  // ← ✅ Unified secret
+import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
 
 // ============================================
-// Generate JWT Token — uses unified secret
+// Generate JWT Token
 // ============================================
 const generateToken = (user: { id: string; email: string; role: string }): string => {
   return jwt.sign(
@@ -15,7 +15,7 @@ const generateToken = (user: { id: string; email: string; role: string }): strin
       email: user.email,
       role: user.role,
     },
-    JWT_SECRET,  // ← ✅ Unified secret
+    JWT_SECRET,
     { expiresIn: JWT_EXPIRES_IN }
   );
 };
@@ -70,7 +70,7 @@ export const register = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: 30 * 24 * 60 * 60 * 1000
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     res.status(201).json({
@@ -143,7 +143,7 @@ export const login = async (req: Request, res: Response) => {
       httpOnly: true,
       secure: true,
       sameSite: 'none',
-      maxAge: 30 * 24 * 60 * 60 * 1000
+      maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
     const { password: _, ...userWithoutPassword } = user;
