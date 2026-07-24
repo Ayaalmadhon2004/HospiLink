@@ -1,7 +1,7 @@
 // frontend/src/components/Appointments/NewAppointmentModal.tsx
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Search, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
-import { createAppointment, updateAppointment, CreateAppointmentData } from '../../services/appointmentsService';
+import { createAppointment, updateAppointment} from '../../services/appointmentsService';
 import { apiGet } from '../../services/api';
 import { toast } from 'sonner';
 

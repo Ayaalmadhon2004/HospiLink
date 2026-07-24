@@ -1,5 +1,3 @@
-// components/ConfirmDeleteDialog.tsx
-// Reusable confirm delete dialog with Sonner toast styling
 
 import { AlertTriangle} from 'lucide-react';
 

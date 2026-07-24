@@ -26,7 +26,7 @@ export const getIncidents = async (req: Request, res: Response) => {
     const incidents = await prisma.incident.findMany({
       where,
       orderBy: { createdAt: 'desc' },
-      take: 100, // ✅ limit لتجنب كميات ضخمة
+      take: 100,
     });
 
     res.status(200).json({ success: true, count: incidents.length, data: incidents });
@@ -41,13 +41,12 @@ export const getActiveIncidents = async (req: Request, res: Response) => {
     const incidents = await prisma.incident.findMany({
       where: { status: 'ACTIVE' },
       orderBy: [
-        { severity: 'asc' }, // CRITICAL first
+        { severity: 'asc' },
         { createdAt: 'desc' },
       ],
-      take: 50, // ✅ limit
+      take: 50,
     });
 
-    // Group by severity for dashboard
     const critical = incidents.filter((i) => i.severity === 'CRITICAL');
     const elevated = incidents.filter((i) => i.severity === 'ELEVATED');
     const moderate = incidents.filter((i) => i.severity === 'MODERATE');
@@ -86,8 +85,7 @@ export const getIncidentById = async (req: Request, res: Response) => {
 // POST /api/incidents
 export const createIncident = async (req: Request, res: Response) => {
   try {
-    const { title, description, type, severity, location, teams, triageLevel, reportedBy } =
-      req.body;
+    const { title, type, severity, location, reportedBy, description } = req.body;
 
     const code = await generateIncidentCode();
 
@@ -99,15 +97,12 @@ export const createIncident = async (req: Request, res: Response) => {
         type,
         severity,
         location,
-        teams: teams || 1,
-        triageLevel,
         reportedBy,
         progress: 0,
       },
     });
 
     io.emit('incident-created', incident);
-
     res.status(201).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to create incident');
@@ -155,5 +150,19 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to update incident status');
+  }
+};
+
+// ✅ NEW: DELETE /api/incidents/:id
+export const deleteIncident = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+
+    await prisma.incident.delete({ where: { id } });
+
+    io.emit('incident-deleted', { id });
+    res.status(200).json({ success: true, message: 'Incident deleted successfully' });
+  } catch (error: any) {
+    handleError(res, error, 'Failed to delete incident');
   }
 };

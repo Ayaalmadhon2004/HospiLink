@@ -1,11 +1,6 @@
-// hooks/useCrud.ts
-// Generic CRUD hooks with optimistic updates for HospiLink
-
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-
-// ─── Types ───────────────────────────────────────────────────────────
 
 export interface CrudConfig<T> {
   queryKey: string[];
@@ -13,7 +8,7 @@ export interface CrudConfig<T> {
   createFn?: (data: any) => Promise<any>;
   updateFn?: (id: string, data: any) => Promise<any>;
   getItemId: (item: T) => string;
-  itemName: string; // for toast messages: "Bed", "Staff member", etc.
+  itemName: string; 
 }
 
 export interface UseDeleteResult {
@@ -39,12 +34,13 @@ export interface UseCreateResult<T> {
 export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
+   // شو يعني الميوتيشن ؟
 
   const deleteMutation = useMutation({
     mutationFn: config.deleteFn,
 
     onMutate: async (id: string) => {
-      // Cancel any outgoing refetches
+      // ليش هنا بنعمل كانس للكويريز ؟
       await queryClient.cancelQueries({ queryKey: config.queryKey });
 
       // Snapshot previous data
@@ -71,7 +67,7 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
     },
 
     onSettled: () => {
-      // Always refetch to ensure sync
+      // شو بعمل الانفاليديت كويريز 
       queryClient.invalidateQueries({ queryKey: config.queryKey });
     },
   });
@@ -129,7 +125,7 @@ export function useCrudModal<T>(): UseCreateResult<T> {
 }
 
 // ─── useOptimisticCreate ────────────────────────────────────────────
-
+// شو يساوي اليوز ابوتيمستك بالكريت والابديت 
 export function useOptimisticCreate<T>(config: CrudConfig<T>) {
   const queryClient = useQueryClient();
 

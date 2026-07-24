@@ -1,6 +1,7 @@
 // frontend/src/services/api.ts
+// احنا بنستخدم هاد الاي بي اي مش بس الاكسيوس مشان الهيدرز عشان هيك اذا استخدمنا اشي غير غير هاد الاي بي اي بيصير عندي مشاكل صح ؟
 import axios from 'axios';
-
+// احكيلي شو اجزاء هاد الملف وشو اهمية كل سكشن 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
 
 // ============================================
@@ -10,6 +11,7 @@ const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrende
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
+  timeout: 30000, // ✅ 30 ثانية — ضروري لـ Render cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -41,13 +43,11 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // ✅ لا تمسح التوكن إلا لو كان 401 فعلاً
     if (error.response?.status === 401) {
-      // ✅ شيل الـ token بس — لا تعمل redirect
-      // الـ PrivateRoute/AuthContext بيتعاملوا مع الـ 401
       localStorage.removeItem('token');
       localStorage.removeItem('accessToken');
       localStorage.removeItem('authToken');
-      // ❌ شيلنا: window.location.href = '/login';
     }
 
     if (error.response?.status === 403) {
@@ -58,6 +58,7 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Server error. Please try again later.'));
     }
 
+    // ✅ خطأ شبكة/timeout — نرجع الرسالة الأصلية
     const message = error.response?.data?.message || error.response?.data?.error || error.message;
     return Promise.reject(new Error(message));
   }
@@ -108,7 +109,7 @@ export const apiUpload = async <T = any>(url: string, formData: FormData): Promi
 // ============================================
 // LEGACY COMPATIBILITY
 // ============================================
-
+// ليش الفتش فيها كل المثودز مش بس get ? 
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
   const method = (options.method || 'GET').toUpperCase();
 

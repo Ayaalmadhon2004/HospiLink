@@ -151,6 +151,11 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
   },
 }));
 
+// app.ts أو server.ts
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', time: new Date().toISOString() });
+});
+
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/beds', bedRoutes);

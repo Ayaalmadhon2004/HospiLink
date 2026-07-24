@@ -150,7 +150,7 @@ export const appointmentValidationSchema = z.object({
   notes: z.string().optional(),
 });
 
-// ─── 4. STAFF CONFIG (NEW) ───────────────────────────────────────
+// ─── 4. STAFF CONFIG ─────────────────────────────────────────────
 export interface StaffFormValues {
   name: string;
   email: string;
@@ -202,16 +202,14 @@ export const staffValidationSchema = z.object({
   shiftEnd: z.string().optional(),
 });
 
-// ─── 5. INCIDENT CONFIG (NEW) ────────────────────────────────────
-// ✅ FIXED: severity values now match API/Incident interface
+// ─── 5. INCIDENT CONFIG (FIXED) ────────────────────────────────────
 export interface IncidentFormValues {
+  title: string;        // ← ✅ Added
   type: string;
-  severity: 'CRITICAL' | 'ELEVATED' | 'MODERATE' | 'LOW';  // ← متطابق مع API
+  severity: 'CRITICAL' | 'ELEVATED' | 'MODERATE' | 'LOW';
   location: string;
   reportedBy: string;
-  patientId?: string;
   description: string;
-  actionTaken: string;
 }
 
 const INCIDENT_TYPE_OPTIONS = [
@@ -222,7 +220,6 @@ const INCIDENT_TYPE_OPTIONS = [
   { label: 'Other', value: 'OTHER' },
 ];
 
-// ✅ FIXED: severity options match API exactly
 const SEVERITY_OPTIONS = [
   { label: 'Critical', value: 'CRITICAL' },
   { label: 'Elevated', value: 'ELEVATED' },
@@ -231,29 +228,20 @@ const SEVERITY_OPTIONS = [
 ];
 
 export const incidentFields: FieldConfig<IncidentFormValues>[] = [
-  { name: 'type', label: 'Incident Type', type: 'select', required: true, options: INCIDENT_TYPE_OPTIONS },
-  { name: 'severity', label: 'Severity', type: 'select', required: true, options: SEVERITY_OPTIONS },
-  { name: 'location', label: 'Location', type: 'text', required: true, placeholder: 'Ward / Room' },
-  { name: 'reportedBy', label: 'Reported By', type: 'text', required: true, placeholder: 'Staff name' },
-  {
-    name: 'patientId',
-    label: 'Related Patient',
-    type: 'search-select',
-    apiEndpoint: '/patients',
-    placeholder: '— Optional —',
-    helperText: 'Link to a patient (optional)',
-  },
-  { name: 'description', label: 'Description', type: 'textarea', required: true, rows: 4, placeholder: 'Describe the incident in detail...' },
-  { name: 'actionTaken', label: 'Action Taken', type: 'textarea', rows: 3, placeholder: 'What was done to resolve...' },
+  { name: 'title', label: 'Incident Title', type: 'text', required: true, colSpan: 2, placeholder: 'Short title for the incident' },
+  { name: 'type', label: 'Incident Type', type: 'select', required: true, options: INCIDENT_TYPE_OPTIONS, colSpan: 1 },
+  { name: 'severity', label: 'Severity', type: 'select', required: true, options: SEVERITY_OPTIONS, colSpan: 1 },
+  { name: 'location', label: 'Location', type: 'text', required: true, placeholder: 'Ward / Room / Street', colSpan: 1 },
+  { name: 'reportedBy', label: 'Reported By', type: 'text', required: true, placeholder: 'Staff name', colSpan: 1 },
+  { name: 'description', label: 'Description', type: 'textarea', required: true, rows: 4, placeholder: 'Describe the incident in detail...', colSpan: 2 },
 ];
 
-// ✅ FIXED: validation schema matches
+// ✅ FIXED: added title to validation
 export const incidentValidationSchema = z.object({
+  title: requiredString('Incident title'),
   type: requiredString('Incident type'),
   severity: z.enum(['CRITICAL', 'ELEVATED', 'MODERATE', 'LOW']),
   location: requiredString('Location'),
   reportedBy: requiredString('Reported by'),
-  patientId: z.string().optional(),
   description: requiredString('Description'),
-  actionTaken: z.string().optional(),
 });

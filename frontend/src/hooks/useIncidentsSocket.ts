@@ -11,8 +11,17 @@ export const useIncidentsSocket = () => {
 
   useEffect(() => {
     const socket = io(SOCKET_URL, {
-      transports: ['polling', 'websocket'],
+      transports: ['polling', 'websocket'], // شو هنا يعني الترانسبورتس وايش معنا حاطين بولنج وويب سوكيت 
       withCredentials: true,
+      /*
+      انا شفت بالصفحة بس هاد السكشن وتل ما قلت ما في سويتش او اشي بخليك تختار ؟  useEffect(() => {
+    if (!latestUpdate) return;
+    const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
+    if (updateId === lastSocketId.current) return;
+    lastSocketId.current = updateId;
+    fetchIncidents();
+  }, [latestUpdate, fetchIncidents]);
+      */
     });
 
     socket.on('connect', () => {
@@ -47,4 +56,5 @@ export const useIncidentsSocket = () => {
   }, []);
 
   return { latestUpdate, isConnected };
+  // احنا هنا بنرجع اللاتست ابديت في السوكيت انه اذا هيك اعمل هيك وطيب ولما نرجع اللاتست ابديت كيف بفهم اي نوع من السوكيت وهو ما في سويتش مثلا ؟
 };

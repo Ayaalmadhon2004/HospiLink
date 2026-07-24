@@ -1,10 +1,7 @@
 // components/IncidentModal.tsx
 import { FormModal } from './Form';
 import { apiPost, apiPut } from '../services/api';
-import {
-  incidentFields,
-  type IncidentFormValues,
-} from '../configs/entityConfigs';
+import { incidentFields, type IncidentFormValues } from '../configs/entityConfigs';
 
 interface IncidentModalProps {
   isOpen: boolean;
@@ -18,9 +15,12 @@ export const IncidentModal = ({ isOpen, onClose, onSuccess, initialData }: Incid
 
   const handleSubmit = async (values: IncidentFormValues) => {
     const payload = {
-      ...values,
-      patientId: values.patientId || undefined,
-      actionTaken: values.actionTaken || undefined,
+      title: values.title,
+      type: values.type,
+      severity: values.severity,
+      location: values.location,
+      reportedBy: values.reportedBy,
+      description: values.description,
     };
 
     if (mode === 'edit' && initialData?.id) {

@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { FormBanner } from './FormBanner';
-import  {FieldRenderer}  from './FieldRenderer';
+import { FieldRenderer } from './FieldRenderer';
 import type { FormModalProps } from './types';
 
 export const FormModal = <T extends Record<string, any>>({
@@ -31,10 +31,12 @@ export const FormModal = <T extends Record<string, any>>({
     if (isOpen) {
       const defaults: Partial<T> = {};
       fields.forEach((field) => {
-        if (initialValues && initialValues[field.name] !== undefined) {
+        if (initialValues && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
           defaults[field.name as keyof T] = initialValues[field.name];
         } else if (field.type === 'checkbox') {
           defaults[field.name as keyof T] = false as any;
+        } else if (field.type === 'number') {
+          defaults[field.name as keyof T] = undefined as any; // number empty = undefined
         } else {
           defaults[field.name as keyof T] = '' as any;
         }
@@ -67,7 +69,6 @@ export const FormModal = <T extends Record<string, any>>({
 
   const setValue = useCallback((name: string, value: any) => {
     setValues((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
     setErrors((prev) => {
       const next = { ...prev };
       delete next[name];
@@ -81,28 +82,35 @@ export const FormModal = <T extends Record<string, any>>({
 
     fields.forEach((field) => {
       const value = values[field.name];
-      
-      // Required check
+
+      // Required check — number 0 is NOT empty
       if (field.required) {
-        if (value === undefined || value === '' || value === null || value === false) {
+        const isEmpty =
+          value === undefined ||
+          value === '' ||
+          value === null ||
+          (field.type === 'checkbox' && value === false);
+
+        if (isEmpty) {
           newErrors[field.name] = `${field.label} is required`;
           isValid = false;
         }
       }
 
-      // Type-specific validation
-      if (field.type === 'email' && value) {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(String(value))) {
-          newErrors[field.name] = 'Invalid email address';
+      // Number validation — only if there's an actual value
+      if (field.type === 'number' && value !== undefined && value !== '' && value !== null) {
+        const num = Number(value);
+        if (isNaN(num)) {
+          newErrors[field.name] = 'Must be a valid number';
           isValid = false;
         }
       }
 
-      if (field.type === 'number' && value) {
-        const num = Number(value);
-        if (isNaN(num)) {
-          newErrors[field.name] = 'Must be a valid number';
+      // Email validation
+      if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(String(value))) {
+          newErrors[field.name] = 'Invalid email address';
           isValid = false;
         }
       }
@@ -112,32 +120,47 @@ export const FormModal = <T extends Record<string, any>>({
     return isValid;
   }, [fields, values]);
 
-  const handleSubmit = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    setFormError('');
-    setFormErrorDetail('');
-    setSuccess('');
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setFormError('');
+      setFormErrorDetail('');
+      setSuccess('');
 
-    if (!validate()) return;
+      if (!validate()) return;
 
-    setSubmitting(true);
-    try {
-      await onSubmit(values as T);
-      setSuccess(mode === 'create' ? 'Created successfully!' : 'Updated successfully!');
-      setTimeout(() => {
-        onClose();
-      }, 800);
-    } catch (err: any) {
-      console.error('Form submit error:', err);
-      const backendError = err.response?.data;
-      setFormError(
-        backendError?.message || backendError?.error || 'Failed to save. Please try again.'
-      );
-      setFormErrorDetail(backendError?.fullError || '');
-    } finally {
-      setSubmitting(false);
-    }
-  }, [validate, onSubmit, values, onClose, mode]);
+      setSubmitting(true);
+      try {
+        // ✅ Clean values — convert '' to undefined before sending to API
+        const cleanValues = { ...values };
+        fields.forEach((field) => {
+          if (cleanValues[field.name] === '') {
+            cleanValues[field.name] = undefined;
+          }
+          // Remove undefined number fields from payload
+          if (field.type === 'number' && cleanValues[field.name] === undefined) {
+            delete cleanValues[field.name];
+          }
+        });
+
+        await onSubmit(cleanValues as T);
+        setSuccess(mode === 'create' ? 'Created successfully!' : 'Updated successfully!');
+        setTimeout(() => {
+          onClose();
+        }, 800);
+      } catch (err: any) {
+        console.error('Form submit error:', err);
+        const backendError = err.response?.data;
+        setFormError(
+          backendError?.message || backendError?.error || 'Failed to save. Please try again.'
+        );
+        setFormErrorDetail(backendError?.fullError || '');
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [validate, onSubmit, values, onClose, mode, fields]
+  );
 
   if (!isOpen) return null;
 
@@ -176,11 +199,7 @@ export const FormModal = <T extends Record<string, any>>({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4" noValidate>
-          <FormBanner
-            error={formError}
-            errorDetail={formErrorDetail}
-            success={success}
-          />
+          <FormBanner error={formError} errorDetail={formErrorDetail} success={success} />
 
           <div className="grid grid-cols-2 gap-4">
             {fields.map((field) => (

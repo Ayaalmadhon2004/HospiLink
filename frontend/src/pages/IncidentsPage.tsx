@@ -10,8 +10,13 @@ import {
   Activity,
   Pencil,
   Trash2,
+  CheckCircle2,
 } from 'lucide-react';
-import { getIncidents, deleteIncident } from '../services/incidentsService';
+import {
+  getIncidents,
+  deleteIncident,
+  updateIncidentStatus,
+} from '../services/incidentsService';
 import { useIncidentsSocket } from '../hooks/useIncidentsSocket';
 import { IncidentModal } from '../components/IncidentModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
@@ -24,15 +29,13 @@ interface Incident {
   description?: string;
   type: string;
   severity: 'CRITICAL' | 'ELEVATED' | 'MODERATE' | 'LOW';
-  status: string;
+  status: 'ACTIVE' | 'RESOLVED' | 'PENDING';
   location: string;
   teams: number;
   progress: number;
   triageLevel?: string;
   createdAt: string;
   reportedBy?: string;
-  patientId?: string;
-  actionTaken?: string;
 }
 
 const severityColors = {
@@ -49,21 +52,30 @@ const severityDots = {
   LOW: 'bg-green-500',
 };
 
+const statusColors = {
+  ACTIVE: 'text-red-600 bg-red-50',
+  RESOLVED: 'text-green-600 bg-green-50',
+  PENDING: 'text-amber-600 bg-amber-50',
+};
+
 export const IncidentsPage = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('');
+  const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
 
-  // ✅ Shared CRUD hooks
-  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<Incident>({
-    queryKey: ['incidents'],
-    deleteFn: (id: string) => deleteIncident(id),
-    getItemId: (inc) => inc.id,
-    itemName: 'Incident',
-  });
+  // Shared CRUD hooks
+  const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } =
+    useOptimisticDelete<Incident>({
+      queryKey: ['incidents'],
+      deleteFn: (id: string) => deleteIncident(id),
+      getItemId: (inc) => inc.id,
+      itemName: 'Incident',
+    });
 
-  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<Incident>();
+  const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } =
+    useCrudModal<Incident>();
 
   // Refs
   const isFetching = useRef(false);
@@ -108,6 +120,23 @@ export const IncidentsPage = () => {
     fetchIncidents();
   };
 
+  // ✅ NEW: Update status + progress
+  const handleStatusChange = async (
+    id: string,
+    newStatus: string,
+    progress?: number
+  ) => {
+    setUpdatingStatus(id);
+    try {
+      await updateIncidentStatus(id, newStatus, progress);
+      fetchIncidents();
+    } catch (err) {
+      console.error('Failed to update status:', err);
+    } finally {
+      setUpdatingStatus(null);
+    }
+  };
+
   const filteredIncidents = incidents.filter((inc) => {
     const matchesSearch =
       inc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -136,7 +165,7 @@ export const IncidentsPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      {/* ✅ Shared Confirm Delete Dialog */}
+      {/* Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
         name={confirmDelete?.name || ''}
@@ -155,7 +184,7 @@ export const IncidentsPage = () => {
           </h1>
           <p className="text-gray-500 text-sm">Active emergency response</p>
         </div>
-        <button 
+        <button
           onClick={handleAdd}
           className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition"
         >
@@ -167,18 +196,23 @@ export const IncidentsPage = () => {
       {/* Incident Modal */}
       <IncidentModal
         isOpen={isModalOpen}
-        onClose={() => { handleModalSuccess(); }}
+        onClose={() => {
+          handleModalSuccess();
+        }}
         onSuccess={handleModalSuccessWithRefresh}
-        initialData={editingItem ? {
-          id: editingItem.id,
-          type: editingItem.type,
-          severity: editingItem.severity,
-          location: editingItem.location,
-          reportedBy: editingItem.reportedBy || '',
-          patientId: editingItem.patientId,
-          description: editingItem.description || '',
-          actionTaken: editingItem.actionTaken || '',
-        } : undefined}
+        initialData={
+          editingItem
+            ? {
+                id: editingItem.id,
+                title: editingItem.title,
+                type: editingItem.type,
+                severity: editingItem.severity,
+                location: editingItem.location,
+                reportedBy: editingItem.reportedBy || '',
+                description: editingItem.description || '',
+              }
+            : undefined
+        }
       />
 
       {/* Code Orange Alert */}
@@ -197,7 +231,10 @@ export const IncidentsPage = () => {
       {/* Filters */}
       <div className="flex flex-col md:flex-row gap-4 mb-6">
         <div className="relative flex-1">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <Search
+            size={16}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+          />
           <input
             type="text"
             placeholder="Search incidents..."
@@ -229,6 +266,19 @@ export const IncidentsPage = () => {
             >
               {/* Actions - hover */}
               <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+                {/* ✅ NEW: Mark Resolved button */}
+                {incident.status === 'ACTIVE' && (
+                  <button
+                    onClick={() =>
+                      handleStatusChange(incident.id, 'RESOLVED', 100)
+                    }
+                    disabled={updatingStatus === incident.id}
+                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+                    title="Mark as resolved"
+                  >
+                    <CheckCircle2 size={16} />
+                  </button>
+                )}
                 <button
                   onClick={() => handleEdit(incident)}
                   className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -237,7 +287,9 @@ export const IncidentsPage = () => {
                   <Pencil size={16} />
                 </button>
                 <button
-                  onClick={() => handleDeleteClick(incident.id, incident.code)}
+                  onClick={() =>
+                    handleDeleteClick(incident.id, incident.code)
+                  }
                   className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   title="Delete incident"
                 >
@@ -247,13 +299,23 @@ export const IncidentsPage = () => {
 
               {/* Header */}
               <div className="flex items-start justify-between mb-3 pr-20">
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3 flex-wrap">
                   <span className="text-sm text-gray-500 font-mono">
                     {incident.code}
                   </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[incident.severity]}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${severityDots[incident.severity]} inline-block mr-1`} />
+                  <span
+                    className={`px-2 py-1 rounded-full text-xs font-medium ${severityColors[incident.severity]}`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${severityDots[incident.severity]} inline-block mr-1`}
+                    />
                     {incident.severity}
+                  </span>
+                  {/* ✅ Status badge */}
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[incident.status] || 'text-gray-600 bg-gray-50'}`}
+                  >
+                    {incident.status}
                   </span>
                 </div>
                 <span className="text-sm text-gray-400">
@@ -267,7 +329,7 @@ export const IncidentsPage = () => {
               </h3>
 
               {/* Meta */}
-              <div className="flex items-center gap-4 text-sm text-gray-500 mb-4">
+              <div className="flex items-center gap-4 text-sm text-gray-500 mb-4 flex-wrap">
                 <span className="flex items-center gap-1">
                   <MapPin size={14} />
                   {incident.location}
@@ -280,6 +342,11 @@ export const IncidentsPage = () => {
                   <Clock size={14} />
                   {timeAgo(incident.createdAt)}
                 </span>
+                {incident.reportedBy && (
+                  <span className="text-xs text-gray-400">
+                    by {incident.reportedBy}
+                  </span>
+                )}
               </div>
 
               {/* Progress */}
@@ -305,6 +372,33 @@ export const IncidentsPage = () => {
                   />
                 </div>
               </div>
+
+              {/* ✅ NEW: Progress slider for active incidents */}
+              {incident.status === 'ACTIVE' && (
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs text-gray-500">Update progress:</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="100"
+                      value={incident.progress}
+                      onChange={(e) =>
+                        handleStatusChange(
+                          incident.id,
+                          incident.status,
+                          Number(e.target.value)
+                        )
+                      }
+                      disabled={updatingStatus === incident.id}
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-hospital-navy"
+                    />
+                    <span className="text-xs font-medium text-gray-700 w-8">
+                      {incident.progress}%
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           ))
         ) : (

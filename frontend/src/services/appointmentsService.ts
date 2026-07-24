@@ -1,4 +1,3 @@
-// frontend/src/services/appointmentsService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
 
 export interface Appointment {
@@ -25,7 +24,7 @@ export interface Appointment {
 }
 
 export interface CreateAppointmentData {
-  patientId?: string;      // ✅ NEW: Existing patient ID
+  patientId?: string;   
   patientName?: string;
   patientCode?: string;
   doctorId: string;
