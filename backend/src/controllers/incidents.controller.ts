@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import { createNotification } from './notifications.controller';
 
 const handleError = (res: Response, error: any, message: string) => {
   console.error(message, error);
@@ -103,6 +104,16 @@ export const createIncident = async (req: Request, res: Response) => {
     });
 
     io.emit('incident-created', incident);
+
+    // Notify all connected users about new incident
+    await createNotification({
+      userId: req.user?.id,
+      type: 'INCIDENT',
+      title: 'New Incident Reported',
+      message: `${incident.code}: ${incident.title}`,
+      link: `/incidents/${incident.id}`,
+    });
+
     res.status(201).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to create incident');
@@ -118,6 +129,9 @@ export const updateIncident = async (req: Request, res: Response) => {
     if (updateData.status === 'RESOLVED' && !updateData.resolvedAt) {
       updateData.resolvedAt = new Date();
     }
+
+    if (updateData.patientId === '') updateData.patientId = null;
+    if (updateData.actionTaken === '') updateData.actionTaken = null;
 
     const incident = await prisma.incident.update({
       where: { id },
@@ -147,13 +161,25 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
     });
 
     io.emit('incident-status-updated', incident);
+
+    // Notify when incident is resolved
+    if (status === 'RESOLVED') {
+      await createNotification({
+        userId: req.user?.id,
+        type: 'INCIDENT',
+        title: 'Incident Resolved',
+        message: `${incident.code} has been marked as resolved`,
+        link: `/incidents/${incident.id}`,
+      });
+    }
+
     res.status(200).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to update incident status');
   }
 };
 
-// ✅ NEW: DELETE /api/incidents/:id
+// DELETE /api/incidents/:id
 export const deleteIncident = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };

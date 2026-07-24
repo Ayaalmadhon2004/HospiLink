@@ -20,7 +20,7 @@ import staffRoutes from './routes/staff.routes';
 import appointmentRoutes from './routes/appointments.routes';
 import dispatchRoutes from './routes/dispatch.routes';
 import incidentRoutes from './routes/incidents.routes';
-
+import notificationRoutes from './routes/notifications.routes';
 // Middlewares
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
@@ -166,6 +166,8 @@ app.use('/api/appointments', appointmentRoutes);
 app.use('/api/dispatch', dispatchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/incidents', incidentRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 app.get('/api/health', async (req, res) => {
   try {

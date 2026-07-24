@@ -11,11 +11,10 @@ const handleError = (res: Response, error: any, message: string, statusCode: num
   });
 };
 
-// GET /api/settings — جلب إعدادات المستخدم
+// GET /api/settings
 export const getUserSettings = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
     if (!userId) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
@@ -24,16 +23,21 @@ export const getUserSettings = async (req: Request, res: Response) => {
       where: { userId }
     });
 
-    // إذا ما عندها إعدادات، أنشئي defaults
     if (!settings) {
       settings = await prisma.userSettings.create({
         data: { userId }
       });
     }
 
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true }
+    });
+
     res.status(200).json({
       success: true,
       data: {
+        profile: user,
         notifications: {
           criticalVitalsAlerts: settings.criticalVitalsAlerts,
           incidentEscalations: settings.incidentEscalations,
@@ -58,11 +62,36 @@ export const getUserSettings = async (req: Request, res: Response) => {
   }
 };
 
-// PUT /api/settings/notifications — تحديث الإشعارات
+// PUT /api/settings/profile
+export const updateProfile = async (req: Request, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'User not authenticated' });
+    }
+
+    const { name, department, shift } = req.body;
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        name: name || undefined,
+        department: department || undefined,
+        shift: shift || undefined,
+      },
+      select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true }
+    });
+
+    res.status(200).json({ success: true, data: updatedUser });
+  } catch (error: any) {
+    handleError(res, error, 'Failed to update profile');
+  }
+};
+
+// PUT /api/settings/notifications
 export const updateNotifications = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
     if (!userId) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
@@ -100,11 +129,10 @@ export const updateNotifications = async (req: Request, res: Response) => {
   }
 };
 
-// PUT /api/settings/security — تحديث الأمان والعرض
+// PUT /api/settings/security
 export const updateSecurity = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
     if (!userId) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
@@ -132,11 +160,10 @@ export const updateSecurity = async (req: Request, res: Response) => {
   }
 };
 
-// PUT /api/settings/display — تحديث العرض
+// PUT /api/settings/display
 export const updateDisplay = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    
     if (!userId) {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }

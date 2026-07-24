@@ -2,6 +2,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPut } from '../services/api';
 
+export interface ProfileSettings {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  department: string;
+  shift: string;
+  status: string;
+}
+
 export interface NotificationSettings {
   criticalVitalsAlerts: boolean;
   incidentEscalations: boolean;
@@ -23,6 +33,7 @@ export interface DisplaySettings {
 }
 
 export interface UserSettings {
+  profile: ProfileSettings;
   notifications: NotificationSettings;
   security: SecuritySettings;
   display: DisplaySettings;
@@ -33,7 +44,6 @@ const useSettings = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // جلب الإعدادات
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
@@ -48,7 +58,18 @@ const useSettings = () => {
     }
   }, []);
 
-  // تحديث الإشعارات
+  // Update profile (name, department, shift)
+  const updateProfile = async (data: Partial<ProfileSettings>) => {
+    try {
+      const res = await apiPut('/settings/profile', data);
+      setSettings(prev => prev ? { ...prev, profile: { ...prev.profile, ...res.data.data } } : null);
+      return { success: true, data: res.data.data };
+    } catch (err: any) {
+      console.error('Update profile error:', err);
+      return { success: false, error: err.message };
+    }
+  };
+
   const updateNotifications = async (data: Partial<NotificationSettings>) => {
     try {
       await apiPut('/settings/notifications', data);
@@ -60,7 +81,6 @@ const useSettings = () => {
     }
   };
 
-  // تحديث الأمان
   const updateSecurity = async (data: Partial<SecuritySettings>) => {
     try {
       await apiPut('/settings/security', data);
@@ -72,7 +92,6 @@ const useSettings = () => {
     }
   };
 
-  // تحديث العرض
   const updateDisplay = async (data: Partial<DisplaySettings>) => {
     try {
       await apiPut('/settings/display', data);
@@ -92,6 +111,7 @@ const useSettings = () => {
     settings,
     loading,
     error,
+    updateProfile,
     updateNotifications,
     updateSecurity,
     updateDisplay,

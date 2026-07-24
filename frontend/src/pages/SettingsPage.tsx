@@ -1,8 +1,7 @@
-// frontend/src/pages/Settings/SettingsPage.tsx
+// frontend/src/pages/SettingsPage.tsx
 import { useState } from 'react';
 import useSettings from '../hooks/useSettings';
-import { useAuth } from '../contexts/AuthContext';
-import { Bell, Shield, Monitor, User, Loader2 } from 'lucide-react';
+import { Bell, Shield, Monitor, User, Loader2, Check } from 'lucide-react';
 
 const Toggle: React.FC<{
   enabled: boolean;
@@ -27,12 +26,12 @@ const Toggle: React.FC<{
 );
 
 const SettingsPage: React.FC = () => {
-  const { user, loading: userLoading } = useAuth();
-  const { settings, loading: settingsLoading, updateNotifications, updateSecurity } = useSettings();
+  const { settings, loading: settingsLoading, updateProfile, updateNotifications, updateSecurity, updateDisplay } = useSettings();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+  const [profileEdit, setProfileEdit] = useState({ name: '', department: '', shift: '' });
 
-  const loading = userLoading || settingsLoading;
+  const loading = settingsLoading;
 
   if (loading) {
     return (
@@ -63,9 +62,23 @@ const SettingsPage: React.FC = () => {
     setSaving(true);
     const result = await updateFn({ [key]: !currentValue });
     setSaving(false);
-
     if (result.success) {
       setSaveMessage('Saved successfully');
+      setTimeout(() => setSaveMessage(''), 3000);
+    }
+  };
+
+  const handleProfileSave = async () => {
+    setSaving(true);
+    const result = await updateProfile({
+      name: profileEdit.name || settings.profile.name,
+      department: profileEdit.department || settings.profile.department,
+      shift: profileEdit.shift || settings.profile.shift,
+    });
+    setSaving(false);
+    if (result.success) {
+      setSaveMessage('Profile updated');
+      setProfileEdit({ name: '', department: '', shift: '' });
       setTimeout(() => setSaveMessage(''), 3000);
     }
   };
@@ -74,75 +87,73 @@ const SettingsPage: React.FC = () => {
     <div className="p-6 max-w-4xl mx-auto">
       <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
 
-      {/* Save Message */}
       {saveMessage && (
-        <div 
-          className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg"
-          role="alert"
-          aria-live="polite"
-        >
+        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-2" role="alert">
+          <Check className="w-4 h-4" />
           {saveMessage}
         </div>
       )}
 
-      {/* Profile Section - DYNAMIC */}
+      {/* Profile Section - EDITABLE */}
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <User className="w-5 h-5 text-teal-600" aria-hidden="true" />
+          <User className="w-5 h-5 text-teal-600" />
           <h2 className="text-lg font-semibold text-gray-800">Profile</h2>
         </div>
         <div className="grid grid-cols-2 gap-6">
           <div>
-            <label htmlFor="profile-name" className="block text-sm font-medium text-gray-700 mb-2">
-              Full name
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full name</label>
             <input
-              id="profile-name"
               type="text"
-              value={user?.name || 'Unknown'}
-              disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
-              aria-disabled="true"
+              defaultValue={settings.profile.name}
+              onChange={(e) => setProfileEdit(prev => ({ ...prev, name: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
             />
           </div>
           <div>
-            <label htmlFor="profile-role" className="block text-sm font-medium text-gray-700 mb-2">
-              Role
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
             <input
-              id="profile-role"
               type="text"
-              value={user?.role || 'Unknown'}
+              value={settings.profile.role}
               disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
-              aria-disabled="true"
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
             />
           </div>
           <div>
-            <label htmlFor="profile-email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
             <input
-              id="profile-email"
               type="email"
-              value={user?.email || 'Unknown'}
+              value={settings.profile.email}
               disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
-              aria-disabled="true"
+              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
             />
           </div>
           <div>
-            <label htmlFor="profile-department" className="block text-sm font-medium text-gray-700 mb-2">
-              Department
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
             <input
-              id="profile-department"
               type="text"
-              value={user?.department || 'General'}
-              disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600"
-              aria-disabled="true"
+              defaultValue={settings.profile.department}
+              onChange={(e) => setProfileEdit(prev => ({ ...prev, department: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
+            <input
+              type="text"
+              defaultValue={settings.profile.shift}
+              onChange={(e) => setProfileEdit(prev => ({ ...prev, shift: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
+            />
+          </div>
+          <div className="flex items-end">
+            <button
+              onClick={handleProfileSave}
+              disabled={saving}
+              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition"
+            >
+              {saving ? 'Saving...' : 'Save Profile'}
+            </button>
           </div>
         </div>
       </section>
@@ -150,7 +161,7 @@ const SettingsPage: React.FC = () => {
       {/* Notifications Section */}
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <Bell className="w-5 h-5 text-teal-600" aria-hidden="true" />
+          <Bell className="w-5 h-5 text-teal-600" />
           <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
         </div>
         <div className="space-y-6">
@@ -161,42 +172,52 @@ const SettingsPage: React.FC = () => {
             </div>
             <Toggle
               enabled={settings.notifications.criticalVitalsAlerts}
-              onChange={() => handleToggle(
-                'criticalVitalsAlerts',
-                settings.notifications.criticalVitalsAlerts,
-                updateNotifications
-              )}
+              onChange={() => handleToggle('criticalVitalsAlerts', settings.notifications.criticalVitalsAlerts, updateNotifications)}
               label="Toggle critical vitals alerts"
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
               <h3 className="font-medium text-gray-800">Incident escalations</h3>
-              <p className="text-sm text-gray-500">Notify me when an incident is upgraded to Code Orange or higher.</p>
+              <p className="text-sm text-gray-500">Notify when an incident upgrades to Code Orange or higher.</p>
             </div>
             <Toggle
               enabled={settings.notifications.incidentEscalations}
-              onChange={() => handleToggle(
-                'incidentEscalations',
-                settings.notifications.incidentEscalations,
-                updateNotifications
-              )}
+              onChange={() => handleToggle('incidentEscalations', settings.notifications.incidentEscalations, updateNotifications)}
               label="Toggle incident escalation notifications"
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
               <h3 className="font-medium text-gray-800">Shift reminders</h3>
-              <p className="text-sm text-gray-500">Remind assigned staff 30 minutes before a shift starts.</p>
+              <p className="text-sm text-gray-500">Remind assigned staff 30 minutes before shift starts.</p>
             </div>
             <Toggle
               enabled={settings.notifications.shiftReminders}
-              onChange={() => handleToggle(
-                'shiftReminders',
-                settings.notifications.shiftReminders,
-                updateNotifications
-              )}
+              onChange={() => handleToggle('shiftReminders', settings.notifications.shiftReminders, updateNotifications)}
               label="Toggle shift reminders"
+            />
+          </div>
+          <div className="border-t pt-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-gray-800">Dispatch alerts</h3>
+              <p className="text-sm text-gray-500">Notify on new dispatch assignments.</p>
+            </div>
+            <Toggle
+              enabled={settings.notifications.dispatchAlerts}
+              onChange={() => handleToggle('dispatchAlerts', settings.notifications.dispatchAlerts, updateNotifications)}
+              label="Toggle dispatch alerts"
+            />
+          </div>
+          <div className="border-t pt-6 flex items-center justify-between">
+            <div>
+              <h3 className="font-medium text-gray-800">Appointment reminders</h3>
+              <p className="text-sm text-gray-500">Notify patients and staff of upcoming appointments.</p>
+            </div>
+            <Toggle
+              enabled={settings.notifications.appointmentReminders}
+              onChange={() => handleToggle('appointmentReminders', settings.notifications.appointmentReminders, updateNotifications)}
+              label="Toggle appointment reminders"
             />
           </div>
         </div>
@@ -205,7 +226,7 @@ const SettingsPage: React.FC = () => {
       {/* Security & Display Section */}
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-5 h-5 text-teal-600" aria-hidden="true" />
+          <Shield className="w-5 h-5 text-teal-600" />
           <h2 className="text-lg font-semibold text-gray-800">Security & Display</h2>
         </div>
         <div className="space-y-6">
@@ -216,11 +237,7 @@ const SettingsPage: React.FC = () => {
             </div>
             <Toggle
               enabled={settings.security.twoFactorAuth}
-              onChange={() => handleToggle(
-                'twoFactorAuth',
-                settings.security.twoFactorAuth,
-                updateSecurity
-              )}
+              onChange={() => handleToggle('twoFactorAuth', settings.security.twoFactorAuth, updateSecurity)}
               label="Toggle two-factor authentication"
             />
           </div>
@@ -231,11 +248,7 @@ const SettingsPage: React.FC = () => {
             </div>
             <Toggle
               enabled={settings.security.autoLockIdleSessions}
-              onChange={() => handleToggle(
-                'autoLockIdleSessions',
-                settings.security.autoLockIdleSessions,
-                updateSecurity
-              )}
+              onChange={() => handleToggle('autoLockIdleSessions', settings.security.autoLockIdleSessions, updateSecurity)}
               label="Toggle auto-lock idle sessions"
             />
           </div>
@@ -246,31 +259,54 @@ const SettingsPage: React.FC = () => {
             </div>
             <Toggle
               enabled={settings.security.compactDensity}
-              onChange={() => handleToggle(
-                'compactDensity',
-                settings.security.compactDensity,
-                updateSecurity
-              )}
+              onChange={() => handleToggle('compactDensity', settings.security.compactDensity, updateSecurity)}
               label="Toggle compact density"
             />
           </div>
         </div>
       </section>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between bg-white rounded-xl shadow-sm p-6">
-        <div className="flex items-center gap-2 text-gray-600">
-          <Monitor className="w-5 h-5" aria-hidden="true" />
-          <span>St. Meridian General · Facility ID SMG-001</span>
+      {/* Display Preferences */}
+      <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="flex items-center gap-3 mb-6">
+          <Monitor className="w-5 h-5 text-teal-600" />
+          <h2 className="text-lg font-semibold text-gray-800">Display</h2>
         </div>
-        <button
-          disabled={saving}
-          className="px-6 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
-          aria-busy={saving}
-        >
-          {saving ? 'Saving...' : 'Save changes'}
-        </button>
-      </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+            <select
+              value={settings.display.theme}
+              onChange={(e) => updateDisplay({ theme: e.target.value as any })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
+            >
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+              <option value="system">System</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+            <select
+              value={settings.display.language}
+              onChange={(e) => updateDisplay({ language: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
+            >
+              <option value="en">English</option>
+              <option value="ar">Arabic</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+            <input
+              type="text"
+              value={settings.display.timezone}
+              onChange={(e) => updateDisplay({ timezone: e.target.value })}
+              className="w-full px-4 py-2 border border-gray-200 rounded-lg"
+            />
+          </div>
+        </div>
+      </section>
     </div>
   );
 };
