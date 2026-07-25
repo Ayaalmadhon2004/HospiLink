@@ -36,7 +36,6 @@ export const logout = async () => {
   try {
     await apiPost('/auth/logout');
   } catch (err) {
-    console.error('Logout error:', err);
   }
   // ✅ امسح token من localStorage
   localStorage.removeItem('token');

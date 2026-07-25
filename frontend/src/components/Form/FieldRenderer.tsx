@@ -59,7 +59,6 @@ export const FieldRenderer = <T extends Record<string, any>>({
         }))
       );
     } catch (err) {
-      console.error('Failed to fetch options:', err);
       setSearchOptions([]);
     } finally {
       setSearchLoading(false);

@@ -71,18 +71,18 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
               activeItem === item.id
                 ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500 shadow-sm shadow-teal-500/10'
-                : 'text-slate-300 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
+                : 'text-slate-200 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
             }`}
           >
             <item.icon className={`w-5 h-5 transition-colors ${
-              activeItem === item.id ? 'text-teal-400' : 'text-slate-400 group-hover:text-white'
+              activeItem === item.id ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
             }`} />
             <span className="flex-1 text-left font-medium">{item.label}</span>
             {item.badge && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
                   ? 'bg-teal-500 text-white' 
-                  : 'bg-slate-700 text-slate-300'
+                  : 'bg-slate-700 text-slate-200'
               }`}>
                 {item.badge}
               </span>
@@ -101,11 +101,11 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
             activeItem === 'Settings'
               ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500'
-              : 'text-slate-300 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
+              : 'text-slate-200 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
           }`}
         >
           <Settings className={`w-5 h-5 ${
-            activeItem === 'Settings' ? 'text-teal-400' : 'text-slate-400 group-hover:text-white'
+            activeItem === 'Settings' ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
           }`} />
           <span className="flex-1 text-left font-medium">Settings</span>
         </button>

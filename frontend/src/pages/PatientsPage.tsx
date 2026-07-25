@@ -214,7 +214,7 @@ export const PatientsPage = () => {
         <div className="relative ml-auto">
           <Search 
             size={16} 
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-clinic-text/30" 
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-clinic-text/50" 
             aria-hidden="true" 
           />
           <input
@@ -374,7 +374,7 @@ export const PatientsPage = () => {
               <div className="flex items-center gap-1 mx-1" role="group" aria-label="Page numbers">
                 {paginationRange.map((item, idx) => (
                   item === '...' ? (
-                    <span key={`dots-${idx}`} className="px-2 text-clinic-text/30" aria-hidden="true">...</span>
+                    <span key={`dots-${idx}`} className="px-2 text-clinic-text/50" aria-hidden="true">...</span>
                   ) : (
                     <button
                       key={item}

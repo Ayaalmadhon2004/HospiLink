@@ -116,7 +116,7 @@ export const VitalsCard = ({
               {vital.value !== null ? vital.value : '—'}
             </div>
             <div className="text-xs text-clinic-text/50 mt-1">{vital.label}</div>
-            <div className="text-xs text-clinic-text/30">{vital.unit}</div>
+            <div className="text-xs text-clinic-text/50">{vital.unit}</div>
           </div>
         ))}
       </div>

@@ -30,7 +30,6 @@ export const ConfirmModal = ({
       await onConfirm();
       onClose();
     } catch (err) {
-      console.error('Confirm action failed:', err);
     } finally {
       setConfirming(false);
     }

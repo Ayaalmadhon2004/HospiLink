@@ -42,7 +42,7 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
                 <div className="absolute inset-0 flex">
                   {[0, 4, 8, 12, 16, 20].map((hour) => (
                     <div key={hour} className="flex-1 border-r border-slate-200 last:border-r-0 relative">
-                      <span className="absolute top-0 left-1 text-[10px] text-clinic-text/30">
+                      <span className="absolute top-0 left-1 text-[10px] text-clinic-text/50">
                         {hour.toString().padStart(2, '0')}:00
                       </span>
                     </div>

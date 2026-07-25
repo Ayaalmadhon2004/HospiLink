@@ -36,43 +36,35 @@ export const useDispatchSocket = () => {
     });
 
     newSocket.on('connect', () => {
-      console.log('🚑 Connected to dispatch stream');
       setIsConnected(true);
       newSocket.emit('join-dispatch');
     });
 
     newSocket.on('disconnect', () => {
-      console.log('🚑 Disconnected from dispatch stream');
       setIsConnected(false);
     });
 
-    newSocket.on('connect_error', (err) => {
-      console.warn('Dispatch socket error:', err.message);
+    newSocket.on('connect_error', () => {
       setIsConnected(false);
     });
 
     newSocket.on('unit-status-update', (data: UnitUpdate) => {
-      console.log('Unit status update:', data);
       setLatestUnitUpdate(data);
     });
 
     newSocket.on('unit-location', (data: UnitUpdate) => {
-      console.log('Unit location:', data);
       setLatestUnitUpdate(data);
     });
 
     newSocket.on('new-call', (data: DispatchCall) => {
-      console.log('New dispatch call:', data);
       setLatestCall(data);
     });
 
     newSocket.on('critical-alert', (data: any) => {
-      console.log('CRITICAL ALERT:', data);
       setCriticalAlert(data);
     });
 
     newSocket.on('call-assigned', (data: any) => {
-      console.log('Call assigned:', data);
       setLatestUnitUpdate(data);
     });
 

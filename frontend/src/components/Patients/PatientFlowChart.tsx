@@ -1,9 +1,14 @@
-import { memo, useRef, useEffect, useState } from 'react';
-import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, type ChartOptions } from 'chart.js';
-
-// ✅ Register once globally - NOT inside component
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import { memo, useRef, useEffect, useState, useMemo } from 'react';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface FlowData {
   labels: string[];
@@ -21,7 +26,6 @@ interface PatientFlowChartProps {
 }
 
 const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChartProps) => {
-  const chartRef = useRef<ChartJS<'line'>>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -44,64 +48,19 @@ const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChar
     return () => observer.disconnect();
   }, []);
 
-  // ─── Cleanup chart on unmount ────────────────────────────────────
-  useEffect(() => {
-    return () => {
-      if (chartRef.current) {
-        chartRef.current.destroy();
-      }
-    };
-  }, []);
+  // ─── Transform chart.js data format to recharts format ───────────
+  const chartData = useMemo(() => {
+    if (!data.labels || !data.datasets) return [];
+    return data.labels.map((label, index) => {
+      const point: Record<string, string | number> = { label };
+      data.datasets.forEach((dataset) => {
+        point[dataset.label] = dataset.data[index] ?? 0;
+      });
+      return point;
+    });
+  }, [data]);
 
-  const options: ChartOptions<'line'> = {
-    responsive: true,
-    maintainAspectRatio: true,
-    plugins: {
-      legend: {
-        position: 'bottom',
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          font: { size: 12 },
-        },
-      },
-      title: {
-        display: !!title,
-        text: title,
-        font: { size: 16, weight: 'bold' },
-        padding: { bottom: 20 },
-      },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleFont: { size: 13 },
-        bodyFont: { size: 12 },
-        padding: 12,
-        cornerRadius: 8,
-      },
-    },
-    scales: {
-      x: {
-        grid: { display: false },
-        ticks: { font: { size: 11 } },
-      },
-      y: {
-        beginAtZero: true,
-        grid: { color: 'rgba(0, 0, 0, 0.05)' },
-        ticks: { font: { size: 11 } },
-      },
-    },
-    interaction: {
-      mode: 'nearest',
-      axis: 'x',
-      intersect: false,
-    },
-    animation: {
-      duration: 800,
-      easing: 'easeOutQuart',
-    },
-  };
+  const colors = ['#0ea5e9', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6'];
 
   return (
     <figure
@@ -110,7 +69,58 @@ const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChar
       aria-label={`${title} chart showing patient flow data over time`}
     >
       {isVisible ? (
-        <Line ref={chartRef} options={options} data={data} />
+        <>
+          {title && (
+            <figcaption className="text-base font-bold text-gray-700 mb-4 text-center">
+              {title}
+            </figcaption>
+          )}
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis
+                  dataKey="label"
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e2e8f0' }}
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: '#94a3b8' }}
+                  tickLine={false}
+                  axisLine={{ stroke: '#e2e8f0' }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#fff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                  }}
+                />
+                <Legend
+                  verticalAlign="bottom"
+                  height={36}
+                  iconType="circle"
+                  wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
+                />
+                {data.datasets.map((dataset, idx) => (
+                  <Line
+                    key={dataset.label}
+                    type="monotone"
+                    dataKey={dataset.label}
+                    stroke={dataset.borderColor || colors[idx % colors.length]}
+                    strokeWidth={2}
+                    dot={{ r: 3, fill: dataset.borderColor || colors[idx % colors.length], strokeWidth: 0 }}
+                    activeDot={{ r: 5, stroke: dataset.borderColor || colors[idx % colors.length], strokeWidth: 2, fill: '#fff' }}
+                    animationDuration={800}
+                    animationEasing="ease-out"
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </>
       ) : (
         <div
           className="flex items-center justify-center py-12 text-gray-400"

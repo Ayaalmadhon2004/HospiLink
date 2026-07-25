@@ -92,7 +92,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
       const data = res?.data?.data || res?.data || [];
       setPatients(Array.isArray(data) ? data : []);
     } catch (err) {
-      console.error('Failed to fetch patients:', err);
       setPatients([]);
     } finally {
       setFetchingPatients(false);
@@ -117,8 +116,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         const data = res?.data?.data || res?.data || [];
         setDoctors(Array.isArray(data) ? data : []);
       } catch (err) {
-        console.error('Failed to fetch doctors:', err);
-      }
+        }
     };
     if (isOpen) fetchDoctors();
   }, [isOpen]);
@@ -218,15 +216,12 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         data.patientId = selectedPatient.id;
         data.patientName = selectedPatient.name;
         data.patientCode = selectedPatient.patientCode;
-        console.log('✅ Using existing patient:', selectedPatient.name, selectedPatient.id);
       } else {
         // New patient
         data.patientName = patientSearch.trim();
         data.patientCode = `PT-${Date.now()}`;
-        console.log('🆕 Creating new patient:', data.patientName);
       }
 
-      console.log('🚀 Sending:', data);
 
       if (isEditing) {
         await updateAppointment(editingAppointment.id, data);
@@ -239,7 +234,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
       onSuccess();
       onClose();
     } catch (err: any) {
-      console.error('Submit error:', err);
       toast.error(err?.response?.data?.message || 'Failed to save appointment');
     } finally {
       setLoading(false);

@@ -13,15 +13,16 @@ import { getStaff } from '../services/staffService';
 import { getBeds } from '../services/bedService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 
-// ✅ STATIC imports (not lazy) — App.tsx already imports these
-import { PatientsPage } from '../pages/PatientsPage';
-import Beds from '../pages/Beds';
-import { VitalsMonitorPage } from '../pages/VitalsMonitorPage';
-import { StaffDirectoryPage } from '../pages/StaffDirectoryPage';
-import { AppointmentsPage } from '../pages/AppointmentsPage';
-import { IncidentsPage } from './IncidentsPage';
-import DispatchDashboard from './DispatchDashboard';
-import SettingsPage from './SettingsPage';
+// ✅ Lazy-loaded tabs — code-split per page
+import { lazy, Suspense } from 'react';
+const PatientsPage = lazy(() => import('../pages/PatientsPage').then(m => ({ default: m.PatientsPage })));
+const Beds = lazy(() => import('../pages/Beds'));
+const VitalsMonitorPage = lazy(() => import('../pages/VitalsMonitorPage').then(m => ({ default: m.VitalsMonitorPage })));
+const StaffDirectoryPage = lazy(() => import('../pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
+const AppointmentsPage = lazy(() => import('../pages/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })));
+const IncidentsPage = lazy(() => import('./IncidentsPage').then(m => ({ default: m.IncidentsPage })));
+const DispatchDashboard = lazy(() => import('./DispatchDashboard'));
+const SettingsPage = lazy(() => import('./SettingsPage'));
 
 // ─── Cookie Helpers ───────────────────────────────────────────────
 const getCookie = (name: string): string => {
@@ -236,7 +237,6 @@ const useDashboardData = () => {
 
     } catch (err) {
       if (signal?.aborted) return;
-      console.error('Dashboard fetch error:', err);
       setError('Failed to load dashboard data. Please try again.');
     } finally {
       if (!signal?.aborted) {
@@ -263,6 +263,14 @@ const useDashboardData = () => {
 
   return { ...data, loading, error, refetch: fetchData };
 };
+
+// ─── Tab Loading Fallback ───────────────────────────────────────────
+const TabFallback = memo(() => (
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading page">
+    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+    <span className="sr-only">Loading page content...</span>
+  </div>
+));
 
 // ─── Main Component ─────────────────────────────────────────────────
 const Dashboard = () => {
@@ -318,27 +326,41 @@ const Dashboard = () => {
 
   // ─── Render Content ───────────────────────────────────────────────
   const renderContent = useMemo(() => {
+    let content: React.ReactNode = null;
     switch (activeItem) {
       case 'Patients':
-        return <PatientsPage />;
+        content = <PatientsPage />;
+        break;
       case 'Beds & Wards':
-        return <Beds />;
+        content = <Beds />;
+        break;
       case 'Staff & Shifts':
-        return <StaffDirectoryPage />;
+        content = <StaffDirectoryPage />;
+        break;
       case 'Vitals Monitor':
-        return <VitalsMonitorPage />;
+        content = <VitalsMonitorPage />;
+        break;
       case 'Appointments':
-        return <AppointmentsPage />;
+        content = <AppointmentsPage />;
+        break;
       case 'Incidents':
-        return <IncidentsPage />;
+        content = <IncidentsPage />;
+        break;
       case 'Dispatch':
-        return <DispatchDashboard />;
+        content = <DispatchDashboard />;
+        break;
       case 'Settings':
-        return <SettingsPage />;
+        content = <SettingsPage />;
+        break;
       case 'Overview':
       default:
         return null;
     }
+    return (
+      <Suspense fallback={<TabFallback />}>
+        {content}
+      </Suspense>
+    );
   }, [activeItem]);
 
   // ─── Overview Panel ───────────────────────────────────────────────

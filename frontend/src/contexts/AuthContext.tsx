@@ -39,8 +39,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         setUser(userData);
       })
       .catch((err: any) => {
-        console.error('Auth error:', err);
-
         // ✅ امسح التوكن فقط إذا كان السيرفر رفضه فعلاً (401)
         if (err?.response?.status === 401) {
           localStorage.removeItem('token');
@@ -48,13 +46,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
           localStorage.removeItem('authToken');
           setUser(null);
         } else {
-          // ❌ خطأ شبكة/سيرفر مؤقت (cold start, timeout, 502, 503...)
-          // نخلي المستخدم مسجل دخول ونحاول مرة ثانية لاحقاً
-          console.warn(
-            '[AuthContext] Network/server issue (not 401). Keeping token. Error:',
-            err.message || err
-          );
-          // نحتفظ بالـ user الحالي لو كان موجود
+          // Network/server issue — keeping token
           // لو null، التوكن لسه موجود والـ PrivateRoute رح يسمح بالمرور
         }
       })

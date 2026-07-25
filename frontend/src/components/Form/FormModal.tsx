@@ -149,7 +149,6 @@ export const FormModal = <T extends Record<string, any>>({
           onClose();
         }, 800);
       } catch (err: any) {
-        console.error('Form submit error:', err);
         const backendError = err.response?.data;
         setFormError(
           backendError?.message || backendError?.error || 'Failed to save. Please try again.'

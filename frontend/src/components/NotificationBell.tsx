@@ -26,6 +26,13 @@ export const NotificationBell = () => {
     setOpen(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent, n: any) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick(n);
+    }
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <button
@@ -65,13 +72,16 @@ export const NotificationBell = () => {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">No notifications</div>
+            <div className="p-6 text-center text-gray-500 text-sm">No notifications</div>
           ) : (
             notifications.map((n) => (
               <div
                 key={n.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => handleClick(n)}
-                className={`p-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition ${
+                onKeyDown={(e) => handleKeyDown(e, n)}
+                className={`w-full text-left p-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition ${
                   !n.read ? 'bg-teal-50/30' : ''
                 }`}
               >
@@ -90,7 +100,8 @@ export const NotificationBell = () => {
                       e.stopPropagation();
                       deleteNotification(n.id);
                     }}
-                    className="p-1 text-gray-300 hover:text-red-500 rounded transition shrink-0"
+                    className="p-1 text-gray-500 hover:text-red-500 rounded transition shrink-0"
+                    aria-label={`Delete notification ${n.title}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

@@ -181,8 +181,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
         }
       } catch (err: any) {
         if (!controller.signal.aborted) {
-          console.error('Failed to fetch beds:', err);
-          dispatch({
+            dispatch({
             type: 'FETCH_BEDS_ERROR',
             error: err.response?.data?.error || 'Failed to load available beds',
           });
@@ -273,7 +272,6 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
         onAdd();
       }, 800);
     } catch (err: any) {
-      console.error('Admit error response:', err.response?.data);
       const backendError = err.response?.data;
       dispatch({
         type: 'SUBMIT_ERROR',

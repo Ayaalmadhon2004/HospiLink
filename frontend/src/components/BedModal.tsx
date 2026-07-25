@@ -52,7 +52,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         const data = await apiGet('/wards');
         if (data.success) setWards(data.data);
       } catch (err) {
-        console.error('Error fetching wards:', err);
       }
     };
     fetchWards();
@@ -112,7 +111,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         onSuccess();
         onClose();
       } else {
-        console.error('Server error:', data.message);
         addToast(data.message || 'Failed to save bed', 'error');
       }
     } catch (error: any) {
@@ -433,13 +431,15 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
 
         {/* Click outside to close dropdowns */}
         {(showWardDropdown || showPatientDropdown || showStatusDropdown) && (
-          <div
-            className="fixed inset-0 z-40"
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-transparent border-none p-0 m-0 w-full h-full cursor-default"
             onClick={() => {
               setShowWardDropdown(false);
               setShowPatientDropdown(false);
               setShowStatusDropdown(false);
             }}
+            tabIndex={-1}
             aria-hidden="true"
           />
         )}

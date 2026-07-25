@@ -1,121 +1,133 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { LoginPage } from './pages/LoginPage';
-import Dashboard from './pages/Dashboard';
+import { lazy ,Suspense } from 'react';
+
+// Named exports → wrap with default via .then()
+const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
 import { PrivateRoute } from './components/PrivateRoute';
-import { SignupPage } from './pages/SignupPage';
-import { PatientsPage } from './pages/PatientsPage';
-import { PatientDetailPage } from './pages/PatientDetailPage';
-import { EditPatientPage } from './pages/EditPatientPage';
-import Beds from './pages/Beds';
-import { VitalsMonitorPage } from './pages/VitalsMonitorPage';
-import { AppointmentsPage } from './pages/AppointmentsPage';
-import DispatchDashboard from './pages/DispatchDashboard';
-import { IncidentsPage } from './pages/IncidentsPage';
-import { StaffDirectoryPage } from './pages/StaffDirectoryPage';
-import SettingsPage  from './pages/SettingsPage';
+const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
+const PatientsPage = lazy(() => import('./pages/PatientsPage').then(m => ({ default: m.PatientsPage })));
+const PatientDetailPage = lazy(() => import('./pages/PatientDetailPage').then(m => ({ default: m.PatientDetailPage })));
+const EditPatientPage = lazy(() => import('./pages/EditPatientPage').then(m => ({ default: m.EditPatientPage })));
+const Beds = lazy(() => import('./pages/Beds'));
+const VitalsMonitorPage = lazy(() => import('./pages/VitalsMonitorPage').then(m => ({ default: m.VitalsMonitorPage })));
+const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then(m => ({ default: m.AppointmentsPage })));
+const DispatchDashboard = lazy(() => import('./pages/DispatchDashboard'));
+const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then(m => ({ default: m.IncidentsPage })));
+const StaffDirectoryPage = lazy(() => import('./pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-4 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-400 text-sm">Loading...</p>
+        </div>
+      </div>
+    }>
+      <Routes>
+        <Route path="/" element={<Navigate to="/login" replace />} />
 
-      {/* Public Routes */}
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/signup" element={<SignupPage />} />
+        {/* Public Routes */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/signup" element={<SignupPage />} />
 
-      {/* Protected Routes */}
-      <Route 
-        path="/dashboard" 
-        element={
-          <PrivateRoute>
-            <Dashboard />
-          </PrivateRoute>
-        } 
-      />
+        {/* Protected Routes */}
+        <Route 
+          path="/dashboard" 
+          element={
+            <PrivateRoute>
+              <Dashboard />
+            </PrivateRoute>
+          } 
+        />
 
-      <Route 
-        path="/patients" 
-        element={
-          <PrivateRoute>
-            <PatientsPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/patients/:id" 
-        element={
-          <PrivateRoute>
-            <PatientDetailPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/patients/:id/edit" 
-        element={
-          <PrivateRoute>
-            <EditPatientPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/beds" 
-        element={
-          <PrivateRoute>
-            <Beds />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/appointments" 
-        element={
-          <PrivateRoute>
-            <AppointmentsPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/dispatch" 
-        element={
-          <PrivateRoute>
-            <DispatchDashboard />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/vitals" 
-        element={
-          <PrivateRoute>
-            <VitalsMonitorPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/incidents" 
-        element={
-          <PrivateRoute>
-            <IncidentsPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/staff" 
-        element={
-          <PrivateRoute>
-            <StaffDirectoryPage />
-          </PrivateRoute>
-        } 
-      />
-      <Route 
-        path="/settings" 
-        element={
-          <PrivateRoute>
-            <SettingsPage />
-          </PrivateRoute>
-        } 
-      />
+        <Route 
+          path="/patients" 
+          element={
+            <PrivateRoute>
+              <PatientsPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/patients/:id" 
+          element={
+            <PrivateRoute>
+              <PatientDetailPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/patients/:id/edit" 
+          element={
+            <PrivateRoute>
+              <EditPatientPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/beds" 
+          element={
+            <PrivateRoute>
+              <Beds />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/appointments" 
+          element={
+            <PrivateRoute>
+              <AppointmentsPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/dispatch" 
+          element={
+            <PrivateRoute>
+              <DispatchDashboard />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/vitals" 
+          element={
+            <PrivateRoute>
+              <VitalsMonitorPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/incidents" 
+          element={
+            <PrivateRoute>
+              <IncidentsPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/staff" 
+          element={
+            <PrivateRoute>
+              <StaffDirectoryPage />
+            </PrivateRoute>
+          } 
+        />
+        <Route 
+          path="/settings" 
+          element={
+            <PrivateRoute>
+              <SettingsPage />
+            </PrivateRoute>
+          } 
+        />
 
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
-    </Routes>
+        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      </Routes>
+    </Suspense>
   );
 }
 

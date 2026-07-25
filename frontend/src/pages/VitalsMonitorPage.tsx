@@ -132,7 +132,6 @@ export const VitalsMonitorPage = () => {
           const patientsRes = await getPatients();
           patientsData = ensureArray<Patient>(patientsRes?.data ?? patientsRes);
         } catch (err) {
-          console.error('Failed to fetch patients:', err);
           if (showErrors) showToast('Failed to fetch patients list', 'error');
         }
         setPatients(patientsData);
@@ -143,11 +142,9 @@ export const VitalsMonitorPage = () => {
           const alertsRes = await getCriticalAlerts();
           alertsData = ensureArray<AlertItem>(alertsRes?.data ?? alertsRes);
         } catch (err) {
-          console.error('Failed to fetch critical alerts:', err);
         }
         setAlerts(alertsData);
       } catch (err) {
-        console.error('Failed to fetch data:', err);
         if (showErrors) showToast('Failed to fetch vitals data', 'error');
       } finally {
         setRefreshing(false);
@@ -177,7 +174,6 @@ export const VitalsMonitorPage = () => {
         const data = ensureArray<VitalRecord>(res?.data ?? res);
         setVitals((prev) => mergeVitals(ensureArray<VitalRecord>(prev), data));
       } catch (err) {
-        console.error('Failed to fetch vitals:', err);
       } finally {
         setLoading(false);
         isFetchingVitals.current = false;
@@ -419,7 +415,7 @@ export const VitalsMonitorPage = () => {
           <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="heart-rate" className="block text-sm text-clinic-text/60 mb-1">
-                Heart Rate <span className="text-xs text-clinic-text/30">(60-100)</span>
+                Heart Rate <span className="text-xs text-clinic-text/50">(60-100)</span>
               </label>
               <input
                 id="heart-rate"
@@ -434,7 +430,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="systolic-bp" className="block text-sm text-clinic-text/60 mb-1">
-                Systolic BP <span className="text-xs text-clinic-text/30">(90-140)</span>
+                Systolic BP <span className="text-xs text-clinic-text/50">(90-140)</span>
               </label>
               <input
                 id="systolic-bp"
@@ -449,7 +445,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="diastolic-bp" className="block text-sm text-clinic-text/60 mb-1">
-                Diastolic BP <span className="text-xs text-clinic-text/30">(60-90)</span>
+                Diastolic BP <span className="text-xs text-clinic-text/50">(60-90)</span>
               </label>
               <input
                 id="diastolic-bp"
@@ -464,7 +460,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="spo2" className="block text-sm text-clinic-text/60 mb-1">
-                SpO2 <span className="text-xs text-clinic-text/30">(%)</span>
+                SpO2 <span className="text-xs text-clinic-text/50">(%)</span>
               </label>
               <input
                 id="spo2"
@@ -480,7 +476,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="temperature" className="block text-sm text-clinic-text/60 mb-1">
-                Temperature <span className="text-xs text-clinic-text/30">(°C)</span>
+                Temperature <span className="text-xs text-clinic-text/50">(°C)</span>
               </label>
               <input
                 id="temperature"
@@ -496,7 +492,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="respiratory-rate" className="block text-sm text-clinic-text/60 mb-1">
-                Respiratory Rate <span className="text-xs text-clinic-text/30">(12-20)</span>
+                Respiratory Rate <span className="text-xs text-clinic-text/50">(12-20)</span>
               </label>
               <input
                 id="respiratory-rate"
