@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منظومة الإنجاز القسري - تتبع العادات</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --text-color: #f8fafc;
+            --green: #22c55e;
+            --red: #ef4444;
+            --empty: #334155;
+            --gray: #64748b;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            direction: rtl;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        header h1 {
+            color: #38bdf8;
+            margin-bottom: 5px;
+        }
+
+        header p {
+            color: var(--gray);
+            font-size: 14px;
+        }
+
+        /* لوحة التحكم بالتنبيهات */
+        .alert-control-panel {
+            background-color: #1e1b4b;
+            border: 1px solid #4338ca;
+            padding: 15px 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .alert-control-panel span {
+            font-size: 14px;
+            color: #c7d2fe;
+        }
+
+        .alert-btn {
+            background-color: #4f46e5;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .alert-btn:hover {
+            background-color: #4338ca;
+        }
+
+        .add-section {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            display: flex;
+            gap: 10px;
+        }
+
+        .add-section input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--gray);
+            background-color: #0f172a;
+            color: white;
+            font-size: 16px;
+        }
+
+        .add-section button {
+            padding: 12px 24px;
+            background-color: #38bdf8;
+            color: #0f172a;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .add-section button:hover {
+            background-color: #0ea5e9;
+        }
+
+        .habits-container {
+            display: grid;
+            gap: 20px;
+        }
+
+        .habit-card {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .habit-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .habit-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #38bdf8;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--red);
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .github-grid {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .day-box {
+            width: 28px;
+            height: 28px;
+            background-color: var(--empty);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #94a3b8;
+            transition: 0.2s;
+            flex-shrink: 0;
+        }
+
+        .day-box:hover {
+            border: 1px solid white;
+        }
+
+        .day-box.done {
+            background-color: var(--green);
+            color: #0f172a;
+            font-weight: bold;
+        }
+
+        .day-box.missed {
+            background-color: var(--red);
+            color: white;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 10px;
+            align-items: center;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>منظومة العادات والإنجاز الإلزامي</h1>
+            <p>اضغط على مربعات الأيام لتسجيل حالتك، وافعل التنبيهات لكي يلاحقك الموقع!</p>
+        </header>
+
+        <!-- لوحة تفعيل التنبيهات الذكية -->
+        <div class="alert-control-panel">
+            <span>🚨 نظام التنبيه الذكي: اضغط لتفعيل الإشعارات الشاشية لتذكيرك بالإنجاز فوراً.</span>
+            <button class="alert-btn" onclick="requestNotificationPermission()">تفعيل التنبيهات الفورية</button>
+        </div>
+
+        <div class="add-section">
+            <input type="text" id="habitInput" placeholder="أدخل عادة تريد إجبار نفسك عليها اليوم...">
+            <button onclick="addHabit()">إضافة عادة</button>
+        </div>
+
+        <div class="habits-container" id="habitsList">
+            <!-- العادات -->
+        </div>
+    </div>
+
+    <script>
+        let habits = JSON.parse(localStorage.getItem('github_habits')) || [];
+
+        // طلب الإذن لإرسال إشعارات نظام التشغيل
+        function requestNotificationPermission() {
+            if (!("Notification" in window)) {
+                alert("متصفحك لا يدعم الإشعارات الفورية.");
+                return;
+            }
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    alert("تم تفعيل الإشعارات بنجاح! سيتم تنبيهك.");
+                    new Notification("منظومة الإنجاز", {
+                        body: "ممتاز! تم تفعيل الملاحقة البصرية بنجاح. لا تنسَ إنجاز مهامك اليوم!"
+                    });
+                } else {
+                    alert("يرجى السماح بالإشعارات من إعدادات المتصفح لتعمل الملاحقة.");
+                }
+            });
+        }
+
+        // فحص تلقائي كل ساعة لإرسال تنبيه في حال وجود عادات غير منجزة لليوم
+        function checkDailyReminder() {
+            if (Notification.permission === "granted") {
+                let todayStr = new Date().toISOString().split('T')[0];
+                let pendingCount = 0;
+
+                habits.forEach(habit => {
+                    if (!habit.logs || !habit.logs[todayStr]) {
+                        pendingCount++;
+                    }
+                });
+
+                if (pendingCount > 0) {
+                    new Notification("⚠️ تذكير قسري بالإنجاز!", {
+                        body: `لديك ${pendingCount} عادات لم تحدد حالتها لليوم حتى الآن! افتح الموقع وأنجزها.`
+                    });
+                }
+            }
+        }
+
+        // جدولة فحص كل ساعة
+        setInterval(checkDailyReminder, 60 * 60 * 1000);
+
+        function getLast30Days() {
+            let dates = [];
+            for (let i = 29; i >= 0; i--) {
+                let d = new Date();
+                d.setDate(d.getDate() - i);
+                let dateString = d.toISOString().split('T')[0];
+                let dayNum = d.getDate();
+                dates.push({ date: dateString, label: dayNum });
+            }
+            return dates;
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('github_habits', JSON.stringify(habits));
+            renderHabits();
+        }
+
+        function addHabit() {
+            const input = document.getElementById('habitInput');
+            const text = input.value.trim();
+            if (text === '') return;
+
+            habits.push({
+                id: Date.now(),
+                name: text,
+                logs: {}
+            });
+
+            input.value = '';
+            saveAndRender();
+        }
+
+        function toggleDay(habitId, dateString) {
+            habits = habits.map(habit => {
+                if (habit.id === habitId) {
+                    if (!habit.logs) habit.logs = {};
+                    let currentStatus = habit.logs[dateString];
+                    if (!currentStatus) {
+                        habit.logs[dateString] = 'done';
+                    } else if (currentStatus === 'done') {
+                        habit.logs[dateString] = 'missed';
+                    } else {
+                        delete habit.logs[dateString];
+                    }
+                }
+                return habit;
+            });
+            saveAndRender();
+        }
+
+        function deleteHabit(id) {
+            habits = habits.filter(habit => habit.id !== id);
+            saveAndRender();
+        }
+
+        function renderHabits() {
+            const container = document.getElementById('habitsList');
+            container.innerHTML = '';
+
+            if (habits.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: var(--gray);">لا توجد عادات مضافة بعد. أضف عادتك الأولى وابدأ الملاحقة!</p>`;
+                return;
+            }
+
+            const days = getLast30Days();
+
+            habits.forEach(habit => {
+                const card = document.createElement('div');
+                card.className = 'habit-card';
+
+                let gridHTML = '';
+                days.forEach(day => {
+                    let status = habit.logs && habit.logs[day.date] ? habit.logs[day.date] : '';
+                    let statusClass = status === 'done' ? 'done' : (status === 'missed' ? 'missed' : '');
+                    
+                    gridHTML += `
+                        <div class="day-box ${statusClass}" title="${day.date}" onclick="toggleDay(${habit.id}, '${day.date}')">
+                            ${day.label}
+                        </div>
+                    `;
+                });
+
+                card.innerHTML = `
+                    <div class="habit-header">
+                        <span class="habit-title">${habit.name}</span>
+                        <button class="delete-btn" onclick="deleteHabit(${habit.id})">حذف العادة</button>
+                    </div>
+                    <div class="github-grid">
+                        ${gridHTML}
+                    </div>
+                    <div class="legend">
+                        <div class="legend-item"><div class="legend-color" style="background: var(--green);"></div> أنجزت</div>
+                        <div class="legend-item"><div class="legend-color" style="background: var(--red);"></div> قصرت</div>
+                        <div class="legend-item"><div class="legend-color" style="background: var(--empty);"></div> لم يتم التحديد</div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        renderHabits();
+    </script>
+</body>
+</html>

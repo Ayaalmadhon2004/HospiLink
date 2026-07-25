@@ -38,7 +38,7 @@ export const getNotifications = async (req: Request, res: Response) => {
 export const markAsRead = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { id } = req.params;
+    const id = String(req.params.id); // FIX: cast to string
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
     const notification = await prisma.notification.updateMany({
@@ -73,7 +73,7 @@ export const markAllAsRead = async (req: Request, res: Response) => {
 export const deleteNotification = async (req: Request, res: Response) => {
   try {
     const userId = req.user?.id;
-    const { id } = req.params;
+    const id = String(req.params.id); // FIX: cast to string
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
     await prisma.notification.deleteMany({

@@ -34,13 +34,11 @@ export interface UseCreateResult<T> {
 export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
-   // شو يعني الميوتيشن ؟
 
   const deleteMutation = useMutation({
     mutationFn: config.deleteFn,
 
     onMutate: async (id: string) => {
-      // ليش هنا بنعمل كانس للكويريز ؟
       await queryClient.cancelQueries({ queryKey: config.queryKey });
 
       // Snapshot previous data
@@ -67,7 +65,6 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
     },
 
     onSettled: () => {
-      // شو بعمل الانفاليديت كويريز 
       queryClient.invalidateQueries({ queryKey: config.queryKey });
     },
   });

@@ -65,8 +65,20 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   const [room, setRoom] = useState('');
   const [notes, setNotes] = useState('');
   const [duration, setDuration] = useState(30);
-
   const isEditing = !!editingAppointment;
+
+  interface CreateAppointmentData {
+  doctorId: string;
+  scheduledAt: string;
+  type: string;
+  department: string;
+  room?: string;
+  notes?: string;
+  duration?: number;
+  patientId?: string;
+  patientName?: string;
+  patientCode?: string;
+}
 
   // ─── Fetch Patients for Search ─────────────────────
   const fetchPatients = async (search: string) => {
@@ -189,6 +201,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         setLoading(false);
         return;
       }
+
 
       const data: CreateAppointmentData = {
         doctorId,

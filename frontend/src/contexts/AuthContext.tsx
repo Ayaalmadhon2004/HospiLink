@@ -1,5 +1,4 @@
 // frontend/src/contexts/AuthContext.tsx
-// لشو هاد الملف وشو استخدامه وشو تفصيلته 
 import { createContext, useContext, useState, useEffect } from 'react';
 import { apiGet } from '../services/api';
 

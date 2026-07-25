@@ -1,7 +1,5 @@
 // frontend/src/services/api.ts
-// احنا بنستخدم هاد الاي بي اي مش بس الاكسيوس مشان الهيدرز عشان هيك اذا استخدمنا اشي غير غير هاد الاي بي اي بيصير عندي مشاكل صح ؟
 import axios from 'axios';
-// احكيلي شو اجزاء هاد الملف وشو اهمية كل سكشن 
 const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
 
 // ============================================
@@ -58,7 +56,6 @@ api.interceptors.response.use(
       return Promise.reject(new Error('Server error. Please try again later.'));
     }
 
-    // ✅ خطأ شبكة/timeout — نرجع الرسالة الأصلية
     const message = error.response?.data?.message || error.response?.data?.error || error.message;
     return Promise.reject(new Error(message));
   }
