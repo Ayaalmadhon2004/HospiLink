@@ -173,7 +173,7 @@ export const PatientsPage = () => {
       <header className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold text-hospital-navy">Patients</h1>
-          <p className="text-clinic-text/50">Admitted patient records</p>
+          <p className="text-slate-500">Admitted patient records</p>
         </div>
 
         <button
@@ -214,7 +214,7 @@ export const PatientsPage = () => {
         <div className="relative ml-auto">
           <Search 
             size={16} 
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-clinic-text/50" 
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" 
             aria-hidden="true" 
           />
           <input
@@ -245,7 +245,7 @@ export const PatientsPage = () => {
 
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-slate-50 text-clinic-text/50 text-sm uppercase">
+              <thead className="bg-slate-50 text-slate-500 text-sm uppercase">
                 <tr>
                   <th scope="col" className="px-6 py-4 text-left font-medium">Patient ID</th>
                   <th scope="col" className="px-6 py-4 text-left font-medium">Name</th>
@@ -268,7 +268,7 @@ export const PatientsPage = () => {
                   </tr>
                 ) : patients.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-clinic-text/40">
+                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                       <Search className="w-12 h-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
                       <p>No patients found</p>
                       {search && <p className="text-sm mt-1">Try different search terms</p>}
@@ -290,7 +290,7 @@ export const PatientsPage = () => {
                         }
                       }}
                     >
-                      <td className="px-6 py-4 font-mono text-sm text-clinic-text/60">
+                      <td className="px-6 py-4 font-mono text-sm text-slate-500">
                         {patient.patientCode}
                       </td>
                       <td className="px-6 py-4 font-medium text-clinic-text">
@@ -298,7 +298,7 @@ export const PatientsPage = () => {
                       </td>
                       <td className="px-6 py-4 text-clinic-text/70">{patient.age}</td>
                       <td className="px-6 py-4 text-clinic-text/70">{patient.department}</td>
-                      <td className="px-6 py-4 text-clinic-text/50 text-sm">
+                      <td className="px-6 py-4 text-slate-500 text-sm">
                         <time dateTime={patient.admissionDate}>
                           {new Date(patient.admissionDate).toLocaleDateString('en-US', {
                             month: 'short',
@@ -322,7 +322,7 @@ export const PatientsPage = () => {
         {pagination && pagination.totalCount > 0 && (
           <footer className="px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
             {/* Info */}
-            <div className="text-sm text-clinic-text/50">
+            <div className="text-sm text-slate-500">
               Showing <span className="font-medium text-clinic-text">{startItem}</span>
               {' - '}
               <span className="font-medium text-clinic-text">{endItem}</span>
@@ -331,7 +331,7 @@ export const PatientsPage = () => {
             </div>
 
             {/* Items per page */}
-            <div className="flex items-center gap-2 text-sm text-clinic-text/50">
+            <div className="flex items-center gap-2 text-sm text-slate-500">
               <label htmlFor="rows-per-page">Rows per page:</label>
               <select
                 id="rows-per-page"
@@ -374,7 +374,7 @@ export const PatientsPage = () => {
               <div className="flex items-center gap-1 mx-1" role="group" aria-label="Page numbers">
                 {paginationRange.map((item, idx) => (
                   item === '...' ? (
-                    <span key={`dots-${idx}`} className="px-2 text-clinic-text/50" aria-hidden="true">...</span>
+                    <span key={`dots-${idx}`} className="px-2 text-slate-400" aria-hidden="true">...</span>
                   ) : (
                     <button
                       key={item}

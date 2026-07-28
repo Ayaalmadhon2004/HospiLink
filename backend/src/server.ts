@@ -62,7 +62,8 @@ app.use(compression({
 const allowedOrigins = [
   "http://localhost:5173",
   "https://hospi-link-liart.vercel.app",
-  "https://hospi-link-two.vercel.app"
+  "https://hospi-link-two.vercel.app",
+  " http://localhost:4173"
 ];
 
 // ✅ Rate limiting for auth routes — prevents brute force

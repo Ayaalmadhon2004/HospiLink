@@ -91,7 +91,7 @@ export const NotificationBell = () => {
                       {n.title}
                     </p>
                     <p className="text-xs text-gray-500 truncate">{n.message}</p>
-                    <p className="text-[10px] text-gray-400 mt-1">
+                    <p className="text-[10px] text-gray-500 mt-1">
                       {new Date(n.createdAt).toLocaleTimeString()}
                     </p>
                   </div>

@@ -86,7 +86,7 @@ export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartPro
         aria-label={`${label} chart — no data available`}
       >
         <figcaption className="text-sm font-semibold text-clinic-text/70 mb-4">{label}</figcaption>
-        <div className="h-48 flex items-center justify-center text-clinic-text/30 text-sm">
+        <div className="h-48 flex items-center justify-center text-slate-500 text-sm">
           No data available
         </div>
       </figure>
