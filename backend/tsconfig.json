@@ -16,6 +16,6 @@
     "ignoreDeprecations": "6.0",
     "noEmitOnError": false
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "tests"],
   "exclude": ["node_modules", "dist"]
 }
