@@ -118,6 +118,8 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
               alt={`Preview of ${selectedFile?.name || 'selected file'}`}
               className="max-h-40 mx-auto rounded-lg"
               loading="lazy"
+              decoding="async"
+              fetchPriority="low"
             />
           ) : (
             <div className="flex flex-col items-center gap-2">
