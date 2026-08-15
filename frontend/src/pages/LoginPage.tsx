@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from 'react';
 import { Activity } from 'lucide-react';
 import { login } from '../services/authService';
+import { Link } from 'react-router-dom';
 
 export const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -106,6 +107,11 @@ export const LoginPage = () => {
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
+
+          <p className="text-center text-slate-400 mt-6 text-sm">
+          Don't have an account? 
+          <Link to="/signup" className="text-medical-teal font-medium hover:underline"> Sign Up</Link>
+        </p>
         </form>
       </div>
     </div>
