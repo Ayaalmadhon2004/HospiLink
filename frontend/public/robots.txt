@@ -1,4 +1,4 @@
-# Muraqib Hospital Management System
+# HospiLink Hospital Management System
 # Private dashboard — No indexing allowed
 
 User-agent: *
