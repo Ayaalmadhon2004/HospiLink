@@ -1,12 +1,13 @@
 // frontend/src/hooks/useVitalsSocket.ts
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
+import type { Vitals } from '../types/vitals';
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
 export const useVitalsSocket = (patientId: string) => {
-  const [latestVital, setLatestVital] = useState<any>(null);
+  const [latestVital, setLatestVital] = useState<Vitals | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const socketRef = useRef<Socket | null>(null);
 
@@ -30,7 +31,7 @@ export const useVitalsSocket = (patientId: string) => {
     socket.connect();
     socket.emit('join-room', patientId);
 
-    const handleNewVital = (data: any) => {
+    const handleNewVital = (data: Vitals) => {
       setLatestVital(data);
     };
     socket.on('new-vital', handleNewVital);

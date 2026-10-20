@@ -1,9 +1,11 @@
 // frontend/src/services/staffService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
+import type { ApiResponse } from '../types/api';
+import type { ShiftInput, StaffMember } from '../types/staff';
 
 export const getStaff = (params?: { department?: string; role?: string }) => {
-  const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
-  return apiGet(`/staff${query}`);
+  const query = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
+  return apiGet<ApiResponse<StaffMember[]>>(`/staff${query}`);
 };
 
 export const getStaffById = (id: string) => 
@@ -21,7 +23,7 @@ export const deleteStaff = (id: string) =>
 
 // ─── Shifts ────────────────────────────────────────────────────────
 export const getShifts = (params?: { department?: string; staffId?: string; date?: string }) => {
-  const query = params ? '?' + new URLSearchParams(params as any).toString() : '';
+  const query = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
   return apiGet(`/staff/shifts${query}`);
 };
 
@@ -30,10 +32,10 @@ export const getShiftTimeline = (date?: string) => {
   return apiGet(`/staff/shifts/timeline${query}`);
 };
 
-export const createShift = (data: any) => 
+export const createShift = (data: ShiftInput) => 
   apiPost('/staff/shifts', data);
 
-export const updateShift = (id: string, data: any) => 
+export const updateShift = (id: string, data: ShiftInput) => 
   apiPut(`/staff/shifts/${id}`, data);
 
 export const deleteShift = (id: string) => 

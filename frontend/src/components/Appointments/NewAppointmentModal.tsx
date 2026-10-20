@@ -3,6 +3,8 @@ import { useState, useEffect } from 'react';
 import { X, Search, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
 import { createAppointment, updateAppointment} from '../../services/appointmentsService';
 import { apiGet } from '../../services/api';
+import { extractList, getResponseData } from '../../types/api';
+import type { Appointment } from '../../services/appointmentsService';
 import { toast } from 'sonner';
 
 interface Patient {
@@ -25,7 +27,7 @@ interface NewAppointmentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-  editingAppointment?: any;
+  editingAppointment?: (Appointment & { doctorId?: string }) | null;
 }
 
 const APPOINTMENT_TYPES = [
@@ -89,9 +91,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
     setFetchingPatients(true);
     try {
       const res = await apiGet('/patients', { search, limit: '10' });
-      const data = res?.data?.data || res?.data || [];
-      setPatients(Array.isArray(data) ? data : []);
-    } catch (err) {
+      setPatients(extractList<Patient>(res));
+    } catch {
       setPatients([]);
     } finally {
       setFetchingPatients(false);
@@ -113,10 +114,10 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
     const fetchDoctors = async () => {
       try {
         const res = await apiGet('/staff', { role: 'DOCTOR', limit: '50' });
-        const data = res?.data?.data || res?.data || [];
-        setDoctors(Array.isArray(data) ? data : []);
-      } catch (err) {
-        }
+        setDoctors(extractList<Doctor>(res));
+      } catch {
+        // Doctor list stays empty on failure
+      }
     };
     if (isOpen) fetchDoctors();
   }, [isOpen]);
@@ -125,6 +126,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   useEffect(() => {
     if (!isOpen) {
       // Reset form
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       setSelectedPatient(null);
       setPatientSearch('');
       setDoctorId('');
@@ -233,8 +235,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
 
       onSuccess();
       onClose();
-    } catch (err: any) {
-      toast.error(err?.response?.data?.message || 'Failed to save appointment');
+    } catch (err: unknown) {
+      toast.error(getResponseData(err)?.message || 'Failed to save appointment');
     } finally {
       setLoading(false);
     }
@@ -481,7 +483,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 px-4 py-2.5 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
             </button>

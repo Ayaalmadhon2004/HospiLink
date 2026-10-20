@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import logger from '../config/logger';
 
 export const createVital = async (req: Request, res: Response) => {
   try {
@@ -22,7 +23,7 @@ export const createVital = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: newVital });
   } catch (error) {
-    console.error('Create vital error:', error);
+    logger.error({ err: error }, 'Create vital error:');
     res.status(500).json({ success: false, message: 'فشل حفظ البيانات' });
   }
 };
@@ -73,7 +74,7 @@ const checkCriticalVitals = async (
 
     return { isCritical, alertType };
   } catch (e) {
-    console.log('Thresholds check skipped:', e);
+    logger.debug({ err: e }, 'Thresholds check skipped');
     return { isCritical: false, alertType: null };
   }
 };
@@ -135,7 +136,7 @@ export const recordVitals = async (req: Request, res: Response) => {
       alert: isCritical ? { type: alertType, message: 'Critical vital detected!' } : null,
     });
   } catch (error: any) {
-    console.error('Record vitals error:', error);
+    logger.error({ err: error }, 'Record vitals error:');
     res.status(500).json({ success: false, message: 'Failed to record vitals', error: error.message });
   }
 };
@@ -164,7 +165,7 @@ export const getVitals = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, count: vitals.length, data: vitals });
   } catch (error: any) {
-    console.error('Get vitals error:', error);
+    logger.error({ err: error }, 'Get vitals error:');
     res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
   }
 };
@@ -190,7 +191,7 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, count: alerts.length, data: alerts });
   } catch (error: any) {
-    console.error('Get alerts error:', error);
+    logger.error({ err: error }, 'Get alerts error:');
     res.status(500).json({ success: false, message: 'Failed to fetch alerts', error: error.message });
   }
 };
@@ -214,7 +215,7 @@ export const getVitalsById = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: vitals });
   } catch (error: any) {
-    console.error('Get vitals by id error:', error);
+    logger.error({ err: error }, 'Get vitals by id error:');
     res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
   }
 };
@@ -252,7 +253,7 @@ export const updateVitals = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: updated });
   } catch (error: any) {
-    console.error('Update vitals error:', error);
+    logger.error({ err: error }, 'Update vitals error:');
     res.status(500).json({ success: false, message: 'Failed to update vitals', error: error.message });
   }
 };
@@ -265,7 +266,7 @@ export const deleteVitals = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });
   } catch (error: any) {
-    console.error('Delete vitals error:', error);
+    logger.error({ err: error }, 'Delete vitals error:');
     res.status(500).json({ success: false, message: 'Failed to delete vitals', error: error.message });
   }
 };

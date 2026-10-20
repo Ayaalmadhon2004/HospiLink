@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import prisma from '../config/db';
+import logger from '../config/logger';
 
 export const logActivity = (action: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
@@ -17,7 +18,7 @@ export const logActivity = (action: string) => {
         });
       }
     } catch (error) {
-      console.error("Audit log failed:", error);
+      logger.error({ err: error }, "Audit log failed:");
     }
     next();
   };

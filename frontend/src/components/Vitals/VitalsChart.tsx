@@ -38,7 +38,7 @@ const ensureArray = <T,>(value: unknown): T[] => {
 // ─── Helper: Safe value extraction ─────────────────────────────────────
 const getValue = (record: VitalRecord, key: string): number | null => {
   if (!record || typeof record !== 'object') return null;
-  const val = (record as any)[key];
+  const val = (record as unknown as Record<string, unknown>)[key];
   if (val === null || val === undefined || val === '') return null;
   const num = Number(val);
   return isNaN(num) ? null : num;

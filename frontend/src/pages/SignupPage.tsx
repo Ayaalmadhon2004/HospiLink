@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiPost } from '../services/api';
+import { getErrorMessage } from '../types/api';
 
 export const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -28,9 +29,9 @@ export const SignupPage = () => {
       await apiPost('/auth/signup', dataToSend);
       alert('تم إنشاء الحساب بنجاح!');
       navigate('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Signup error details:", error);
-      setError(error.message || 'خطأ في التسجيل: تأكدي من البيانات');
+      setError(getErrorMessage(error, '') || 'خطأ في التسجيل: تأكدي من البيانات');
     } finally {
       setLoading(false);
     }
@@ -133,9 +134,9 @@ export const SignupPage = () => {
           </button>
         </form>
 
-        <p className="text-center text-slate-400 mt-6 text-sm">
+        <p className="text-center text-slate-600 mt-6 text-sm">
           Do you already have an account? 
-          <Link to="/login" className="text-medical-teal font-medium hover:underline"> Login</Link>
+          <Link to="/login" className="text-teal-700 font-medium hover:underline"> Login</Link>
         </p>
       </div>
     </div>

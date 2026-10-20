@@ -81,7 +81,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             {item.badge && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
-                  ? 'bg-teal-500 text-white' 
+                  ? 'bg-teal-700 text-white' 
                   : 'bg-slate-700 text-slate-200'
               }`}>
                 {item.badge}
@@ -120,7 +120,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           </div>
         ) : user ? (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-teal-500 flex items-center justify-center text-sm font-bold text-white shrink-0">
+            <div className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {getInitials(user.name)}
             </div>
             <div className="flex-1 min-w-0">

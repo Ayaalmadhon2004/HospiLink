@@ -27,7 +27,7 @@ export const StaffModal = ({ isOpen, onClose, onSuccess, initialData }: StaffMod
     if (mode === 'edit' && initialData?.id) {
       await updateStaff(initialData.id, payload);
     } else {
-      await createStaff(payload as any);
+      await createStaff(payload);
     }
     onSuccess();
   };

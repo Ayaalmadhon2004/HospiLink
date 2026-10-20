@@ -2,6 +2,7 @@
 import { useEffect, useReducer, useMemo, useCallback, useRef } from 'react';
 import { X, Bed, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { admitPatient, getAvailableBeds } from '../../services/patientService';
+import { extractList, getResponseData } from '../../types/api';
 
 interface AdmitPatientModalProps {
   isOpen: boolean;
@@ -175,15 +176,15 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
       dispatch({ type: 'FETCH_BEDS_START' });
       try {
         const res = await getAvailableBeds(state.formData.department || undefined);
-        const bedsData: Bed[] = res.data?.data || res.data || [];
+        const bedsData = extractList<Bed>(res);
         if (!controller.signal.aborted) {
           dispatch({ type: 'FETCH_BEDS_SUCCESS', beds: bedsData });
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (!controller.signal.aborted) {
             dispatch({
             type: 'FETCH_BEDS_ERROR',
-            error: err.response?.data?.error || 'Failed to load available beds',
+            error: getResponseData(err)?.error || 'Failed to load available beds',
           });
         }
       }
@@ -271,8 +272,8 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
       timeoutRef.current = setTimeout(() => {
         onAdd();
       }, 800);
-    } catch (err: any) {
-      const backendError = err.response?.data;
+    } catch (err: unknown) {
+      const backendError = getResponseData(err);
       dispatch({
         type: 'SUBMIT_ERROR',
         error: backendError?.message || backendError?.error || 'Failed to admit patient',

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { Activity, Plus, RefreshCw, ChevronDown, AlertCircle, X } from 'lucide-react';
 import { getVitals, getCriticalAlerts, recordVitals } from '../services/vitalsService';
 import { getPatients } from '../services/patientService';
+import { getErrorMessage } from '../types/api';
 import { VitalsCard } from '../components/Vitals/VitalsCard';
 import { VitalsChart } from '../components/Vitals/VitalsChart';
 import { AlertsPanel } from '../components/Vitals/AlertsPanel';
@@ -131,7 +132,7 @@ export const VitalsMonitorPage = () => {
         try {
           const patientsRes = await getPatients();
           patientsData = ensureArray<Patient>(patientsRes?.data ?? patientsRes);
-        } catch (err) {
+        } catch {
           if (showErrors) showToast('Failed to fetch patients list', 'error');
         }
         setPatients(patientsData);
@@ -141,10 +142,11 @@ export const VitalsMonitorPage = () => {
         try {
           const alertsRes = await getCriticalAlerts();
           alertsData = ensureArray<AlertItem>(alertsRes?.data ?? alertsRes);
-        } catch (err) {
+        } catch {
+          // Alerts are optional; the panel simply stays empty
         }
         setAlerts(alertsData);
-      } catch (err) {
+      } catch {
         if (showErrors) showToast('Failed to fetch vitals data', 'error');
       } finally {
         setRefreshing(false);
@@ -173,7 +175,8 @@ export const VitalsMonitorPage = () => {
         const res = await getVitals({ patientId, limit: 20 });
         const data = ensureArray<VitalRecord>(res?.data ?? res);
         setVitals((prev) => mergeVitals(ensureArray<VitalRecord>(prev), data));
-      } catch (err) {
+      } catch {
+        // Keep previously loaded vitals on failure
       } finally {
         setLoading(false);
         isFetchingVitals.current = false;
@@ -184,8 +187,9 @@ export const VitalsMonitorPage = () => {
 
   // ✅ Initial load — مرة واحدة بس
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchData(false);
-  }, []); // ⬅️ فارغ! ما يتنادىش تاني
+  }, [fetchData]); // fetchData is stable (its only dependency, showToast, never changes)
 
   // ✅ Polling كل 30 ثانية — بس لو الصفحة visible
   useEffect(() => {
@@ -214,6 +218,7 @@ export const VitalsMonitorPage = () => {
   // ✅ Fetch vitals لما يتغير المريض
   useEffect(() => {
     if (selectedPatient) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       fetchVitals(selectedPatient);
     } else {
       setVitals([]);
@@ -284,8 +289,8 @@ export const VitalsMonitorPage = () => {
 
       showToast('Vitals recorded successfully', 'success');
       await fetchData(false); // Refresh alerts silently
-    } catch (err: any) {
-      showToast(err.message || 'Failed to record vitals', 'error');
+    } catch (err: unknown) {
+      showToast(getErrorMessage(err, '') || 'Failed to record vitals', 'error');
     } finally {
       setSubmitting(false);
     }

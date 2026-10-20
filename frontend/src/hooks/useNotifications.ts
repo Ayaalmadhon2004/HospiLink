@@ -1,6 +1,7 @@
 // frontend/src/hooks/useNotifications.ts
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPut, apiDelete } from '../services/api';
+import type { ApiResponse } from '../types/api';
 
 export interface Notification {
   id: string;
@@ -20,7 +21,7 @@ export const useNotifications = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiGet('/notifications');
+      const res = await apiGet<ApiResponse<{ data?: Notification[]; unreadCount?: number }>>('/notifications');
       setNotifications(res.data?.data || []);
       setUnreadCount(res.data?.unreadCount || 0);
     } catch (err) {
@@ -60,6 +61,7 @@ export const useNotifications = () => {
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);

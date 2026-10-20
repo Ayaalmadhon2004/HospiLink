@@ -1,12 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getErrorMessage } from '../types/api';
 
 export interface CrudConfig<T> {
   queryKey: string[];
-  deleteFn: (id: string) => Promise<any>;
-  createFn?: (data: any) => Promise<any>;
-  updateFn?: (id: string, data: any) => Promise<any>;
+  deleteFn: (id: string) => Promise<unknown>;
+  createFn?: (data: Record<string, unknown>) => Promise<unknown>;
+  updateFn?: (id: string, data: Record<string, unknown>) => Promise<unknown>;
   getItemId: (item: T) => string;
   itemName: string; 
 }
@@ -56,12 +57,12 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
       return { previousData };
     },
 
-    onError: (err: any, _id: string, context: any) => {
+    onError: (err: unknown, _id: string, context?: { previousData?: T[] }) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
       }
-      toast.error(err?.message || `Failed to delete ${config.itemName.toLowerCase()}`);
+      toast.error(getErrorMessage(err, '') || `Failed to delete ${config.itemName.toLowerCase()}`);
     },
 
     onSettled: () => {
@@ -134,8 +135,8 @@ export function useOptimisticCreate<T>(config: CrudConfig<T>) {
       queryClient.invalidateQueries({ queryKey: config.queryKey });
     },
 
-    onError: (err: any) => {
-      toast.error(err?.message || `Failed to create ${config.itemName.toLowerCase()}`);
+    onError: (err: unknown) => {
+      toast.error(getErrorMessage(err, '') || `Failed to create ${config.itemName.toLowerCase()}`);
     },
   });
 }
@@ -146,7 +147,7 @@ export function useOptimisticUpdate<T>(config: CrudConfig<T>) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => config.updateFn!(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Record<string, unknown> }) => config.updateFn!(id, data),
 
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: config.queryKey });
@@ -162,11 +163,11 @@ export function useOptimisticUpdate<T>(config: CrudConfig<T>) {
       return { previousData };
     },
 
-    onError: (err: any, _vars: { id: string; data: any }, context: any) => {
+    onError: (err: unknown, _vars: { id: string; data: Record<string, unknown> }, context?: { previousData?: T[] }) => {
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
       }
-      toast.error(err?.message || `Failed to update ${config.itemName.toLowerCase()}`);
+      toast.error(getErrorMessage(err, '') || `Failed to update ${config.itemName.toLowerCase()}`);
     },
 
     onSuccess: () => {

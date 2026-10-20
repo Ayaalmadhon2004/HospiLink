@@ -2,9 +2,10 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string) => {
-  console.error(`[Notifications] ${message}:`, error);
+  logger.error({ err: error }, `[Notifications] ${message}:`);
   res.status(500).json({ success: false, message, error: error.message });
 };
 
@@ -99,7 +100,7 @@ export const createNotification = async (data: {
     io.to(`user-${data.userId}`).emit('new-notification', notification);
     return notification;
   } catch (error) {
-    console.error('Failed to create notification:', error);
+    logger.error({ err: error }, 'Failed to create notification:');
     return null;
   }
 };

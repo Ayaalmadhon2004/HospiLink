@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
+import type { Notification } from '../types/notification';
 
 export const NotificationBell = () => {
   const [open, setOpen] = useState(false);
@@ -20,13 +21,13 @@ export const NotificationBell = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleClick = (n: any) => {
+  const handleClick = (n: Notification) => {
     if (!n.read) markAsRead(n.id);
     if (n.link) navigate(n.link);
     setOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, n: any) => {
+  const handleKeyDown = (e: React.KeyboardEvent, n: Notification) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleClick(n);
@@ -58,6 +59,7 @@ export const NotificationBell = () => {
                   onClick={markAllAsRead}
                   className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition"
                   title="Mark all as read"
+                  aria-label="Mark all as read"
                 >
                   <Check className="w-4 h-4" />
                 </button>
@@ -65,6 +67,7 @@ export const NotificationBell = () => {
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded transition"
+                aria-label="Close notifications"
               >
                 <X className="w-4 h-4" />
               </button>

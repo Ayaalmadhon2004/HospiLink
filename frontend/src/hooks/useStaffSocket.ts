@@ -1,12 +1,13 @@
 // frontend/src/hooks/useStaffSocket.ts
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import type { Shift } from '../types/staff';
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
 export const useStaffSocket = (department?: string) => {
-  const [latestShift, setLatestShift] = useState<any>(null);
+  const [latestShift, setLatestShift] = useState<(Shift & { deleted?: boolean }) | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
