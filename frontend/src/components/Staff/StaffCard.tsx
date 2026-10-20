@@ -89,7 +89,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
               className="hover:text-medical-teal transition"
               aria-label={t('staff.card.call', { name: member.name, phone: member.phone })}
             >
-              {member.phone}
+              <bdi dir="ltr">{member.phone}</bdi>
             </a>
           </div>
         )}

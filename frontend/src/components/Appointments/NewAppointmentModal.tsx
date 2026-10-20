@@ -283,7 +283,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
               {selectedPatient && (
                 <span className="absolute end-3 top-1/2 -translate-y-1/2">
                   <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">
-                    #{selectedPatient.patientCode}
+                    <bdi dir="ltr">#{selectedPatient.patientCode}</bdi>
                   </span>
                 </span>
               )}
@@ -309,10 +309,10 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
                     >
                       <div>
                         <span className="font-medium text-gray-900">{patient.name}</span>
-                        <span className="text-xs text-gray-500 ms-2">#{patient.patientCode}</span>
+                        <span className="text-xs text-gray-500 ms-2"><bdi dir="ltr">#{patient.patientCode}</bdi></span>
                       </div>
                       {patient.phone && (
-                        <span className="text-xs text-gray-400">{patient.phone}</span>
+                        <bdi dir="ltr" className="text-xs text-gray-400">{patient.phone}</bdi>
                       )}
                     </button>
                   ))

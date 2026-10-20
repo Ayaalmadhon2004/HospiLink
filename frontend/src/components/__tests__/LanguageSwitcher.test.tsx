@@ -32,6 +32,13 @@ describe('language switching', () => {
     expect(screen.queryByText('Welcome Back')).not.toBeInTheDocument();
   });
 
+  it('keeps the button itself in the page language so logical offsets (end-4) are not flipped', () => {
+    render(<LanguageSwitcher />);
+    const button = screen.getByRole('button');
+    expect(button).not.toHaveAttribute('lang');
+    expect(screen.getByText('العربية')).toHaveAttribute('lang', 'ar');
+  });
+
   it('switches back to English and restores ltr', async () => {
     await i18n.changeLanguage('ar');
     render(<LanguageSwitcher />);
