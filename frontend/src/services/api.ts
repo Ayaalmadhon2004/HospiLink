@@ -1,5 +1,6 @@
 // frontend/src/services/api.ts
 import axios from 'axios';
+import i18n from '../i18n';
 import type { ApiResponse, QueryParams } from '../types/api';
 const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
 
@@ -36,11 +37,11 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 403) {
-      return Promise.reject(new Error('You do not have permission to perform this action.'));
+      return Promise.reject(new Error(i18n.t('errors.forbidden')));
     }
 
     if (error.response?.status >= 500) {
-      return Promise.reject(new Error('Server error. Please try again later.'));
+      return Promise.reject(new Error(i18n.t('errors.server')));
     }
 
     const message = error.response?.data?.message || error.response?.data?.error || error.message;
