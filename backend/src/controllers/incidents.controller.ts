@@ -3,9 +3,10 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import { createNotification } from './notifications.controller';
+import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string) => {
-  console.error(message, error);
+  logger.error({ err: error }, message);
   res.status(500).json({ success: false, message, error: error.message });
 };
 

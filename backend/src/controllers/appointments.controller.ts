@@ -2,9 +2,10 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string) => {
-  console.error(message, error);
+  logger.error({ err: error }, message);
   res.status(500).json({ success: false, message, error: error.message });
 };
 
@@ -155,7 +156,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         where: { id: patientId },
       });
       if (patient) {
-        console.log(`✅ Found existing patient by ID: ${patient.name} (${patient.id})`);
+        logger.debug({ patientId: patient.id }, "Found existing patient by ID");
       }
     }
 
@@ -165,7 +166,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         where: { patientCode },
       });
       if (patient) {
-        console.log(`✅ Found existing patient by code: ${patient.name}`);
+        logger.debug({ patientId: patient.id }, "Found existing patient by code");
       }
     }
 
@@ -189,7 +190,7 @@ export const createAppointment = async (req: Request, res: Response) => {
           hospitalId: hospital.id,
         },
       });
-      console.log('🆕 Created new patient:', patient.name, `(${patient.id})`);
+      logger.debug({ patientId: patient.id }, "Created new patient");
     }
 
     // ✅ Check for conflicts
