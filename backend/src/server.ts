@@ -38,6 +38,10 @@ const server = http.createServer(app);
 
 const isDev = process.env.NODE_ENV !== 'production';
 
+// Render sits behind one reverse proxy. Without this, req.ip is the proxy's IP and every
+// client shares a single rate-limit bucket.
+app.set('trust proxy', 1);
+
 // ✅ Security: Helmet — sets security headers (X-Content-Type-Options, X-Frame-Options, etc.)
 app.use(helmet({
   contentSecurityPolicy: {
