@@ -1,9 +1,10 @@
 // src/controllers/settings.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string, statusCode: number = 500) => {
-  console.error(`[Settings Error] ${message}:`, error);
+  logger.error({ err: error }, `[Settings Error] ${message}:`);
   res.status(statusCode).json({
     success: false,
     message,

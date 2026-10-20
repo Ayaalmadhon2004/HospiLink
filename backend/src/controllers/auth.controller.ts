@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
 import { registerSchema, loginSchema, formatZodError } from '../validators/auth.validator';
+import logger from '../config/logger';
 
 // Public signup always creates the lowest-privilege role. (The Prisma Role enum
 // has no STAFF value; NURSE is the least privileged.) Elevated roles can only be
@@ -49,7 +50,7 @@ export const register = async (req: Request, res: Response) => {
 
     const hospitalId = await resolveSignupHospitalId();
     if (!hospitalId) {
-      console.error('Register error: no hospital configured for signup');
+      logger.error('Register error: no hospital configured for signup');
       res.status(500).json({ success: false, message: 'Registration is currently unavailable' });
       return;
     }
@@ -107,7 +108,7 @@ export const register = async (req: Request, res: Response) => {
       user,
     });
   } catch (error: any) {
-    console.error('Register error:', error);
+    logger.error({ err: error }, 'Register error:');
     res.status(500).json({
       success: false,
       message: 'Registration failed',
@@ -182,7 +183,7 @@ export const login = async (req: Request, res: Response) => {
       user: userWithoutPassword,
     });
   } catch (error: any) {
-    console.error('Login error:', error);
+    logger.error({ err: error }, 'Login error:');
     res.status(500).json({
       success: false,
       message: error.message || 'Login failed',
@@ -206,7 +207,7 @@ export const logout = async (req: Request, res: Response) => {
       message: 'Logged out successfully',
     });
   } catch (error: any) {
-    console.error('Logout error:', error);
+    logger.error({ err: error }, 'Logout error:');
     res.status(500).json({
       success: false,
       message: error.message || 'Logout failed',
@@ -264,7 +265,7 @@ export const getMe = async (req: Request, res: Response) => {
       user,
     });
   } catch (error: any) {
-    console.error('GetMe error:', error);
+    logger.error({ err: error }, 'GetMe error:');
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to get user',
@@ -321,7 +322,7 @@ export const updatePassword = async (req: Request, res: Response) => {
       message: 'Password updated successfully',
     });
   } catch (error: any) {
-    console.error('UpdatePassword error:', error);
+    logger.error({ err: error }, 'UpdatePassword error:');
     res.status(500).json({
       success: false,
       message: error.message || 'Failed to update password',

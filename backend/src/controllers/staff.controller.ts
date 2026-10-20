@@ -2,22 +2,23 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import logger from '../config/logger';
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
 const handleError = (res: Response, error: any, message: string) => {
-  console.error(message, error);
+  logger.error({ err: error }, message);
   res.status(500).json({ success: false, message, error: error.message });
 };
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
     const staff = await (prisma as any).staff.findMany();
-    console.log('ALL STAFF (no filter):', staff.length, staff);
+    logger.debug({ count: staff.length }, 'All staff fetched (no filter)');
     
     res.status(200).json({ success: true, count: staff.length, data: staff });
   } catch (error: any) {
-    console.error('ERROR:', error);
+    logger.error({ err: error }, 'ERROR:');
     handleError(res, error, 'Failed to fetch staff');
   }
 };

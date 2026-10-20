@@ -1,6 +1,7 @@
 // backend/src/controllers/patient.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import logger from '../config/logger';
 
 // ============================================
 // GET /api/patients/recent
@@ -24,7 +25,7 @@ export const getRecentPatients = async (req: Request, res: Response) => {
     });
 
   } catch (error: any) {
-    console.error("🔥 getRecentPatients error:", error);
+    logger.error({ err: error }, "🔥 getRecentPatients error:");
     res.status(500).json({ 
       success: false, 
       message: 'فشل جلب قائمة المرضى', 
@@ -111,7 +112,7 @@ export const admitPatient = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: result });
   } catch (error: any) {
-    console.error('🔥 Admit error:', error);
+    logger.error({ err: error }, '🔥 Admit error:');
     res.status(500).json({ 
       success: false, 
       message: 'فشل إدخال المريض', 
@@ -150,7 +151,7 @@ export const uploadReport = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, message: 'Report uploaded', data: report });
   } catch (error: any) {
-    console.error('Upload error:', error);
+    logger.error({ err: error }, 'Upload error:');
     res.status(500).json({ success: false, message: 'Failed to upload report', error: error.message });
   }
 };
@@ -205,7 +206,7 @@ export const getPatientById = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: patient });
   } catch (error: any) {
-    console.error('Get patient error:', error);
+    logger.error({ err: error }, 'Get patient error:');
     res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض', error: error.message });
   }
 };
@@ -282,7 +283,7 @@ export const getPatients = async (req: Request, res: Response) => {
       }
     });
   } catch (error: any) {
-    console.error("🔥 Error:", error);
+    logger.error({ err: error }, "🔥 Error:");
     res.status(500).json({ success: false, message: 'فشل جلب المرضى', error: error.message });
   }
 };
