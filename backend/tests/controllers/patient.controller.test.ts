@@ -8,6 +8,9 @@ import {
   getAvailableBeds,
   updatePatient,
   dischargePatient,
+  uploadReport,
+  getReportFile,
+  getPatientReports,
 } from '../../src/controllers/patient.controller';
 
 describe('patient.controller', () => {
@@ -365,6 +368,61 @@ describe('patient.controller', () => {
 
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('report files stored in the database', () => {
+    it('uploadReport يحفظ الملف بالداتابيز ولا يرجع fileData بالرد', async () => {
+      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.report.create.mockImplementation(async ({ data }: any) => ({ ...data, createdAt: new Date() }));
+      const req = mockRequest({
+        params: { id: 'p1' },
+        file: { originalname: 'xray.pdf', mimetype: 'application/pdf', buffer: Buffer.from('%PDF') },
+      } as any);
+      const res = mockResponse();
+
+      await uploadReport(req, res);
+
+      const data = prismaMock.report.create.mock.calls[0][0].data as any;
+      expect(data.fileData).toBeInstanceOf(Uint8Array);
+      expect(data.fileUrl).toBe(`/api/patients/reports/${data.id}/file`);
+      expect(res.status).toHaveBeenCalledWith(201);
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.data.fileData).toBeUndefined();
+    });
+
+    it('uploadReport يرجع 400 بدون ملف', async () => {
+      const res = mockResponse();
+      await uploadReport(mockRequest({ params: { id: 'p1' } } as any), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('getPatientReports ما بيجيب fileData', async () => {
+      prismaMock.report.findMany.mockResolvedValue([] as any);
+      await getPatientReports(mockRequest({ params: { id: 'p1' } } as any), mockResponse());
+      expect(prismaMock.report.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ omit: { fileData: true } })
+      );
+    });
+
+    it('getReportFile يرجع 404 لو الملف مش موجود', async () => {
+      prismaMock.report.findUnique.mockResolvedValue(null);
+      const res = mockResponse();
+      await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('getReportFile يرجع الملف بنوعه الأصلي', async () => {
+      prismaMock.report.findUnique.mockResolvedValue({
+        id: 'r1', fileType: 'application/pdf', fileData: new Uint8Array([1, 2, 3]),
+      } as any);
+      const res = mockResponse();
+      (res as any).setHeader = jest.fn();
+      (res as any).send = jest.fn();
+      await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
+      expect((res as any).setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect((res as any).send).toHaveBeenCalled();
     });
   });
 });

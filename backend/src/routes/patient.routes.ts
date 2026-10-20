@@ -8,13 +8,14 @@ import {
   updatePatient,      
   dischargePatient,    
   getPatientReports,
-  getAvailableBeds    // ← NEW
+  getAvailableBeds,
+  getReportFile
 } from '../controllers/patient.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { upload } from '../middlewares/upload.middleware';
 import { validate } from '../middlewares/validate.middleware';
-import { idParams } from '../validators/common.validator';
+import { idParams, reportIdParams } from '../validators/common.validator';
 import {
   admitPatientSchema,
   updatePatientSchema,
@@ -72,6 +73,19 @@ router.get(
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   validate({ query: availableBedsQuerySchema }),
   getAvailableBeds
+);
+
+// ============================================
+// GET /api/patients/reports/:reportId/file
+// ملف التقرير المخزّن بالداتابيز
+// ============================================
+router.get(
+  '/reports/:reportId/file',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ params: reportIdParams }),
+  logActivity('VIEW_REPORT_FILE'),
+  getReportFile
 );
 
 // ============================================
