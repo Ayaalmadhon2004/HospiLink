@@ -63,3 +63,12 @@ export const hasRole = (socket: Socket, ...roles: string[]): boolean => {
   const role = socket.data?.user?.role;
   return typeof role === 'string' && roles.includes(role);
 };
+
+// يضم السوكيت تلقائياً لغرفة المستخدم الخاصة (user-<id>) لاستقبال الإشعارات الفورية
+export const joinUserRoom = (socket: Socket): string | null => {
+  const id = socket.data?.user?.id;
+  if (typeof id !== 'string' || !id) return null;
+  const room = `user-${id}`;
+  socket.join(room);
+  return room;
+};

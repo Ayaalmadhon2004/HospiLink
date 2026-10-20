@@ -1,7 +1,7 @@
 import { prismaMock } from '../mocks/prisma';
 import jwt from 'jsonwebtoken';
 import { JWT_SECRET } from '../../src/config/jwt';
-import { socketAuth, extractSocketToken, hasRole } from '../../src/middlewares/socket.auth';
+import { socketAuth, extractSocketToken, hasRole, joinUserRoom } from '../../src/middlewares/socket.auth';
 import { attachDispatchEvents } from '../../src/middlewares/dispatch.socket';
 
 const makeSocket = (handshake: any = {}, data: any = {}) =>
@@ -105,5 +105,19 @@ describe('dispatch socket handlers', () => {
     expect(socket.join).not.toHaveBeenCalled();
     handlers['track-unit']('abc');
     expect(socket.join).toHaveBeenCalledWith('unit-abc');
+  });
+});
+
+describe('joinUserRoom', () => {
+  it('joins user-<id> room for an authenticated socket', () => {
+    const socket = { ...makeSocket({}, { user: { id: 'u1', role: 'NURSE' } }), join: jest.fn() };
+    expect(joinUserRoom(socket)).toBe('user-u1');
+    expect(socket.join).toHaveBeenCalledWith('user-u1');
+  });
+
+  it('does not join when socket has no user', () => {
+    const socket = { ...makeSocket(), join: jest.fn() };
+    expect(joinUserRoom(socket)).toBeNull();
+    expect(socket.join).not.toHaveBeenCalled();
   });
 });
