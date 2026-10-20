@@ -1,4 +1,5 @@
 // components/BedModal.tsx
+import { logger } from '../utils/logger';
 import { useEffect, useState, useRef, useCallback } from "react";
 import { apiGet, apiPost, apiPut } from '../services/api';
 import { getErrorMessage, type ApiResponse } from '../types/api';
@@ -117,7 +118,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         addToast(data.message || 'Failed to save bed', 'error');
       }
     } catch (error: unknown) {
-      console.error('Error saving bed:', error);
+      logger.error('Error saving bed:', error);
       addToast(getErrorMessage(error, 'An unexpected error occurred'), 'error');
     } finally {
       setSaving(false);

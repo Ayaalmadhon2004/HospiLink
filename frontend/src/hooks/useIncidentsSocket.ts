@@ -1,4 +1,5 @@
 // frontend/src/hooks/useIncidentsSocket.ts
+import { logger } from '../utils/logger';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { Incident } from '../types/incident';
@@ -17,7 +18,6 @@ export const useIncidentsSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to incidents stream');
       setIsConnected(true);
     });
 
@@ -26,7 +26,7 @@ export const useIncidentsSocket = () => {
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Incidents socket error:', err.message);
+      logger.warn('Incidents socket error:', err.message);
       setIsConnected(false);
     });
 

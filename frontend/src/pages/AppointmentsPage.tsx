@@ -1,4 +1,5 @@
 // pages/AppointmentsPage.tsx
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, Clock, Stethoscope, MapPin, Plus, Search, Trash2, Pencil } from 'lucide-react';
 import { apiGet, apiDelete } from '../services/api';
@@ -85,9 +86,8 @@ export const AppointmentsPage = () => {
         // The API returns { data: { appointments, schedule } }
         const todayList = responseData?.appointments || responseData || [];
         setTodayAppointments(Array.isArray(todayList) ? todayList : []);
-        console.log('✅ Today appointments loaded:', todayList.length);
       } else {
-        console.error('Failed to fetch today appointments:', todayRes.reason);
+        logger.error('Failed to fetch today appointments:', todayRes.reason);
         setTodayAppointments([]);
       }
 
@@ -97,13 +97,12 @@ export const AppointmentsPage = () => {
         // The API returns { data: appointments[] }
         const upcomingList = responseData || [];
         setUpcoming(Array.isArray(upcomingList) ? upcomingList : []);
-        console.log('✅ Upcoming appointments loaded:', upcomingList.length);
       } else {
-        console.error('Failed to fetch upcoming appointments:', upcomingRes.reason);
+        logger.error('Failed to fetch upcoming appointments:', upcomingRes.reason);
         setUpcoming([]);
       }
     } catch (err) {
-      console.error('Failed to fetch appointments:', err);
+      logger.error('Failed to fetch appointments:', err);
       toast.error('Failed to load appointments');
     } finally {
       setLoading(false);
