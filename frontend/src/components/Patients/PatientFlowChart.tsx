@@ -1,4 +1,5 @@
 import { memo, useRef, useEffect, useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -25,7 +26,9 @@ interface PatientFlowChartProps {
   title?: string;
 }
 
-const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChartProps) => {
+const PatientFlowChart = memo(({ data, title }: PatientFlowChartProps) => {
+  const { t } = useTranslation();
+  const chartTitle = title ?? t('patients.flow.title');
   const containerRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(false);
 
@@ -66,13 +69,13 @@ const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChar
     <figure
       ref={containerRef}
       className="bg-white rounded-xl shadow-sm border p-4"
-      aria-label={`${title} chart showing patient flow data over time`}
+      aria-label={t('patients.flow.chartLabel', { title: chartTitle })}
     >
       {isVisible ? (
         <>
-          {title && (
+          {chartTitle && (
             <figcaption className="text-base font-bold text-gray-700 mb-4 text-center">
-              {title}
+              {chartTitle}
             </figcaption>
           )}
           <div className="h-64">
@@ -126,11 +129,11 @@ const PatientFlowChart = memo(({ data, title = 'Patient Flow' }: PatientFlowChar
           className="flex items-center justify-center py-12 text-gray-400"
           role="status"
           aria-live="polite"
-          aria-label="Loading chart"
+          aria-label={t('patients.flow.loadingChart')}
         >
           <div className="animate-pulse flex flex-col items-center gap-2">
             <div className="w-48 h-32 bg-gray-200 rounded-lg" aria-hidden="true" />
-            <span className="text-sm">Loading chart...</span>
+            <span className="text-sm">{t('patients.flow.loadingChart')}</span>
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { getPatientById, updatePatient } from '../services/patientService';
 import { getResponseData } from '../types/api';
 import { ArrowLeft, Save, User } from 'lucide-react';
@@ -8,6 +9,7 @@ const DEPARTMENTS = ['Emergency', 'ICU', 'Surgery', 'Pediatrics', 'Cardiology', 
 const GENDERS = ['MALE', 'FEMALE'];
 
 export const EditPatientPage = () => {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -38,13 +40,13 @@ export const EditPatientPage = () => {
           status: p.status || 'STABLE',
         });
       } catch (err: unknown) {
-        setError(getResponseData(err)?.message || 'Failed to load patient');
+        setError(getResponseData(err)?.message || t('patientDetail.loadError'));
       } finally {
         setLoading(false);
       }
     };
     fetchPatient();
-  }, [id]);
+  }, [id, t]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -62,7 +64,7 @@ export const EditPatientPage = () => {
       });
       navigate(`/patients/${id}`);
     } catch (err: unknown) {
-      setError(getResponseData(err)?.message || 'Failed to update patient');
+      setError(getResponseData(err)?.message || t('editPatient.updateError'));
     } finally {
       setSaving(false);
     }
@@ -71,7 +73,7 @@ export const EditPatientPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="text-clinic-text/50">Loading...</div>
+        <div className="text-clinic-text/50">{t('common.loading')}</div>
       </div>
     );
   }
@@ -82,7 +84,7 @@ export const EditPatientPage = () => {
         <div className="bg-red-50 text-red-600 px-6 py-4 rounded-xl">
           {error}
           <button onClick={() => navigate(-1)} className="block mt-4 text-hospital-navy hover:underline">
-            Back
+            {t('common.back')}
           </button>
         </div>
       </div>
@@ -92,8 +94,8 @@ export const EditPatientPage = () => {
   return (
     <div className="min-h-screen bg-clinic-bg p-8">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-clinic-text/70 hover:text-clinic-text mb-6 transition">
-        <ArrowLeft size={20} />
-        Back
+        <ArrowLeft size={20} className="rtl:rotate-180" aria-hidden="true" />
+        {t('common.back')}
       </button>
 
       <div className="max-w-2xl mx-auto">
@@ -103,8 +105,8 @@ export const EditPatientPage = () => {
               <User size={24} className="text-hospital-navy" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-hospital-navy">Edit Patient</h1>
-              <p className="text-clinic-text/50">Update patient information</p>
+              <h1 className="text-2xl font-bold text-hospital-navy">{t('editPatient.title')}</h1>
+              <p className="text-clinic-text/50">{t('editPatient.subtitle')}</p>
             </div>
           </div>
 
@@ -116,7 +118,7 @@ export const EditPatientPage = () => {
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div>
-              <label className="block text-sm font-medium text-clinic-text mb-1">Full Name</label>
+              <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.fullName')}</label>
               <input
                 name="name"
                 value={formData.name}
@@ -128,7 +130,7 @@ export const EditPatientPage = () => {
 
             <div className="flex gap-4">
               <div className="flex-1">
-                <label className="block text-sm font-medium text-clinic-text mb-1">Age</label>
+                <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.age')}</label>
                 <input
                   name="age"
                   type="number"
@@ -139,32 +141,32 @@ export const EditPatientPage = () => {
                 />
               </div>
               <div className="flex-1">
-                <label className="block text-sm font-medium text-clinic-text mb-1">Gender</label>
+                <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.gender')}</label>
                 <select
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
                   className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none"
                 >
-                  {GENDERS.map(g => <option key={g} value={g}>{g}</option>)}
+                  {GENDERS.map(g => <option key={g} value={g}>{t(`gender.${g}`)}</option>)}
                 </select>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-clinic-text mb-1">Department</label>
+              <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.department')}</label>
               <select
                 name="department"
                 value={formData.department}
                 onChange={handleChange}
                 className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none"
               >
-                {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+                {DEPARTMENTS.map(d => <option key={d} value={d}>{t(`departments.${d}`, { defaultValue: d })}</option>)}
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-clinic-text mb-1">Diagnosis</label>
+              <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.diagnosis')}</label>
               <textarea
                 name="diagnosis"
                 value={formData.diagnosis}
@@ -176,17 +178,17 @@ export const EditPatientPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-clinic-text mb-1">Status</label>
+              <label className="block text-sm font-medium text-clinic-text mb-1">{t('editPatient.status')}</label>
               <select
                 name="status"
                 value={formData.status}
                 onChange={handleChange}
                 className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none"
               >
-                <option value="STABLE">Stable</option>
-                <option value="OBSERVATION">Observation</option>
-                <option value="CRITICAL">Critical</option>
-                <option value="DISCHARGED">Discharged</option>
+                <option value="STABLE">{t('status.STABLE')}</option>
+                <option value="OBSERVATION">{t('status.OBSERVATION')}</option>
+                <option value="CRITICAL">{t('status.CRITICAL')}</option>
+                <option value="DISCHARGED">{t('status.DISCHARGED')}</option>
               </select>
             </div>
 
@@ -197,7 +199,7 @@ export const EditPatientPage = () => {
                 className="flex-1 bg-slate-100 text-clinic-text py-3 rounded-xl hover:bg-slate-200 transition"
                 disabled={saving}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -205,7 +207,7 @@ export const EditPatientPage = () => {
                 disabled={saving}
               >
                 <Save size={18} />
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? t('common.saving') : t('editPatient.save')}
               </button>
             </div>
           </form>
