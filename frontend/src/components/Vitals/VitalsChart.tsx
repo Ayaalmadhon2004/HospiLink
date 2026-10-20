@@ -98,7 +98,7 @@ export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartPro
   return (
     <figure
       className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6"
-      aria-label={t('vitals.chartPoints', { label, n: data.length })}
+      aria-label={t('vitals.chartPoints', { label, count: data.length })}
     >
       <figcaption className="text-sm font-semibold text-clinic-text/70 mb-4">{label}</figcaption>
       <div className="h-48">

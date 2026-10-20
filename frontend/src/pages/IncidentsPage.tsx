@@ -154,10 +154,10 @@ export const IncidentsPage = () => {
     // eslint-disable-next-line react-hooks/purity -- relative-time label is intentionally computed from the current time at render
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 60) return t('incidents.minutesAgo', { n: mins });
+    if (mins < 60) return t('incidents.minutesAgo', { count: mins });
     const hours = Math.floor(mins / 60);
-    if (hours < 24) return t('incidents.hoursAgo', { n: hours });
-    return t('incidents.daysAgo', { n: Math.floor(hours / 24) });
+    if (hours < 24) return t('incidents.hoursAgo', { count: hours });
+    return t('incidents.daysAgo', { count: Math.floor(hours / 24) });
   };
 
   if (loading && incidents.length === 0) {
@@ -346,7 +346,7 @@ export const IncidentsPage = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Users size={14} />
-                  {t('incidents.teams', { n: incident.teams })}
+                  {t('incidents.teams', { count: incident.teams })}
                 </span>
                 <span className="flex items-center gap-1">
                   <Clock size={14} />
