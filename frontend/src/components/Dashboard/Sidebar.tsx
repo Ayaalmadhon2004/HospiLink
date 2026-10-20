@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 
 interface SidebarProps {
   activeItem: string;
@@ -22,15 +23,16 @@ interface SidebarProps {
 
 const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   const { user, loading } = useAuth();
+  const badges = useSidebarBadges(user?.role);
 
-  const menuItems = [
+  const menuItems: { id: string; label: string; icon: typeof Users; badge: string | null }[] = [
     { id: 'Overview', label: 'Overview', icon: LayoutDashboard, badge: null },
-    { id: 'Patients', label: 'Patients', icon: Users, badge: '1.2k' },
+    { id: 'Patients', label: 'Patients', icon: Users, badge: badges.Patients },
     { id: 'Beds & Wards', label: 'Beds & Wards', icon: BedDouble, badge: null },
     { id: 'Staff & Shifts', label: 'Staff & Shifts', icon: Stethoscope, badge: null },
-    { id: 'Appointments', label: 'Appointments', icon: Calendar, badge: null },
-    { id: 'Vitals Monitor', label: 'Vitals Monitor', icon: Activity, badge: '3' },
-    { id: 'Incidents', label: 'Incidents', icon: AlertTriangle, badge: '7' },
+    { id: 'Appointments', label: 'Appointments', icon: Calendar, badge: badges.Appointments },
+    { id: 'Vitals Monitor', label: 'Vitals Monitor', icon: Activity, badge: null },
+    { id: 'Incidents', label: 'Incidents', icon: AlertTriangle, badge: badges.Incidents },
     { id: 'Dispatch', label: 'Dispatch', icon: Truck, badge: null },
   ];
 
