@@ -1,11 +1,10 @@
 // frontend/src/services/staffService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
-import type { ApiResponse } from '../types/api';
+import { toQueryString, type ApiResponse } from '../types/api';
 import type { ShiftInput, StaffMember } from '../types/staff';
 
 export const getStaff = (params?: { department?: string; role?: string }) => {
-  const query = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
-  return apiGet<ApiResponse<StaffMember[]>>(`/staff${query}`);
+  return apiGet<ApiResponse<StaffMember[]>>(`/staff${toQueryString(params)}`);
 };
 
 export const getStaffById = (id: string) => 
@@ -23,8 +22,7 @@ export const deleteStaff = (id: string) =>
 
 // ─── Shifts ────────────────────────────────────────────────────────
 export const getShifts = (params?: { department?: string; staffId?: string; date?: string }) => {
-  const query = params ? '?' + new URLSearchParams(params as Record<string, string>).toString() : '';
-  return apiGet(`/staff/shifts${query}`);
+  return apiGet(`/staff/shifts${toQueryString(params)}`);
 };
 
 export const getShiftTimeline = (date?: string) => {

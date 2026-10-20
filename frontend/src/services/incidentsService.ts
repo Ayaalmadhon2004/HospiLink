@@ -1,6 +1,6 @@
 // frontend/src/services/incidentsService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
-import type { ApiResponse } from '../types/api';
+import { toQueryString, type ApiResponse } from '../types/api';
 import type { CreateIncidentData, Incident } from '../types/incident';
 
 export const getIncidents = (params?: {
@@ -8,10 +8,7 @@ export const getIncidents = (params?: {
   severity?: string;
   type?: string;
 }) => {
-  const query = params
-    ? '?' + new URLSearchParams(params as Record<string, string>).toString()
-    : '';
-  return apiGet<ApiResponse<Incident[]>>(`/incidents${query}`);
+  return apiGet<ApiResponse<Incident[]>>(`/incidents${toQueryString(params)}`);
 };
 
 export const getActiveIncidents = () => apiGet('/incidents?status=ACTIVE');
