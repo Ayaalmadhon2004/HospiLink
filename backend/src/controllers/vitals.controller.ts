@@ -4,18 +4,66 @@ import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
 
+const METRIC_KEYS = [
+  'heartRate',
+  'systolicBP',
+  'diastolicBP',
+  'spO2',
+  'temperature',
+  'respiratoryRate',
+] as const;
+type MetricKey = (typeof METRIC_KEYS)[number];
+type MetricValues = Partial<Record<MetricKey, number | null>>;
+
+// undefined/null/'' => null (missing); numeric value/string => finite number; anything else => undefined (invalid).
+const parseMetric = (v: unknown): number | null | undefined => {
+  if (v === undefined || v === null) return null;
+  if (typeof v === 'string') {
+    if (v.trim() === '') return null;
+    const n = Number(v);
+    return Number.isFinite(n) ? n : undefined;
+  }
+  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
+  return undefined;
+};
+
+// Reads the metric keys of `body`. Never yields NaN: bad values are listed in `invalid`.
+const parseMetrics = (body: Record<string, unknown>, onlyPresent = false) => {
+  const values: MetricValues = {};
+  const invalid: string[] = [];
+  for (const key of METRIC_KEYS) {
+    if (onlyPresent && !(key in body)) continue;
+    const parsed = parseMetric(body[key]);
+    if (parsed === undefined) invalid.push(key);
+    else values[key] = parsed;
+  }
+  return { values, invalid };
+};
+
+const invalidMetricsResponse = (res: Response, invalid: string[]) =>
+  res.status(400).json({ success: false, message: `Invalid numeric value for: ${invalid.join(', ')}` });
+
+// Safe query parsing: positive integer with default, clamped to max.
+const parseLimit = (raw: unknown, def = 50, max = 200): number => {
+  if (typeof raw !== 'string' || !/^\d+$/.test(raw.trim())) return def;
+  const n = parseInt(raw.trim(), 10);
+  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, max) : def;
+};
+
 export const createVital = async (req: Request, res: Response) => {
   try {
-    const { patientId, heartRate, systolicBP, spO2, temperature, respiratoryRate } = req.body;
+    const { patientId } = req.body;
+    const { values, invalid } = parseMetrics(req.body);
+    if (invalid.length) return invalidMetricsResponse(res, invalid);
 
     const newVital = await prisma.patientVitals.create({
       data: {
         patientId: patientId as string,
-        heartRate: Number(heartRate),
-        systolicBP: Number(systolicBP),
-        spO2: Number(spO2),
-        temperature: Number(temperature),
-        respiratoryRate: Number(respiratoryRate),
+        heartRate: values.heartRate,
+        systolicBP: values.systolicBP,
+        spO2: values.spO2,
+        temperature: values.temperature,
+        respiratoryRate: values.respiratoryRate,
       } as any,
     });
 
@@ -31,14 +79,7 @@ export const createVital = async (req: Request, res: Response) => {
 // Helper: Check if vitals are critical
 const checkCriticalVitals = async (
   department: string,
-  vitals: {
-    heartRate?: number;
-    systolicBP?: number;
-    diastolicBP?: number;
-    spO2?: number;
-    temperature?: number;
-    respiratoryRate?: number;
-  }
+  vitals: MetricValues
 ): Promise<{ isCritical: boolean; alertType: string | null }> => {
   try {
     const thresholds = await (prisma as any).vitalThresholds.findMany({
@@ -56,9 +97,10 @@ const checkCriticalVitals = async (
         SPO2: vitals.spO2,
         TEMPERATURE: vitals.temperature,
         RESPIRATORY_RATE: vitals.respiratoryRate,
-      }[t.vitalType as keyof typeof vitals];
+      }[t.vitalType as string];
 
-      if (value === undefined || value === null) continue;
+      // Missing/invalid metric: skip its threshold (never compare against NaN/null).
+      if (typeof value !== 'number' || !Number.isFinite(value)) continue;
 
       if (t.minCritical !== null && value < t.minCritical) {
         isCritical = true;
@@ -82,16 +124,9 @@ const checkCriticalVitals = async (
 // POST /api/vitals - Record new vitals
 export const recordVitals = async (req: Request, res: Response) => {
   try {
-    const {
-      patientId,
-      heartRate,
-      systolicBP,
-      diastolicBP,
-      spO2,
-      temperature,
-      respiratoryRate,
-      notes,
-    } = req.body;
+    const { patientId, notes } = req.body;
+    const { values, invalid } = parseMetrics(req.body);
+    if (invalid.length) return invalidMetricsResponse(res, invalid);
 
     const patient = await prisma.patient.findUnique({
       where: { id: patientId as string },
@@ -102,24 +137,17 @@ export const recordVitals = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
-    const { isCritical, alertType } = await checkCriticalVitals(patient.department, {
-      heartRate: Number(heartRate),
-      systolicBP: Number(systolicBP),
-      diastolicBP: Number(diastolicBP),
-      spO2: Number(spO2),
-      temperature: Number(temperature),
-      respiratoryRate: Number(respiratoryRate),
-    });
+    const { isCritical, alertType } = await checkCriticalVitals(patient.department, values);
 
     const vitals = await (prisma as any).patientVitals.create({
       data: {
         patientId: patientId as string,
-        heartRate: Number(heartRate),
-        systolicBP: Number(systolicBP),
-        diastolicBP: Number(diastolicBP),
-        spO2: Number(spO2),
-        temperature: Number(temperature),
-        respiratoryRate: Number(respiratoryRate),
+        heartRate: values.heartRate,
+        systolicBP: values.systolicBP,
+        diastolicBP: values.diastolicBP,
+        spO2: values.spO2,
+        temperature: values.temperature,
+        respiratoryRate: values.respiratoryRate,
         recordedBy: (req.user as any)?.userId || 'system',
         notes,
         isCritical,
@@ -144,9 +172,8 @@ export const recordVitals = async (req: Request, res: Response) => {
 // GET /api/vitals - Get vitals
 export const getVitals = async (req: Request, res: Response) => {
   try {
-    const patientId = req.query.patientId as string;
-    const critical = req.query.critical as string;
-    const limit = req.query.limit as string;
+    const patientId = typeof req.query.patientId === 'string' ? req.query.patientId : undefined;
+    const critical = req.query.critical;
 
     const where: any = {};
     if (patientId) where.patientId = patientId;
@@ -160,7 +187,7 @@ export const getVitals = async (req: Request, res: Response) => {
         },
       },
       orderBy: { recordedAt: 'desc' },
-      take: parseInt(limit || '50'),
+      take: parseLimit(req.query.limit),
     });
 
     res.status(200).json({ success: true, count: vitals.length, data: vitals });
@@ -224,7 +251,11 @@ export const getVitalsById = async (req: Request, res: Response) => {
 export const updateVitals = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const updateData = req.body;
+    const body = (req.body ?? {}) as Record<string, unknown>;
+    const { values, invalid } = parseMetrics(body, true);
+    if (invalid.length) return invalidMetricsResponse(res, invalid);
+    const updateData: Record<string, unknown> = { ...values };
+    if ('notes' in body) updateData.notes = body.notes;
 
     const currentVitals = await (prisma as any).patientVitals.findUnique({
       where: { id },
@@ -235,7 +266,11 @@ export const updateVitals = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Vitals entry not found' });
     }
 
-    const newVitalsData = { ...currentVitals, ...updateData };
+    const newVitalsData: MetricValues = {};
+    for (const key of METRIC_KEYS) {
+      const next = key in values ? values[key] : currentVitals[key];
+      newVitalsData[key] = typeof next === 'number' && Number.isFinite(next) ? next : null;
+    }
 
     const { isCritical, alertType } = await checkCriticalVitals(
       currentVitals.patient.department,
