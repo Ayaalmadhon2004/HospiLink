@@ -31,6 +31,19 @@ describe('webVitals', () => {
     vi.restoreAllMocks();
   });
 
+  it.each([
+    ['/patients/abc123', '/patients/:id'],
+    ['/patients/abc123/edit', '/patients/:id/edit'],
+    ['/patients/abc123/', '/patients/:id'],
+    ['/patients', '/patients'],
+    ['/dashboard', '/dashboard'],
+    ['/', '/'],
+    ['/something/with/ids/42', '/other'],
+  ])('normalizePath maps %s to %s', async (input, expected) => {
+    const { normalizePath } = await import('./webVitals');
+    expect(normalizePath(input)).toBe(expected);
+  });
+
   it('toPayload keeps only name, value, rating and pathname', async () => {
     const { toPayload } = await import('./webVitals');
     expect(toPayload(metric)).toEqual({ name: 'LCP', value: ROUNDED_VALUE, rating: 'good', path: '/patients' });

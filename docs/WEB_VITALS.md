@@ -38,6 +38,5 @@ Payload:
 
 ## Privacy
 
-Only the metric name, value, rating and `location.pathname` are sent. No user id, token, patient data, query string,
-hash or full URL is included, and no cookies are attached. Do not add such fields. Pathnames that contain record ids
-(for example `/patients/<id>`) are sent as-is; normalise them in `toPayload` if the collector is third-party.
+Only the metric name, value, rating and a normalised route are sent. No user id, token, patient data, query string,
+hash or full URL is included, and no cookies are attached. Do not add such fields. The path is normalised by `normalizePath` in `src/utils/webVitals.ts`: dynamic segments are replaced with their param name (for example `/patients/<id>` is sent as `/patients/:id`) and any pathname that matches no known route is sent as `/other`. Add new routes to that list when you add pages.
