@@ -92,7 +92,7 @@ export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
                   </span>
                 )}
                 {alert.spO2 !== undefined && alert.spO2 !== null && (
-                  <span className="bg-white/60 px-2 py-1 rounded-md">
+                  <span dir="ltr" className="bg-white/60 px-2 py-1 rounded-md">
                     SpO₂: <span className="font-bold text-red-600">{alert.spO2}</span>%
                   </span>
                 )}

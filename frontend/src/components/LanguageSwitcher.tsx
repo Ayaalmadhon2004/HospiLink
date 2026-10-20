@@ -18,11 +18,10 @@ export const LanguageSwitcher = ({ className = '' }: LanguageSwitcherProps) => {
       type="button"
       onClick={() => void i18n.changeLanguage(target)}
       aria-label={`${t('common.switchLanguage')}: ${NATIVE_NAMES[target]}`}
-      lang={target}
       className={`flex items-center gap-2 text-sm rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-teal-500 ${className}`}
     >
       <Languages className="w-4 h-4" aria-hidden="true" />
-      <span>{NATIVE_NAMES[target]}</span>
+      <span lang={target}>{NATIVE_NAMES[target]}</span>
     </button>
   );
 };
