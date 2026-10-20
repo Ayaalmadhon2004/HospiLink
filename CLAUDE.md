@@ -132,7 +132,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 Open:
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; the real-backend suite is `npm run test:e2e:real`).
-- PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap). i18n (en/ar, RTL) covers only the shell, Login, Sidebar and Dashboard; other pages are still English (see `docs/I18N.md`).
+- PWA and Web Vitals are not implemented (README lists them under Roadmap). i18n (en/ar, RTL) covers only the shell, Login, Sidebar and Dashboard; other pages are still English (see `docs/I18N.md`).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
 Fixed on main (do not reintroduce): `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;

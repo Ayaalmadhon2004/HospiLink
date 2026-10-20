@@ -49,12 +49,11 @@ Everything below exists in the code today.
 
 ## Roadmap / planned
 
-These were listed in earlier versions of this README. Except for the partial i18n item, they are **not implemented**. Verified against the code: there is no web manifest or service worker, no `web-vitals` package, and no Dockerfile or docker-compose file in the repository.
+These were listed in earlier versions of this README. Except for the partial i18n item, they are **not implemented**. Verified against the code: there is no web manifest or service worker and no `web-vitals` package.
 
 - Translate the remaining pages. Arabic / English (RTL) is in place for the shell, Login, Sidebar and Dashboard; see `docs/I18N.md`.
 - Progressive Web App support (manifest, service worker, offline mode).
 - Web Vitals / performance monitoring.
-- Docker images and docker-compose for the full stack.
 - Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.
 - Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
 - Automated patient queue management.
@@ -246,6 +245,7 @@ Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the
 - **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
 - **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so legacy file-based report uploads are lost on redeploy; new reports are stored in the database.
 - **Database: Neon** PostgreSQL.
+- **Docker (local full stack):** `docker compose --env-file .env.docker up --build`; see [docs/DOCKER.md](docs/DOCKER.md).
 
 Auth cookies use `sameSite: none` so the Vercel frontend and the Render API (different sites) can share the session over HTTPS.
 
