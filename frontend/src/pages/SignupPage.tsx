@@ -8,7 +8,6 @@ export const SignupPage = () => {
     name: '', 
     email: '', 
     password: '', 
-    role: 'NURSE', 
     department: 'General'
   });
   const [error, setError] = useState('');
@@ -22,9 +21,7 @@ export const SignupPage = () => {
 
     const dataToSend = {
       ...formData,
-      hospitalId: "e4eb651b-fc3c-4284-a73d-9178e77195d8", 
-      status: "Active", 
-      shift: "Day"    
+      shift: "Day"
     };
 
     try {
@@ -106,24 +103,7 @@ export const SignupPage = () => {
             />
           </div>
 
-          <div>
-            <label htmlFor="role" className="block text-sm font-medium text-slate-700 mb-1">
-              Role
-            </label>
-            <select 
-              id="role"
-              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none" 
-              value={formData.role}
-              onChange={e => setFormData({...formData, role: e.target.value})}
-              aria-describedby="role-help"
-            >
-              <option value="NURSE">Nurse</option>
-              <option value="DOCTOR">Doctor</option>
-              <option value="ADMIN">Admin</option>
-            </select>
-          </div>
-
-          <div>
+          <div className="col-span-2">
             <label htmlFor="department" className="block text-sm font-medium text-slate-700 mb-1">
               Department
             </label>

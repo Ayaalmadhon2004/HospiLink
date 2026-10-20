@@ -87,7 +87,12 @@ router.get(
   getPatientById
 );
 
-router.get('/:id/reports', getPatientReports);
+router.get(
+  '/:id/reports',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  getPatientReports
+);
 
 
 // ============================================

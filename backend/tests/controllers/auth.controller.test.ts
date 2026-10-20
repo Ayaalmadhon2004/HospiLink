@@ -21,12 +21,65 @@ describe('auth.controller', () => {
   });
 
   describe('register', () => {
-    it('يرفض التسجيل لو الإيميل مستخدم من قبل', async () => {
+    const validBody = {
+      email: 'new@hospilink.com',
+      password: 'secret123',
+      name: 'Dr. Sara',
+      department: 'ER',
+      shift: 'DAY',
+    };
+
+    it('يرفض بيانات غير صالحة بـ 400 ولا يلمس الداتابيز', async () => {
+      const req = mockRequest({ body: { email: 'bad', password: 'short', name: 'A' } });
+      const res = mockResponse();
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+      expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
+    });
+
+    it('يتجاهل role و hospitalId القادمة من الطلب (منع ADMIN self-signup)', async () => {
       const req = mockRequest({
-        body: { email: 'exists@hospilink.com', password: '12345678', name: 'A' },
+        body: { ...validBody, role: 'ADMIN', hospitalId: 'attacker-hospital' },
       });
       const res = mockResponse();
 
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'server-hosp' } as any);
+      prismaMock.user.create.mockResolvedValue({
+        id: 'u', email: validBody.email, role: 'NURSE',
+      } as any);
+
+      await register(req, res);
+
+      const data = (prismaMock.user.create.mock.calls[0][0] as any).data;
+      expect(data.role).toBe('NURSE');
+      expect(data.hospitalId).toBe('server-hosp');
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('يرجع 500 عام بدون تسريب رسالة الخطأ الداخلية', async () => {
+      const req = mockRequest({ body: validBody });
+      const res = mockResponse();
+
+      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'h' } as any);
+      prismaMock.user.findUnique.mockRejectedValue(new Error('secret db detail'));
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('secret db detail');
+    });
+
+    it('يرفض التسجيل لو الإيميل مستخدم من قبل', async () => {
+      const req = mockRequest({
+        body: { ...validBody, email: 'exists@hospilink.com' },
+      });
+      const res = mockResponse();
+
+      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'h' } as any);
       prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
 
       await register(req, res);
@@ -40,23 +93,17 @@ describe('auth.controller', () => {
 
     it('ينشئ مستخدم جديد، بيهاش الباسورد، وبيرجع توكن + كوكي', async () => {
       const req = mockRequest({
-        body: {
-          email: 'new@hospilink.com',
-          password: 'secret123',
-          name: 'Dr. Sara',
-          department: 'ER',
-          shift: 'DAY',
-          hospitalId: 'hosp-1',
-        },
+        body: validBody,
       });
       const res = mockResponse();
 
+      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'hosp-1' } as any);
       prismaMock.user.findUnique.mockResolvedValue(null);
       prismaMock.user.create.mockResolvedValue({
         id: 'new-user',
         email: 'new@hospilink.com',
         name: 'Dr. Sara',
-        role: 'STAFF',
+        role: 'NURSE',
         department: 'ER',
         shift: 'DAY',
         status: 'OFF_DUTY',
@@ -70,7 +117,7 @@ describe('auth.controller', () => {
       const createCallArg = prismaMock.user.create.mock.calls[0][0] as any;
       expect(createCallArg.data.password).not.toBe('secret123');
       expect(await bcrypt.compare('secret123', createCallArg.data.password)).toBe(true);
-      expect(createCallArg.data.role).toBe('STAFF'); // القيمة الافتراضية
+      expect(createCallArg.data.role).toBe('NURSE'); // أقل دور
 
       expect(res.cookie).toHaveBeenCalledWith(
         'token',
@@ -83,16 +130,6 @@ describe('auth.controller', () => {
       );
     });
 
-    it('يرجع 500 لو صار خطأ غير متوقع', async () => {
-      const req = mockRequest({ body: { email: 'x@x.com', password: 'p' } });
-      const res = mockResponse();
-
-      prismaMock.user.findUnique.mockRejectedValue(new Error('DB down'));
-
-      await register(req, res);
-
-      expect(res.status).toHaveBeenCalledWith(500);
-    });
   });
 
   describe('login', () => {

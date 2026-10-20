@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { api } from '../services/api';
 import { getPatientById, dischargePatient, uploadReport, getPatientReports } from '../services/patientService';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, X, CheckCircle, Download } from 'lucide-react';
 
@@ -10,8 +11,14 @@ const STATUS_COLORS = {
   DISCHARGED: 'bg-gray-100 text-gray-500',
 };
 
-// Use environment variable or fallback to relative path
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
+// /uploads is protected: fetch the file with auth (Bearer/cookie) and open it as a blob URL
+const openReportFile = async (fileUrl: string): Promise<void> => {
+  const base = String(api.defaults.baseURL ?? '').replace(/\/api\/?$/, '');
+  const res = await api.get(`${base}${fileUrl}`, { responseType: 'blob' });
+  const blobUrl = URL.createObjectURL(res.data as Blob);
+  window.open(blobUrl, '_blank', 'noopener');
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+};
 
 export const PatientDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -313,16 +320,15 @@ export const PatientDetailPage = () => {
                       {report.fileType.split('/')[1].toUpperCase()}
                     </p>
                   </div>
-                  <a 
-                    href={`${API_BASE_URL}${report.fileUrl}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={() => { openReportFile(report.fileUrl).catch(() => setError('Failed to open report')); }}
                     className="text-medical-teal hover:underline text-sm flex items-center gap-1"
                     aria-label={`View report: ${report.fileName}`}
                   >
                     <Download size={14} aria-hidden="true" />
                     View
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
