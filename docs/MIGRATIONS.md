@@ -20,12 +20,13 @@ After that, `npx prisma migrate deploy` is a no-op until a new migration is adde
 - Commit the generated folder under `prisma/migrations/`.
 - Deploy with `npx prisma migrate deploy` (never `db push` against production).
 
-## Pending on production
+## Automatic on deploy (CI/CD)
 
-`20261020000000_report_file_data` adds `Report.fileData`. After the baseline is marked as applied, run once:
+The `deploy-backend` job in `.github/workflows/ci-cd.yml` (pushes to `main`, after Backend CI and Frontend CI pass) runs `npx prisma migrate deploy` before it triggers the Render deploy hook, so new code never starts against an older schema.
 
-```
-npx prisma migrate deploy
-```
+Setup, once, in GitHub: Settings -> Environments -> `production` -> add the secret `MIGRATE_DATABASE_URL`. Use Neon's direct (non-pooled) connection string. It is separate from the `DATABASE_URL` Render uses at runtime and is never printed in the logs.
 
-Deploy the backend code only after this, otherwise report uploads will fail.
+- If the secret is not set, the step prints a warning and is skipped; run `npx prisma migrate deploy` by hand in that case.
+- If the migration fails, the job stops and the deploy hook is not triggered.
+- Migrations should be additive (add a column, then ship the code that uses it) because the old code keeps serving while the new one builds. Destructive changes need a two-step release.
+- Never use `db push` against production.

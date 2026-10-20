@@ -183,8 +183,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # No prisma/migrations folder yet (schema is applied with `prisma db push`),
-      # so there is nothing for CI to migrate. Add a migrate step once migrations exist.
+      # Apply pending Prisma migrations to production BEFORE triggering the deploy, so new code
+      # never starts against an older schema. If this step fails the job stops and nothing is deployed.
+      # MIGRATE_DATABASE_URL lives in the `production` environment secrets; use Neon's direct
+      # (non-pooled) connection string for it. It is only passed through env, never printed.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Apply database migrations
+        env:
+          MIGRATE_DATABASE_URL: ${{ secrets.MIGRATE_DATABASE_URL }}
+        run: |
+          if [ -z "$MIGRATE_DATABASE_URL" ]; then
+            echo "::warning::MIGRATE_DATABASE_URL secret is not set; skipping migrations. Run 'npx prisma migrate deploy' manually (docs/MIGRATIONS.md)."
+            exit 0
+          fi
+          DATABASE_URL="$MIGRATE_DATABASE_URL" npx prisma migrate deploy
+        working-directory: backend
 
       - name: Trigger Render Deploy Hook
         env:
