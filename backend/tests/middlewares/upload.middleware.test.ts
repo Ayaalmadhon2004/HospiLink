@@ -7,12 +7,12 @@
 let capturedConfig: any;
 
 jest.mock('multer', () => {
-  const diskStorage = jest.fn((opts: any) => ({ __isDiskStorage: true, ...opts }));
+  const memoryStorage = jest.fn(() => ({ __isMemoryStorage: true }));
   const multerMock: any = jest.fn((config: any) => {
     capturedConfig = config;
     return { __isMulterInstance: true };
   });
-  multerMock.diskStorage = diskStorage;
+  multerMock.memoryStorage = memoryStorage;
   return multerMock;
 });
 
@@ -48,16 +48,7 @@ describe('upload.middleware', () => {
     expect(cb.mock.calls[0][0].message).toContain('Invalid file type');
   });
 
-  it('بيولد اسم ملف فريد باستخدام fieldname + suffix + الامتداد الأصلي', () => {
-    const cb = jest.fn();
-    capturedConfig.storage.filename(
-      {},
-      { fieldname: 'report', originalname: 'xray.png' },
-      cb
-    );
-
-    expect(cb).toHaveBeenCalledTimes(1);
-    const generatedName = cb.mock.calls[0][1];
-    expect(generatedName).toMatch(/^report-\d+-\d+\.png$/);
+  it('بيخزن الملفات بالذاكرة (للحفظ بالداتابيز) مش على القرص', () => {
+    expect(capturedConfig.storage.__isMemoryStorage).toBe(true);
   });
 });

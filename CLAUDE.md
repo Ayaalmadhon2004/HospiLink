@@ -78,7 +78,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   Passwords hashed with bcryptjs (12 rounds).
 - Sockets: `io` is created in server.ts; rooms are `patient-<id>`, `department-<name>`, `dispatch-room`, `unit-<id>`.
   Controllers emit events (vitals, incidents, appointments, dispatch, notifications) to those rooms.
-- File uploads: multer to `uploads/` (jpeg/png/pdf, 5MB). Uploaded files are patient data: never commit them.
+- File uploads: multer memory storage, saved in `Report.fileData` (jpeg/png/pdf, 5MB) and served by `GET /api/patients/reports/:reportId/file`. Older reports may still point to `/uploads/...` on disk. Uploaded files are patient data: never commit them.
 - Use the shared Prisma client from `src/config/db.ts`; do not instantiate new clients.
 - TypeScript: avoid `any`; type request bodies and use `Prisma` generated types.
 
@@ -125,7 +125,7 @@ Open:
 - `prisma/migrations` has a baseline only; production must run `migrate resolve --applied` once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Some `console.*` calls remain in the code (use a logger).
 - zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
-- Uploads live on Render's ephemeral disk (move to S3/Cloudinary). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
+- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 

@@ -94,6 +94,7 @@ model Report {
   fileName   String
   fileUrl    String
   fileType   String
+  fileData   Bytes?
   patientId  String
   uploadedBy String?
   createdAt  DateTime @default(now())

@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import { randomUUID } from 'crypto';
 
 // ============================================
 // GET /api/patients/recent
@@ -139,20 +140,48 @@ export const uploadReport = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
-    const report = await prisma.report.create({
+    const reportId = randomUUID();
+    const created = await prisma.report.create({
       data: {
+        id: reportId,
         fileName: req.file.originalname,
-        fileUrl: `/uploads/${req.file.filename}`,
+        // Served by getReportFile; the frontend prefixes the API origin.
+        fileUrl: `/api/patients/reports/${reportId}/file`,
         fileType: req.file.mimetype,
+        fileData: new Uint8Array(req.file.buffer),
         patientId: patientId,
         uploadedBy: (req.user as any)?.userId,
       },
     });
+    const { fileData: _fileData, ...report } = created;
 
     res.status(201).json({ success: true, message: 'Report uploaded', data: report });
   } catch (error: any) {
     logger.error({ err: error }, 'Upload error:');
     res.status(500).json({ success: false, message: 'Failed to upload report', error: error.message });
+  }
+};
+
+// ============================================
+// GET /api/patients/reports/:reportId/file
+// ============================================
+export const getReportFile = async (req: Request, res: Response) => {
+  try {
+    const { reportId } = req.params as { reportId: string };
+    const report = await prisma.report.findUnique({ where: { id: reportId } });
+    if (!report || !report.fileData) {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+
+    res.setHeader('Content-Type', report.fileType);
+    res.setHeader('Content-Disposition', 'inline');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; object-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'");
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.status(200).send(Buffer.from(report.fileData));
+  } catch (error) {
+    logger.error({ err: error }, 'Report file error:');
+    res.status(500).json({ success: false, message: 'Failed to fetch file' });
   }
 };
 
@@ -164,6 +193,7 @@ export const getPatientReports = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const reports = await prisma.report.findMany({
       where: { patientId: id },
+      omit: { fileData: true },
       orderBy: { createdAt: 'desc' },
     });
 
