@@ -5,8 +5,9 @@ import { io } from '../server';
 import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import { createNotification } from './notifications.controller';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
   res.status(500).json({ success: false, message });
 };
@@ -20,7 +21,7 @@ const generateIncidentCode = async () => {
 export const getIncidents = async (req: Request, res: Response) => {
   try {
     const { status, severity, type } = req.query;
-    const where: any = {};
+    const where: Prisma.IncidentWhereInput = {};
 
     if (status && status !== '') where.status = status as string;
     if (severity && severity !== '') where.severity = severity as string;
@@ -33,7 +34,7 @@ export const getIncidents = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: incidents.length, data: incidents });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch incidents');
   }
 };
@@ -64,7 +65,7 @@ export const getActiveIncidents = async (req: Request, res: Response) => {
         total: incidents.length,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch active incidents');
   }
 };
@@ -80,7 +81,7 @@ export const getIncidentById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch incident');
   }
 };
@@ -117,7 +118,7 @@ export const createIncident = async (req: Request, res: Response) => {
     });
 
     res.status(201).json({ success: true, data: incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create incident');
   }
 };
@@ -142,7 +143,7 @@ export const updateIncident = async (req: Request, res: Response) => {
 
     io.to(CLINICAL_ROOM).emit('incident-updated', incident);
     res.status(200).json({ success: true, data: incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update incident');
   }
 };
@@ -153,7 +154,7 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const { status, progress } = req.body;
 
-    const updateData: any = { status };
+    const updateData: Prisma.IncidentUpdateInput = { status };
     if (progress !== undefined) updateData.progress = progress;
     if (status === 'RESOLVED') updateData.resolvedAt = new Date();
 
@@ -176,7 +177,7 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: incident });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update incident status');
   }
 };
@@ -190,7 +191,7 @@ export const deleteIncident = async (req: Request, res: Response) => {
 
     io.to(CLINICAL_ROOM).emit('incident-deleted', { id });
     res.status(200).json({ success: true, message: 'Incident deleted successfully' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to delete incident');
   }
 };

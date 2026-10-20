@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
 
 // جلب كل السراير
 export const getAllBeds = async (req: Request, res: Response) => {
@@ -13,7 +14,7 @@ export const getAllBeds = async (req: Request, res: Response) => {
       }
     });
     res.status(200).json({ success: true, data: beds });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get beds error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -32,7 +33,7 @@ export const getBedById = async (req: Request, res: Response) => {
     });
     if (!bed) return res.status(404).json({ success: false, message: 'السرير غير موجود' });
     res.status(200).json({ success: true, data: bed });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get bed error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -63,7 +64,7 @@ export const createBed = async (req: Request, res: Response) => {
       }
     });
     res.status(201).json({ success: true, data: bed });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Create bed error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -75,7 +76,7 @@ export const updateBedStatus = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const { status, patientId, wardId, bedNumber, hospitalId } = req.body;
     
-    const data: any = {};
+    const data: Prisma.BedUpdateInput = {};
     
     if (bedNumber) data.bedNumber = bedNumber;
     if (status) data.status = status;
@@ -97,7 +98,7 @@ export const updateBedStatus = async (req: Request, res: Response) => {
       }
     });
     res.status(200).json({ success: true, data: bed });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Update bed error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -109,7 +110,7 @@ export const deleteBed = async (req: Request, res: Response) => {
     const id = req.params.id as string;
     await prisma.bed.delete({ where: { id } });
     res.status(200).json({ success: true, message: 'تم حذف السرير' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Delete bed error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }

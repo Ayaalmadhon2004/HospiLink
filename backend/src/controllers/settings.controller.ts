@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
 
-const handleError = (res: Response, error: any, message: string, statusCode: number = 500) => {
+const handleError = (res: Response, error: unknown, message: string, statusCode: number = 500) => {
   logger.error({ err: error }, `[Settings Error] ${message}:`);
   res.status(statusCode).json({
     success: false,
@@ -57,7 +57,7 @@ export const getUserSettings = async (req: Request, res: Response) => {
         }
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch settings');
   }
 };
@@ -83,7 +83,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: updatedUser });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update profile');
   }
 };
@@ -124,7 +124,7 @@ export const updateNotifications = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: settings });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update notifications');
   }
 };
@@ -155,7 +155,7 @@ export const updateSecurity = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: settings });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update security settings');
   }
 };
@@ -182,7 +182,7 @@ export const updateDisplay = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: settings });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update display settings');
   }
 };

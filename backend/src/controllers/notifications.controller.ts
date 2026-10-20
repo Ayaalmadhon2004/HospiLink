@@ -3,8 +3,9 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, `[Notifications] ${message}:`);
   res.status(500).json({ success: false, message });
 };
@@ -16,7 +17,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
     const { limit = '20', unreadOnly = 'false' } = req.query;
-    const where: any = { userId };
+    const where: Prisma.NotificationWhereInput = { userId };
     if (unreadOnly === 'true') where.read = false;
 
     const notifications = await prisma.notification.findMany({
@@ -30,7 +31,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: notifications, unreadCount });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch notifications');
   }
 };
@@ -48,7 +49,7 @@ export const markAsRead = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: notification });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to mark as read');
   }
 };
@@ -65,7 +66,7 @@ export const markAllAsRead = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, message: 'All notifications marked as read' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to mark all as read');
   }
 };
@@ -82,7 +83,7 @@ export const deleteNotification = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, message: 'Notification deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to delete notification');
   }
 };

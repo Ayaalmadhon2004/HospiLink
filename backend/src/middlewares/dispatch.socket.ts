@@ -1,5 +1,6 @@
 import { Socket } from 'socket.io';
 import prisma from '../config/db';
+import type { UnitStatus } from '@prisma/client';
 import { hasRole } from './socket.auth';
 import logger from '../config/logger';
 
@@ -47,7 +48,7 @@ export const attachDispatchEvents = (socket: Socket) => {
         where: { id: d.unitId },
         data: {
           location: JSON.stringify({ lat: d.lat, lng: d.lng }),
-          status: (d.status as any) || undefined,
+          status: (d.status as UnitStatus) || undefined,
           lastUpdated: new Date(),
         },
       });
