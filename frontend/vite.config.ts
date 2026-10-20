@@ -20,9 +20,6 @@ export default defineConfig({
           if (id.includes('@tanstack/react-query')) {
             return 'query';
           }
-          if (id.includes('recharts')) {
-            return 'charts';
-          }
           if (id.includes('lucide-react')) {
             return 'icons';
           }
