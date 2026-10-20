@@ -52,6 +52,15 @@ describe('api helper methods and apiFetch', () => {
     expect(JSON.parse(calls[0].data as string)).toEqual({ a: 1 });
   });
 
+  it('apiFetch sends a FormData body untouched instead of JSON-parsing it', async () => {
+    const form = new FormData();
+    form.append('reportFile', new File(['x'], 'r.pdf', { type: 'application/pdf' }));
+    const res = await apiFetch('/upload', { method: 'POST', body: form });
+    expect(res.ok).toBe(true);
+    expect(calls).toHaveLength(1);
+    expect(calls[0].data).toBeInstanceOf(FormData);
+  });
+
   it('apiFetch defaults to GET', async () => {
     await apiFetch('/x');
     expect(calls[0].method).toBe('get');
