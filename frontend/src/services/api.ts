@@ -95,6 +95,18 @@ export const apiUpload = async <T = ApiResponse>(url: string, formData: FormData
 // LEGACY COMPATIBILITY
 // ============================================
 // ليش الفتش فيها كل المثودز مش بس get ? 
+// A FormData body (file uploads) must reach axios untouched; only JSON strings are parsed.
+const toRequestData = (body: RequestInit['body']): unknown => {
+  if (!body) return undefined;
+  if (body instanceof FormData) return body;
+  return JSON.parse(body as string);
+};
+
+// The instance default is application/json, and axios then turns a FormData into JSON (the file is lost).
+// Asking for multipart makes axios keep the FormData; the browser adds the boundary itself.
+const toRequestConfig = (body: RequestInit['body']): { headers?: Record<string, string> } =>
+  body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
+
 export const apiFetch = async (url: string, options: RequestInit = {}) => {
   const method = (options.method || 'GET').toUpperCase();
 
@@ -106,13 +118,13 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
         response = await api.get(url);
         break;
       case 'POST':
-        response = await api.post(url, options.body ? JSON.parse(options.body as string) : undefined);
+        response = await api.post(url, toRequestData(options.body), toRequestConfig(options.body));
         break;
       case 'PUT':
-        response = await api.put(url, options.body ? JSON.parse(options.body as string) : undefined);
+        response = await api.put(url, toRequestData(options.body), toRequestConfig(options.body));
         break;
       case 'PATCH':
-        response = await api.patch(url, options.body ? JSON.parse(options.body as string) : undefined);
+        response = await api.patch(url, toRequestData(options.body), toRequestConfig(options.body));
         break;
       case 'DELETE':
         response = await api.delete(url);
