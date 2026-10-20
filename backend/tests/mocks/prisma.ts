@@ -7,7 +7,7 @@
 // https://www.prisma.io/docs/orm/prisma-client/testing/unit-testing
 
 import { PrismaClient } from '@prisma/client';
-import { mockDeep, mockReset, DeepMockProxy } from 'jest-mock-extended';
+import { mockDeep, mockReset } from 'jest-mock-extended';
 
 jest.mock('../../src/config/db', () => ({
   __esModule: true,
@@ -16,7 +16,11 @@ jest.mock('../../src/config/db', () => ({
 
 import prisma from '../../src/config/db';
 
-export const prismaMock = prisma as unknown as DeepMockProxy<PrismaClient>;
+// ملاحظة: DeepMockProxy<PrismaClient> بيعمل TS2615 (أنواع دائرية) مع Prisma 7،
+// فبنستخدم نوع مبسّط: كل model/method هو jest.Mock.
+type PrismaMock = Record<string, any> & Record<string, Record<string, jest.Mock>>;
+
+export const prismaMock = prisma as unknown as PrismaMock;
 
 beforeEach(() => {
   mockReset(prismaMock);
