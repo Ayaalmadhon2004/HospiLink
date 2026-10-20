@@ -22,6 +22,7 @@ import dispatchRoutes from './routes/dispatch.routes';
 import incidentRoutes from './routes/incidents.routes';
 import notificationRoutes from './routes/notifications.routes';
 // Middlewares
+import { protect } from './middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
 import settingsRoutes from './routes/settings.routes';
@@ -141,13 +142,13 @@ app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
 
 // ✅ Cache headers for static uploads (1 hour)
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+app.use('/uploads', protect, express.static(path.join(__dirname, '../uploads'), {
   maxAge: '1h',
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.pdf')) {
       res.setHeader('Content-Type', 'application/pdf');
     }
-    res.setHeader('Cache-Control', 'public, max-age=3600');
+    res.setHeader('Cache-Control', 'private, max-age=3600');
     res.setHeader('X-Content-Type-Options', 'nosniff');
   },
 }));
