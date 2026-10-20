@@ -1,5 +1,6 @@
 // frontend/src/components/Appointments/NewAppointmentModal.tsx
 import { useState, useEffect } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import { X, Search, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
 import { createAppointment, updateAppointment} from '../../services/appointmentsService';
 import { apiGet } from '../../services/api';
@@ -50,6 +51,7 @@ const DEPARTMENTS = [
 ];
 
 export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppointment }: NewAppointmentModalProps) => {
+  const { t } = useTranslation();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(false);
@@ -187,17 +189,17 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
 
     try {
       if (!doctorId) {
-        toast.error('Please select a doctor');
+        toast.error(t('appointments.modal.selectDoctorError'));
         setLoading(false);
         return;
       }
       if (!scheduledAt) {
-        toast.error('Please select a date and time');
+        toast.error(t('appointments.modal.selectDateError'));
         setLoading(false);
         return;
       }
       if (!patientSearch.trim()) {
-        toast.error('Please enter a patient name');
+        toast.error(t('appointments.modal.patientNameError'));
         setLoading(false);
         return;
       }
@@ -227,16 +229,16 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
 
       if (isEditing) {
         await updateAppointment(editingAppointment.id, data);
-        toast.success('Appointment updated successfully');
+        toast.success(t('appointments.modal.updated'));
       } else {
         await createAppointment(data);
-        toast.success('Appointment created successfully');
+        toast.success(t('appointments.modal.created'));
       }
 
       onSuccess();
       onClose();
     } catch (err: unknown) {
-      toast.error(getResponseData(err)?.message || 'Failed to save appointment');
+      toast.error(getResponseData(err)?.message || t('appointments.modal.saveFailed'));
     } finally {
       setLoading(false);
     }
@@ -250,11 +252,12 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
           <h2 className="text-xl font-bold text-gray-900">
-            {isEditing ? 'Edit Appointment' : 'New Appointment'}
+            {isEditing ? t('appointments.modal.editTitle') : t('appointments.new')}
           </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition"
+            aria-label={t('common.close')}
           >
             <X size={20} className="text-gray-500" />
           </button>
@@ -264,21 +267,21 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Patient Search ────────────────────────── */}
           <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Patient *
+              {t('appointments.modal.patient')} *
             </label>
             <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
                 value={patientSearch}
                 onChange={(e) => handlePatientInputChange(e.target.value)}
                 onFocus={() => setShowPatientDropdown(true)}
-                placeholder="Search existing patient or type new name..."
-                className="w-full pl-10 pr-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
+                placeholder={t('appointments.modal.patientPlaceholder')}
+                className="w-full ps-10 pe-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
                 required
               />
               {selectedPatient && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2">
+                <span className="absolute end-3 top-1/2 -translate-y-1/2">
                   <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">
                     #{selectedPatient.patientCode}
                   </span>
@@ -290,11 +293,11 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             {showPatientDropdown && (patients.length > 0 || fetchingPatients) && !selectedPatient && (
               <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
                 {fetchingPatients ? (
-                  <div className="p-3 text-sm text-gray-500 text-center">Searching...</div>
+                  <div className="p-3 text-sm text-gray-500 text-center">{t('appointments.modal.searching')}</div>
                 ) : patients.length === 0 ? (
                   <div className="p-3 text-sm text-gray-500 text-center">
-                    <UserPlus size={14} className="inline mr-1" />
-                    Will create new patient: "{patientSearch}"
+                    <UserPlus size={14} className="inline me-1" />
+                    {t('appointments.modal.willCreateColon', { name: patientSearch })}
                   </div>
                 ) : (
                   patients.map((patient) => (
@@ -302,11 +305,11 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
                       key={patient.id}
                       type="button"
                       onClick={() => handleSelectPatient(patient)}
-                      className="w-full text-left px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 transition flex items-center justify-between"
+                      className="w-full text-start px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 transition flex items-center justify-between"
                     >
                       <div>
                         <span className="font-medium text-gray-900">{patient.name}</span>
-                        <span className="text-xs text-gray-500 ml-2">#{patient.patientCode}</span>
+                        <span className="text-xs text-gray-500 ms-2">#{patient.patientCode}</span>
                       </div>
                       {patient.phone && (
                         <span className="text-xs text-gray-400">{patient.phone}</span>
@@ -321,7 +324,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             {selectedPatient && (
               <div className="mt-2 flex items-center gap-2">
                 <span className="text-sm text-gray-600">
-                  Selected: <strong>{selectedPatient.name}</strong>
+                  <Trans i18nKey="appointments.modal.selected" values={{ name: selectedPatient.name }} components={{ strong: <strong /> }} />
                 </span>
                 <button
                   type="button"
@@ -331,7 +334,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
                   }}
                   className="text-xs text-red-500 hover:text-red-700"
                 >
-                  Change
+                  {t('appointments.modal.change')}
                 </button>
               </div>
             )}
@@ -339,8 +342,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             {/* New Patient Hint */}
             {!selectedPatient && patientSearch.length >= 2 && patients.length === 0 && !fetchingPatients && (
               <p className="mt-1 text-xs text-amber-600">
-                <UserPlus size={12} className="inline mr-1" />
-                Will create new patient "{patientSearch}"
+                <UserPlus size={12} className="inline me-1" />
+                {t('appointments.modal.willCreate', { name: patientSearch })}
               </p>
             )}
           </div>
@@ -348,7 +351,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Doctor ────────────────────────────────── */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Doctor *
+              {t('appointments.modal.doctor')} *
             </label>
             <select
               value={doctorId}
@@ -356,10 +359,10 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
               className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
               required
             >
-              <option value="">Select doctor...</option>
+              <option value="">{t('appointments.modal.selectDoctor')}</option>
               {doctors.map((doc) => (
                 <option key={doc.id} value={doc.id}>
-                  {doc.name.replace(/^Dr\.\s*/i, 'Dr. ')} — {doc.department || doc.role}
+                  {t('dashboard.doctorPrefix', { name: doc.name.replace(/^Dr\.\s*/i, '') })} — {doc.department || doc.role}
                 </option>
               ))}
             </select>
@@ -368,8 +371,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Date & Time ───────────────────────────── */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              <Clock size={14} className="inline mr-1" />
-              Date & Time *
+              <Clock size={14} className="inline me-1" />
+              {t('appointments.modal.dateTime')} *
             </label>
             <input
               type="datetime-local"
@@ -383,22 +386,23 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Type ──────────────────────────────────── */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              <Stethoscope size={14} className="inline mr-1" />
-              Type *
+              <Stethoscope size={14} className="inline me-1" />
+              {t('appointments.modal.type')} *
             </label>
             <div className="grid grid-cols-2 gap-2">
-              {APPOINTMENT_TYPES.map((t) => (
+              {APPOINTMENT_TYPES.map((opt) => (
                 <button
-                  key={t.value}
+                  key={opt.value}
                   type="button"
-                  onClick={() => setType(t.value)}
+                  aria-pressed={type === opt.value}
+                  onClick={() => setType(opt.value)}
                   className={`px-3 py-2 rounded-lg text-sm font-medium transition border ${
-                    type === t.value
-                      ? t.color + ' border-current ring-2 ring-offset-1 ring-current'
+                    type === opt.value
+                      ? opt.color + ' border-current ring-2 ring-offset-1 ring-current'
                       : 'bg-gray-50 text-gray-600 border-gray-200 hover:bg-gray-100'
                   }`}
                 >
-                  {t.label}
+                  {t(`appointments.types.${opt.value}`, { defaultValue: opt.label })}
                 </button>
               ))}
             </div>
@@ -408,7 +412,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Department
+                {t('appointments.modal.department')}
               </label>
               <select
                 value={department}
@@ -416,20 +420,20 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
                 className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
               >
                 {DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>{dept}</option>
+                  <option key={dept} value={dept}>{t(`departments.${dept}`, { defaultValue: dept })}</option>
                 ))}
               </select>
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                <MapPin size={14} className="inline mr-1" />
-                Room
+                <MapPin size={14} className="inline me-1" />
+                {t('appointments.modal.room')}
               </label>
               <input
                 type="text"
                 value={room}
                 onChange={(e) => setRoom(e.target.value)}
-                placeholder="e.g. Room 101"
+                placeholder={t('appointments.modal.roomPlaceholder')}
                 className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
               />
             </div>
@@ -438,7 +442,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Duration ──────────────────────────────── */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Duration (minutes)
+              {t('appointments.modal.duration')}
             </label>
             <div className="flex items-center gap-3">
               <input
@@ -450,8 +454,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
                 onChange={(e) => setDuration(Number(e.target.value))}
                 className="flex-1"
               />
-              <span className="min-w-[60px] text-right font-medium text-gray-900">
-                {duration} min
+              <span className="min-w-[60px] text-end font-medium text-gray-900">
+                {t('appointments.minutes', { count: duration })}
               </span>
             </div>
           </div>
@@ -459,14 +463,14 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
           {/* ─── Notes ─────────────────────────────────── */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              <FileText size={14} className="inline mr-1" />
-              Notes
+              <FileText size={14} className="inline me-1" />
+              {t('appointments.modal.notes')}
             </label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={3}
-              placeholder="Additional notes..."
+              placeholder={t('appointments.modal.notesPlaceholder')}
               className="w-full px-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none resize-none"
             />
           </div>
@@ -478,14 +482,14 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
               onClick={onClose}
               className="flex-1 px-4 py-2.5 border rounded-lg hover:bg-gray-50 transition text-gray-700"
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={loading}
               className="flex-1 px-4 py-2.5 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
+              {loading ? t('common.saving') : isEditing ? t('appointments.modal.update') : t('appointments.modal.create')}
             </button>
           </div>
         </form>

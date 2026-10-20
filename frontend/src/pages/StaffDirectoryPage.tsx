@@ -1,6 +1,7 @@
 // pages/StaffDirectoryPage.tsx
 import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { 
   Users, RefreshCw, Search, Plus, Pencil, Trash2
 } from 'lucide-react';
@@ -25,6 +26,7 @@ interface StaffMember {
 }
 
 export const StaffDirectoryPage = () => {
+  const { t } = useTranslation();
   const [staff, setStaff] = useState<StaffMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -36,7 +38,7 @@ export const StaffDirectoryPage = () => {
     queryKey: ['staff'],
     deleteFn: (id: string) => deleteStaff(id),
     getItemId: (member) => member.id,
-    itemName: 'Staff member',
+    itemName: t('staff.itemName'),
   });
 
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<StaffMember>();
@@ -81,7 +83,7 @@ export const StaffDirectoryPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">Loading staff directory...</div>
+        <div className="animate-pulse text-gray-400">{t('staff.loading')}</div>
       </div>
     );
   }
@@ -92,7 +94,7 @@ export const StaffDirectoryPage = () => {
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
         name={confirmDelete?.name || ''}
-        itemType="staff member"
+        itemType={t('staff.itemType')}
         onCancel={() => {}}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
@@ -103,26 +105,26 @@ export const StaffDirectoryPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Users size={28} className="text-teal-500" aria-hidden="true" />
-            Staff & Shifts
+            {t('staff.title')}
           </h1>
-          <p className="text-gray-500 text-sm">Staff directory and shift management</p>
+          <p className="text-gray-500 text-sm">{t('staff.subtitle')}</p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => { fetchStaff(); }}
             className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-lg border hover:bg-gray-50 transition"
             disabled={refreshing}
-            aria-label="Refresh staff directory"
+            aria-label={t('staff.refreshLabel')}
           >
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
-            Refresh
+            {t('staff.refresh')}
           </button>
           <button
             onClick={handleAdd}
             className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
           >
             <Plus size={16} />
-            Add Staff
+            {t('staff.modal.add')}
           </button>
         </div>
       </div>
@@ -147,28 +149,28 @@ export const StaffDirectoryPage = () => {
       <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
             <input
               type="text"
-              placeholder="Search staff..."
+              placeholder={t('staff.searchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
-              aria-label="Search staff by name or role"
+              className="w-full ps-10 pe-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none"
+              aria-label={t('staff.searchLabel')}
               autoComplete="off"
             />
           </div>
-          <label htmlFor="dept-filter" className="sr-only">Filter by department</label>
+          <label htmlFor="dept-filter" className="sr-only">{t('staff.filterDepartment')}</label>
           <select
             id="dept-filter"
             value={selectedDept}
             onChange={(e) => setSelectedDept(e.target.value)}
             className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 outline-none bg-white"
-            aria-label="Filter by department"
+            aria-label={t('staff.filterDepartment')}
           >
-            <option value="">All Departments</option>
+            <option value="">{t('staff.allDepartments')}</option>
             {departments.map((dept) => (
-              <option key={dept} value={dept}>{dept}</option>
+              <option key={dept} value={dept}>{t(`departments.${dept}`, { defaultValue: dept })}</option>
             ))}
           </select>
         </div>
@@ -179,12 +181,12 @@ export const StaffDirectoryPage = () => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Name</th>
-              <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Role</th>
-              <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Department</th>
-              <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Status</th>
-              <th scope="col" className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Current Shift</th>
-              <th scope="col" className="text-right text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">Actions</th>
+              <th scope="col" className="text-start text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.name')}</th>
+              <th scope="col" className="text-start text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.role')}</th>
+              <th scope="col" className="text-start text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.department')}</th>
+              <th scope="col" className="text-start text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.status')}</th>
+              <th scope="col" className="text-start text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.currentShift')}</th>
+              <th scope="col" className="text-end text-xs font-semibold text-gray-500 uppercase tracking-wider px-6 py-4">{t('staff.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -201,35 +203,37 @@ export const StaffDirectoryPage = () => {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 text-gray-600">{member.role}</td>
-                <td className="px-6 py-4 text-gray-600">{member.department}</td>
+                <td className="px-6 py-4 text-gray-600">{t(`staff.roles.${member.role}`, { defaultValue: member.role })}</td>
+                <td className="px-6 py-4 text-gray-600">{t(`departments.${member.department}`, { defaultValue: member.department })}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${member.isActive ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}`}>
-                    {member.isActive ? 'Active' : 'Inactive'}
+                    {member.isActive ? t('staff.status.ACTIVE') : t('staff.status.INACTIVE')}
                   </span>
                 </td>
                 <td className="px-6 py-4">
                   {member.shifts?.[0] ? (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
-                      {member.shifts[0].type}
+                      {t(`staff.shifts.${member.shifts[0].type}`, { defaultValue: member.shifts[0].type })}
                     </span>
                   ) : (
                     <span className="text-gray-400 text-sm">—</span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-right">
+                <td className="px-6 py-4 text-end">
                   <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
                     <button
                       onClick={() => handleEdit(member)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                      title="Edit staff"
+                      title={t('staff.edit')}
+                      aria-label={t('staff.edit')}
                     >
                       <Pencil size={16} />
                     </button>
                     <button
                       onClick={() => handleDeleteClick(member.id, member.name)}
                       className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title="Delete staff"
+                      title={t('staff.delete')}
+                      aria-label={t('staff.delete')}
                     >
                       <Trash2 size={16} />
                     </button>
@@ -242,7 +246,7 @@ export const StaffDirectoryPage = () => {
         {filteredStaff.length === 0 && (
           <div className="text-center py-20 text-gray-400">
             <Users size={48} className="mx-auto mb-4 opacity-50" aria-hidden="true" />
-            <p>No staff members found</p>
+            <p>{t('staff.empty')}</p>
           </div>
         )}
       </div>
