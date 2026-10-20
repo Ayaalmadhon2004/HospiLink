@@ -49,7 +49,7 @@ Frontend (`cd frontend`):
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
 - `npm run lint`           eslint (currently clean)
-- `npm test`               vitest (53 tests)
+- `npm test`               vitest (82 tests)
 - `npm run preview`        serves build on :4173
 - `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
                            First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
