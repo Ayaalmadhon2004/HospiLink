@@ -121,7 +121,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 Open:
 - `.github/workflows/ci-cd.yml` still has `continue-on-error: true` on the lint and build steps, so they never fail the pipeline.
-- No `prisma/migrations` folder yet (schema is applied with `prisma db push`).
+- `prisma/migrations` has a baseline only; production must run `migrate resolve --applied` once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Some `console.*` calls remain in the code (use a logger).
 - zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
 - Uploads live on Render's ephemeral disk (move to S3/Cloudinary). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
