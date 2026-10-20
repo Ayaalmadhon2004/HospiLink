@@ -9,6 +9,9 @@ import {
 } from '../controllers/vitals.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { idParams } from '../validators/common.validator';
+import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema, vitalsAlertsQuerySchema } from '../validators/vitals.validator';
 
 const router = Router();
 
@@ -16,23 +19,24 @@ router.post(
   '/',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ body: recordVitalsSchema }),
   logActivity('RECORD_VITALS'),
   recordVitals
 );
 
 // GET /api/vitals - Get vitals list (any authenticated user)
-router.get('/', protect, getVitals);
+router.get('/', protect, validate({ query: vitalsQuerySchema }), getVitals);
 
 // GET /api/vitals/alerts - Get critical alerts (DOCTOR, NURSE, ADMIN)
-router.get('/alerts', protect, authorize('DOCTOR', 'NURSE', 'ADMIN'), getCriticalAlerts);
+router.get('/alerts', protect, authorize('DOCTOR', 'NURSE', 'ADMIN'), validate({ query: vitalsAlertsQuerySchema }), getCriticalAlerts);
 
 // GET /api/vitals/:id - Get single vitals entry
-router.get('/:id', protect, getVitalsById);
+router.get('/:id', protect, validate({ params: idParams }), getVitalsById);
 
 // PUT /api/vitals/:id - Update vitals (DOCTOR, NURSE)
-router.put('/:id', protect, authorize('DOCTOR', 'NURSE'), logActivity('UPDATE_VITALS'), updateVitals);
+router.put('/:id', protect, authorize('DOCTOR', 'NURSE'), validate({ params: idParams, body: updateVitalsSchema }), logActivity('UPDATE_VITALS'), updateVitals);
 
 // DELETE /api/vitals/:id - Delete vitals (ADMIN only)
-router.delete('/:id', protect, authorize('ADMIN'), logActivity('DELETE_VITALS'), deleteVitals);
+router.delete('/:id', protect, authorize('ADMIN'), validate({ params: idParams }), logActivity('DELETE_VITALS'), deleteVitals);
 
 export default router;

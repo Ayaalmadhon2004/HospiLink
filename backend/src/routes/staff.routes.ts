@@ -14,6 +14,9 @@ import {
 } from '../controllers/staff.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { idParams } from '../validators/common.validator';
+import { createStaffSchema, updateStaffSchema, createShiftSchema, updateShiftSchema, shiftQuerySchema, shiftTimelineQuerySchema } from '../validators/staff.validator';
 
 const router = Router();
 
@@ -23,33 +26,33 @@ const router = Router();
 router.get('/', protect, getStaff);
 
 // POST /api/staff - Create staff (ADMIN only)
-router.post('/', protect, authorize('ADMIN'), logActivity('CREATE_STAFF'), createStaff);
+router.post('/', protect, authorize('ADMIN'), validate({ body: createStaffSchema }), logActivity('CREATE_STAFF'), createStaff);
 
 // PUT /api/staff/:id - Update staff (ADMIN only)
-router.put('/:id', protect, authorize('ADMIN'), logActivity('UPDATE_STAFF'), updateStaff);
+router.put('/:id', protect, authorize('ADMIN'), validate({ params: idParams, body: updateStaffSchema }), logActivity('UPDATE_STAFF'), updateStaff);
 
 // DELETE /api/staff/:id - Delete staff (ADMIN only)
-router.delete('/:id', protect, authorize('ADMIN'), logActivity('DELETE_STAFF'), deleteStaff);
+router.delete('/:id', protect, authorize('ADMIN'), validate({ params: idParams }), logActivity('DELETE_STAFF'), deleteStaff);
 
 // ─── Shift Routes ──────────────────────────────────────────────────────
 
 // NOTE: /shifts routes must be declared BEFORE '/:id' so they are not swallowed by it
 // GET /api/staff/shifts - List shifts
-router.get('/shifts', protect, getShifts);
+router.get('/shifts', protect, validate({ query: shiftQuerySchema }), getShifts);
 
 // GET /api/staff/shifts/timeline - 24h timeline
-router.get('/shifts/timeline', protect, getShiftTimeline);
+router.get('/shifts/timeline', protect, validate({ query: shiftTimelineQuerySchema }), getShiftTimeline);
 
 // POST /api/staff/shifts - Create shift
-router.post('/shifts', protect, authorize('ADMIN', 'DOCTOR'), logActivity('CREATE_SHIFT'), createShift);
+router.post('/shifts', protect, authorize('ADMIN', 'DOCTOR'), validate({ body: createShiftSchema }), logActivity('CREATE_SHIFT'), createShift);
 
 // PUT /api/staff/shifts/:id - Update shift
-router.put('/shifts/:id', protect, authorize('ADMIN', 'DOCTOR'), logActivity('UPDATE_SHIFT'), updateShift);
+router.put('/shifts/:id', protect, authorize('ADMIN', 'DOCTOR'), validate({ params: idParams, body: updateShiftSchema }), logActivity('UPDATE_SHIFT'), updateShift);
 
 // DELETE /api/staff/shifts/:id - Delete shift
-router.delete('/shifts/:id', protect, authorize('ADMIN'), logActivity('DELETE_SHIFT'), deleteShift);
+router.delete('/shifts/:id', protect, authorize('ADMIN'), validate({ params: idParams }), logActivity('DELETE_SHIFT'), deleteShift);
 
 // GET /api/staff/:id - Get single staff (keep after /shifts routes)
-router.get('/:id', protect, getStaffById);
+router.get('/:id', protect, validate({ params: idParams }), getStaffById);
 
 export default router;
