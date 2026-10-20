@@ -201,7 +201,7 @@ const DispatchDashboard: React.FC = () => {
                     <p className="text-gray-700">{unit.crew.join(t('common.listSeparator'))}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { n: unit.eta }) : '—'}</p>
+                    <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { count: unit.eta }) : '—'}</p>
                   </td>
                   <td className="py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>

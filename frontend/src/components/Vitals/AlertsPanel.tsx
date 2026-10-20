@@ -52,7 +52,7 @@ export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
         {t('vitals.criticalAlerts')}
         <span
           className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-sm"
-          aria-label={t('vitals.criticalAlertsCount', { n: alerts.length })}
+          aria-label={t('vitals.criticalAlertsCount', { count: alerts.length })}
         >
           {alerts.length}
         </span>
