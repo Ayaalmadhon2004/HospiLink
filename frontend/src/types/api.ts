@@ -12,6 +12,18 @@ export interface ApiResponse<T = unknown> {
 /** Query-string parameters accepted by the list endpoints. */
 export type QueryParams = Record<string, string | number | boolean | undefined>;
 
+/** Build "?a=1&b=2", skipping undefined/null/empty values (URLSearchParams would send the text "undefined"). */
+export const toQueryString = (params?: Record<string, string | number | boolean | null | undefined>): string => {
+  if (!params) return '';
+  const qs = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === '') continue;
+    qs.append(key, String(value));
+  }
+  const out = qs.toString();
+  return out ? `?${out}` : '';
+};
+
 /** Extract a human readable message from anything thrown/caught. */
 export const getErrorMessage = (err: unknown, fallback = 'Something went wrong'): string => {
   if (err instanceof Error && err.message) return err.message;

@@ -1,14 +1,10 @@
 // services/patientService.ts
 import { apiFetch, apiGet, apiPost, apiPut } from './api';
-import type { ApiResponse, Pagination, QueryParams } from '../types/api';
+import { toQueryString, type ApiResponse, type Pagination, type QueryParams } from '../types/api';
 import type { Patient, PatientDetail, PatientReport, RecentPatient } from '../types/patient';
 
 export const getPatients = async (params?: QueryParams) => {
-  const queryString = params 
-    ? '?' + new URLSearchParams(params as Record<string, string>).toString() 
-    : '';
-
-  return await apiGet<ApiResponse<Patient[]> & { pagination?: Pagination }>(`/patients${queryString}`);
+  return await apiGet<ApiResponse<Patient[]> & { pagination?: Pagination }>(`/patients${toQueryString(params)}`);
 };
 
 export const getRecentPatients = async () => {
