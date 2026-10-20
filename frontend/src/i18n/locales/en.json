@@ -350,7 +350,7 @@
     "loadError": "Failed to load patient",
     "dischargeError": "Failed to discharge patient",
     "invalidFileType": "Please select a PDF or image file (JPG, PNG)",
-    "fileTooLarge": "File size must be less than 10MB",
+    "fileTooLarge": "File size must be less than 5MB",
     "uploadError": "Failed to upload report",
     "notFound": "Patient not found",
     "backToDashboard": "Back to Dashboard",
@@ -387,7 +387,7 @@
     "closeUpload": "Close upload modal",
     "uploadPrompt": "Upload a medical report (PDF, JPG, PNG) for {{name}}",
     "selectFile": "Click to select file",
-    "fileHelp": "PDF, JPG, PNG (max 10MB)",
+    "fileHelp": "PDF, JPG, PNG (max 5MB)",
     "sizeMb": "{{size}} MB",
     "uploadSuccess": "Report uploaded successfully!",
     "uploading": "Uploading...",
@@ -412,7 +412,7 @@
     "preview": "Preview of {{name}}",
     "selectedFile": "selected file",
     "select": "Click to select PDF or Image",
-    "help": "PDF, JPG, PNG up to 10MB"
+    "help": "PDF, JPG, PNG up to 5MB"
   },
   "beds": {
     "itemName": "Bed",

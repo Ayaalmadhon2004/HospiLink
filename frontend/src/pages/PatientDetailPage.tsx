@@ -6,6 +6,7 @@ import { api } from '../services/api';
 import { getResponseData } from '../types/api';
 import type { PatientDetail, PatientReport } from '../types/patient';
 import { getPatientById, dischargePatient, uploadReport, getPatientReports } from '../services/patientService';
+import { isReportFileTooLarge } from '../utils/reportFile';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, X, CheckCircle, Download } from 'lucide-react';
 
 const STATUS_COLORS = {
@@ -103,7 +104,7 @@ export const PatientDetailPage = () => {
         setUploadError(t('patientDetail.invalidFileType'));
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
+      if (isReportFileTooLarge(file.size)) {
         setUploadError(t('patientDetail.fileTooLarge'));
         return;
       }

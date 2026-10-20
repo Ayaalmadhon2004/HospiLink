@@ -350,7 +350,7 @@
     "loadError": "تعذّر تحميل بيانات المريض",
     "dischargeError": "تعذّر إخراج المريض من المستشفى",
     "invalidFileType": "يرجى اختيار ملف PDF أو صورة (JPG أو PNG)",
-    "fileTooLarge": "يجب أن يكون حجم الملف أقل من 10 ميغابايت",
+    "fileTooLarge": "يجب أن يكون حجم الملف أقل من 5 ميغابايت",
     "uploadError": "تعذّر رفع التقرير",
     "notFound": "لم يتم العثور على المريض",
     "backToDashboard": "العودة إلى لوحة التحكم",
@@ -387,7 +387,7 @@
     "closeUpload": "إغلاق نافذة الرفع",
     "uploadPrompt": "ارفع تقريراً طبياً (PDF أو JPG أو PNG) للمريض {{name}}",
     "selectFile": "انقر لاختيار ملف",
-    "fileHelp": "PDF أو JPG أو PNG (الحد الأقصى 10 ميغابايت)",
+    "fileHelp": "PDF أو JPG أو PNG (الحد الأقصى 5 ميغابايت)",
     "sizeMb": "{{size}} ميغابايت",
     "uploadSuccess": "تم رفع التقرير بنجاح!",
     "uploading": "جارٍ الرفع...",
@@ -412,7 +412,7 @@
     "preview": "معاينة {{name}}",
     "selectedFile": "الملف المحدد",
     "select": "انقر لاختيار ملف PDF أو صورة",
-    "help": "PDF أو JPG أو PNG حتى 10 ميغابايت"
+    "help": "PDF أو JPG أو PNG حتى 5 ميغابايت"
   },
   "beds": {
     "itemName": "السرير",
