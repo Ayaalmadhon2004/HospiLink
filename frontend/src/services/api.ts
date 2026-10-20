@@ -21,14 +21,7 @@ export const api = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token')
-      || localStorage.getItem('accessToken')
-      || localStorage.getItem('authToken');
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
+    // Auth relies on the httpOnly cookie (withCredentials) — no token in JS-accessible storage
     return config;
   },
   (error) => Promise.reject(error)
@@ -41,13 +34,6 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // ✅ لا تمسح التوكن إلا لو كان 401 فعلاً
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('authToken');
-    }
-
     if (error.response?.status === 403) {
       return Promise.reject(new Error('You do not have permission to perform this action.'));
     }

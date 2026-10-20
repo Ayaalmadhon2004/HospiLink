@@ -7,11 +7,7 @@ import { apiPost, apiGet } from './api';
 export const login = async (credentials: { email: string; password: string }) => {
   const data = await apiPost('/auth/login', credentials);
 
-  // ✅ خزن token في localStorage
-  if (data.token) {
-    localStorage.setItem('token', data.token);
-  }
-
+  // الـ token بينحفظ بكوكي httpOnly من السيرفر — ما منخزنه بالـ localStorage
   return data;
 };
 
@@ -37,8 +33,7 @@ export const logout = async () => {
     await apiPost('/auth/logout');
   } catch (err) {
   }
-  // ✅ امسح token من localStorage
-  localStorage.removeItem('token');
+  // الكوكي بيتمسح من السيرفر عبر /auth/logout
   // ✅ redirect للـ login
   window.location.href = '/login';
 };

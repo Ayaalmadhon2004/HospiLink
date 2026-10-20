@@ -24,6 +24,7 @@ import notificationRoutes from './routes/notifications.routes';
 // Middlewares
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
+import { socketAuth, hasRole } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
 
 dotenv.config();
@@ -92,13 +93,18 @@ const io = new Server(server, {
   }
 });
 
+// ✅ Socket auth: JWT from handshake.auth.token or `token` cookie
+io.use(socketAuth);
+
 // ← connection handler
 io.on('connection', (socket: Socket) => {
   if (isDev) {
     console.log('User connected to HospiLink stream:', socket.id);
   }
 
-  socket.on('join-room', (patientId: string) => {
+  socket.on('join-room', (patientId: unknown) => {
+    if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return;
+    if (typeof patientId !== 'string' || !patientId) return;
     socket.join(`patient-${patientId}`);
   });
 
