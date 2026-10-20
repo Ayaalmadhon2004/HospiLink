@@ -4,6 +4,7 @@ import { lazy ,Suspense } from 'react';
 // Named exports → wrap with default via .then()
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrivateRoute } from './components/PrivateRoute';
 const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
 const PatientsPage = lazy(() => import('./pages/PatientsPage').then(m => ({ default: m.PatientsPage })));
@@ -19,6 +20,7 @@ const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function App() {
   return (
+    <ErrorBoundary>
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
@@ -128,6 +130,7 @@ function App() {
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </Suspense>
+    </ErrorBoundary>
   );
 }
 
