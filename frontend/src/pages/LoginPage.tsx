@@ -4,8 +4,11 @@ import { Activity } from 'lucide-react';
 import { login } from '../services/authService';
 import { getErrorMessage } from '../types/api';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
 export const LoginPage = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -28,17 +31,18 @@ export const LoginPage = () => {
         // ✅ توجيه للـ Dashboard
         window.location.href = '/dashboard';
       } else {
-        setError(data.message || 'Login failed');
+        setError(data.message || t('auth.loginFailed'));
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, '') || 'Login failed. Please check your credentials.');
+      setError(getErrorMessage(err, '') || t('auth.loginFailedCheck'));
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative">
+      <LanguageSwitcher className="absolute top-4 end-4 text-gray-700 hover:bg-gray-100" />
       <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
         <div className="flex items-center justify-center gap-2 mb-8">
           <Activity className="text-teal-500" size={32} />
@@ -46,10 +50,10 @@ export const LoginPage = () => {
         </div>
 
         <h2 className="text-xl font-semibold text-gray-800 mb-2 text-center">
-          Welcome Back
+          {t('auth.welcomeBack')}
         </h2>
         <p className="text-gray-500 text-sm text-center mb-6">
-          Sign in to your account
+          {t('auth.signInSubtitle')}
         </p>
 
         {error && (
@@ -61,7 +65,7 @@ export const LoginPage = () => {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
+              {t('auth.email')}
             </label>
             <input
               type="email"
@@ -75,7 +79,7 @@ export const LoginPage = () => {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Password
+              {t('auth.password')}
             </label>
             <input
               type="password"
@@ -95,7 +99,7 @@ export const LoginPage = () => {
                 onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}
                 className="rounded border-gray-300 text-teal-500 focus:ring-teal-500"
               />
-              <span className="text-sm text-gray-600">Remember me</span>
+              <span className="text-sm text-gray-600">{t('auth.rememberMe')}</span>
             </label>
           </div>
 
@@ -104,12 +108,12 @@ export const LoginPage = () => {
             disabled={loading}
             className="w-full bg-teal-700 text-white py-2.5 rounded-lg hover:bg-teal-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
-            {loading ? 'Signing in...' : 'Sign In'}
+            {loading ? t('auth.signingIn') : t('auth.signIn')}
           </button>
 
           <p className="text-center text-slate-600 mt-6 text-sm">
-          Don't have an account? 
-          <Link to="/signup" className="text-teal-700 font-medium hover:underline"> Sign Up</Link>
+          {t('auth.noAccount')}{' '}
+          <Link to="/signup" className="text-teal-700 font-medium hover:underline">{t('auth.signUp')}</Link>
         </p>
         </form>
       </div>
