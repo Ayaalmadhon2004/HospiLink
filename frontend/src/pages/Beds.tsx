@@ -1,4 +1,5 @@
 // pages/Beds.tsx
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
@@ -37,7 +38,7 @@ const Beds = () => {
       const data = await apiGet<ApiResponse<BedWithDetails[]>>('/beds');
       if (data.success) setBeds(data.data);
     } catch (err) {
-      console.error('Error fetching beds:', err);
+      logger.error('Error fetching beds:', err);
     } finally {
       setLoading(false);
     }
@@ -51,7 +52,7 @@ const Beds = () => {
         setPatients(unassigned.map((p) => ({ id: p.id, name: p.name })));
       }
     } catch (err) {
-      console.error('Error fetching patients:', err);
+      logger.error('Error fetching patients:', err);
     }
   }, []);
 
@@ -60,7 +61,7 @@ const Beds = () => {
       const data = await apiGet<ApiResponse<Ward[]>>('/wards');
       if (data.success) setWards(data.data);
     } catch (err) {
-      console.error('Error fetching wards:', err);
+      logger.error('Error fetching wards:', err);
     }
   }, []);
 

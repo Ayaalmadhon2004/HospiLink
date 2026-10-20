@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { logger } from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { getResponseData } from '../types/api';
@@ -69,7 +70,7 @@ export const PatientDetailPage = () => {
         const res = await getPatientReports(id);
         setReports(res.data || []);
       } catch (err: unknown) {
-        console.error('Failed to fetch reports:', err);
+        logger.error('Failed to fetch reports:', err);
       } finally {
         setReportsLoading(false);
       }

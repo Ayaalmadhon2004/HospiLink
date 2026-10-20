@@ -1,4 +1,5 @@
 // pages/StaffDirectoryPage.tsx
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { 
   Users, RefreshCw, Search, Plus, Pencil, Trash2
@@ -48,7 +49,7 @@ export const StaffDirectoryPage = () => {
       const res = await getStaff({ department: selectedDept || undefined });
       setStaff(extractList<StaffMember>(res));
     } catch (err) {
-      console.error('Failed to fetch staff:', err);
+      logger.error('Failed to fetch staff:', err);
       setStaff([]);
     } finally {
       setRefreshing(false);

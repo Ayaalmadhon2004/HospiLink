@@ -1,4 +1,5 @@
 // frontend/src/hooks/useSettings.ts
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPut } from '../services/api';
 import { getErrorMessage, type ApiResponse } from '../types/api';
@@ -52,7 +53,7 @@ const useSettings = () => {
       setSettings(res.data || res);
       setError(null);
     } catch (err: unknown) {
-      console.error('Settings fetch error:', err);
+      logger.error('Settings fetch error:', err);
       setError(getErrorMessage(err, 'Failed to fetch settings'));
     } finally {
       setLoading(false);
@@ -66,7 +67,7 @@ const useSettings = () => {
       setSettings(prev => prev ? { ...prev, profile: { ...prev.profile, ...res.data.data } } : null);
       return { success: true, data: res.data.data };
     } catch (err: unknown) {
-      console.error('Update profile error:', err);
+      logger.error('Update profile error:', err);
       return { success: false, error: getErrorMessage(err, '') };
     }
   };
@@ -77,7 +78,7 @@ const useSettings = () => {
       setSettings(prev => prev ? { ...prev, notifications: { ...prev.notifications, ...data } } : null);
       return { success: true };
     } catch (err: unknown) {
-      console.error('Update notifications error:', err);
+      logger.error('Update notifications error:', err);
       return { success: false, error: getErrorMessage(err, '') };
     }
   };
@@ -88,7 +89,7 @@ const useSettings = () => {
       setSettings(prev => prev ? { ...prev, security: { ...prev.security, ...data } } : null);
       return { success: true };
     } catch (err: unknown) {
-      console.error('Update security error:', err);
+      logger.error('Update security error:', err);
       return { success: false, error: getErrorMessage(err, '') };
     }
   };
@@ -99,7 +100,7 @@ const useSettings = () => {
       setSettings(prev => prev ? { ...prev, display: { ...prev.display, ...data } } : null);
       return { success: true };
     } catch (err: unknown) {
-      console.error('Update display error:', err);
+      logger.error('Update display error:', err);
       return { success: false, error: getErrorMessage(err, '') };
     }
   };

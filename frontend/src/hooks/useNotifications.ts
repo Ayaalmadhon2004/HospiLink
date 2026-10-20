@@ -1,4 +1,5 @@
 // frontend/src/hooks/useNotifications.ts
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { apiGet, apiPut, apiDelete } from '../services/api';
@@ -29,7 +30,7 @@ export const useNotifications = () => {
       setNotifications(res.data?.data || []);
       setUnreadCount(res.data?.unreadCount || 0);
     } catch (err) {
-      console.error('Failed to fetch notifications:', err);
+      logger.error('Failed to fetch notifications:', err);
     } finally {
       setLoading(false);
     }
@@ -41,7 +42,7 @@ export const useNotifications = () => {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (err) {
-      console.error('Failed to mark as read:', err);
+      logger.error('Failed to mark as read:', err);
     }
   };
 
@@ -51,7 +52,7 @@ export const useNotifications = () => {
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       setUnreadCount(0);
     } catch (err) {
-      console.error('Failed to mark all as read:', err);
+      logger.error('Failed to mark all as read:', err);
     }
   };
 
@@ -60,7 +61,7 @@ export const useNotifications = () => {
       await apiDelete(`/notifications/${id}`);
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (err) {
-      console.error('Failed to delete notification:', err);
+      logger.error('Failed to delete notification:', err);
     }
   };
 

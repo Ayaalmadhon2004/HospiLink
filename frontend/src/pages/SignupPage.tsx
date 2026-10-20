@@ -1,4 +1,5 @@
 // pages/SignupPage.tsx
+import { logger } from '../utils/logger';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiPost } from '../services/api';
@@ -30,7 +31,7 @@ export const SignupPage = () => {
       alert('تم إنشاء الحساب بنجاح!');
       navigate('/login');
     } catch (error: unknown) {
-      console.error("Signup error details:", error);
+      logger.error("Signup error details:", error);
       setError(getErrorMessage(error, '') || 'خطأ في التسجيل: تأكدي من البيانات');
     } finally {
       setLoading(false);
