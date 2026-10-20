@@ -13,7 +13,6 @@ const handleError = (res: Response, error: any, message: string, statusCode: num
   res.status(statusCode).json({
     success: false,
     message,
-    error: error?.message || 'Unknown error'
   });
 };
 

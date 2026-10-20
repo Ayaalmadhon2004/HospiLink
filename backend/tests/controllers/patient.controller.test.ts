@@ -88,9 +88,8 @@ describe('patient.controller', () => {
       await admitPatient(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('السرير غير موجود') })
-      );
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'فشل إدخال المريض' });
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('السرير غير موجود');
     });
 
     it('يرفض إدخال المريض لو السرير مش متاح', async () => {
@@ -107,9 +106,8 @@ describe('patient.controller', () => {
       await admitPatient(req, res);
 
       expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('غير متاح') })
-      );
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'فشل إدخال المريض' });
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('غير متاح');
     });
 
     it('يدخل مريض جديد بنجاح ويحجز السرير (يحوله OCCUPIED)', async () => {

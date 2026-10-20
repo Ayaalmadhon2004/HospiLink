@@ -41,4 +41,17 @@ describe('error.middleware', () => {
       message: 'حدث خطأ غير متوقع في السيرفر',
     });
   });
+
+  it('لا يكشف رسالة الخطأ الداخلية لما يكون status >= 500 أو مفقود', () => {
+    const res = mockResponse();
+
+    errorHandler({ status: 503, message: 'secret db detail' }, mockRequest(), res, mockNext());
+    errorHandler(new Error('secret db detail'), mockRequest(), res, mockNext());
+
+    expect(res.status).toHaveBeenNthCalledWith(1, 503);
+    expect(res.status).toHaveBeenNthCalledWith(2, 500);
+    (res.json as jest.Mock).mock.calls.forEach(([body]) => {
+      expect(body).toEqual({ success: false, message: 'حدث خطأ غير متوقع في السيرفر' });
+    });
+  });
 });

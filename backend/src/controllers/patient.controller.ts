@@ -29,9 +29,7 @@ export const getRecentPatients = async (req: Request, res: Response) => {
     logger.error({ err: error }, "🔥 getRecentPatients error:");
     res.status(500).json({ 
       success: false, 
-      message: 'فشل جلب قائمة المرضى', 
-      error: error.message
-    });
+      message: 'فشل جلب قائمة المرضى' });
   }
 };
 
@@ -116,9 +114,7 @@ export const admitPatient = async (req: Request, res: Response) => {
     logger.error({ err: error }, '🔥 Admit error:');
     res.status(500).json({ 
       success: false, 
-      message: 'فشل إدخال المريض', 
-      error: error.message 
-    });
+      message: 'فشل إدخال المريض' });
   }
 };
 // ============================================
@@ -158,7 +154,7 @@ export const uploadReport = async (req: Request, res: Response) => {
     res.status(201).json({ success: true, message: 'Report uploaded', data: report });
   } catch (error: any) {
     logger.error({ err: error }, 'Upload error:');
-    res.status(500).json({ success: false, message: 'Failed to upload report', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to upload report' });
   }
 };
 
@@ -203,10 +199,10 @@ export const getPatientReports = async (req: Request, res: Response) => {
       data: reports,
     });
   } catch (error: any) {
+    logger.error({ err: error }, 'Get reports error:');
     res.status(500).json({
       success: false,
       message: 'Failed to fetch reports',
-      error: error.message,
     });
   }
 };
@@ -237,7 +233,7 @@ export const getPatientById = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: patient });
   } catch (error: any) {
     logger.error({ err: error }, 'Get patient error:');
-    res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض', error: error.message });
+    res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض' });
   }
 };
 
@@ -314,7 +310,7 @@ export const getPatients = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error({ err: error }, "🔥 Error:");
-    res.status(500).json({ success: false, message: 'فشل جلب المرضى', error: error.message });
+    res.status(500).json({ success: false, message: 'فشل جلب المرضى' });
   }
 };
 
@@ -329,7 +325,8 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
     try {
       beds = await prisma.bed.findMany({ where: { status: 'AVAILABLE' }, orderBy: { bedNumber: 'asc' } });
     } catch (err: any) {
-      return res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة', error: err.message });
+      logger.error({ err }, 'Get available beds error:');
+      return res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
     }
 
     let bedsWithWard: any[] = [];
@@ -364,7 +361,8 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, count: finalBeds.length, data: finalBeds, groupedByWard });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة', error: error.message });
+    logger.error({ err: error }, 'Get available beds error:');
+    res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
   }
 };
 
@@ -384,7 +382,8 @@ export const updatePatient = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: updated });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'فشل تحديث المريض', error: error.message });
+    logger.error({ err: error }, 'Update patient error:');
+    res.status(500).json({ success: false, message: 'فشل تحديث المريض' });
   }
 };
 
@@ -426,6 +425,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: result });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: 'فشل تسريح المريض', error: error.message });
+    logger.error({ err: error }, 'Discharge patient error:');
+    res.status(500).json({ success: false, message: 'فشل تسريح المريض' });
   }
 };

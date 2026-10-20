@@ -165,7 +165,7 @@ export const recordVitals = async (req: Request, res: Response) => {
     });
   } catch (error: any) {
     logger.error({ err: error }, 'Record vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to record vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to record vitals' });
   }
 };
 
@@ -193,7 +193,7 @@ export const getVitals = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, count: vitals.length, data: vitals });
   } catch (error: any) {
     logger.error({ err: error }, 'Get vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vitals' });
   }
 };
 
@@ -219,7 +219,7 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, count: alerts.length, data: alerts });
   } catch (error: any) {
     logger.error({ err: error }, 'Get alerts error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch alerts', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
   }
 };
 
@@ -243,7 +243,7 @@ export const getVitalsById = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: vitals });
   } catch (error: any) {
     logger.error({ err: error }, 'Get vitals by id error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vitals' });
   }
 };
 
@@ -289,7 +289,7 @@ export const updateVitals = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: updated });
   } catch (error: any) {
     logger.error({ err: error }, 'Update vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to update vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to update vitals' });
   }
 };
 
@@ -302,6 +302,6 @@ export const deleteVitals = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });
   } catch (error: any) {
     logger.error({ err: error }, 'Delete vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to delete vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete vitals' });
   }
 };

@@ -186,7 +186,7 @@ export const login = async (req: Request, res: Response) => {
     logger.error({ err: error }, 'Login error:');
     res.status(500).json({
       success: false,
-      message: error.message || 'Login failed',
+      message: 'Login failed',
     });
   }
 };
@@ -210,7 +210,7 @@ export const logout = async (req: Request, res: Response) => {
     logger.error({ err: error }, 'Logout error:');
     res.status(500).json({
       success: false,
-      message: error.message || 'Logout failed',
+      message: 'Logout failed',
     });
   }
 };
@@ -268,7 +268,7 @@ export const getMe = async (req: Request, res: Response) => {
     logger.error({ err: error }, 'GetMe error:');
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to get user',
+      message: 'Failed to get user',
     });
   }
 };
@@ -325,7 +325,7 @@ export const updatePassword = async (req: Request, res: Response) => {
     logger.error({ err: error }, 'UpdatePassword error:');
     res.status(500).json({
       success: false,
-      message: error.message || 'Failed to update password',
+      message: 'Failed to update password',
     });
   }
 };
