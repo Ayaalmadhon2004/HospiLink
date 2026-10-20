@@ -1,8 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Instrument Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
-  --font-display: 'Fraunces', 'IBM Plex Sans Arabic', Georgia, serif;
+  --font-sans: 'Poppins', 'IBM Plex Sans Arabic', system-ui, sans-serif;
 
   /* Brand green. blue and teal are remapped so existing utility classes pick it up. */
   --color-blue-50: #effaf6;
@@ -67,6 +66,6 @@
   h1,
   h2,
   h3 {
-    @apply font-display tracking-tight;
+    @apply tracking-tight;
   }
 }
