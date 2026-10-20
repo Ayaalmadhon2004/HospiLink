@@ -11,6 +11,8 @@ import '@fontsource/poppins/latin-700.css';
 import './index.css';
 import './i18n';
 import { AuthProvider } from './contexts/AuthContext';
+import { initWebVitals } from './utils/webVitals';
+import { registerPwa } from './pwa';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -32,3 +34,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </QueryClientProvider>
   </React.StrictMode>
 );
+
+registerPwa();
+initWebVitals();
