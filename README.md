@@ -1,176 +1,274 @@
 # HospiLink
 
-**Web platform designed to streamline hospital management and patient care coordination.**
+**Hospital management platform for patient flow, bed and ward capacity, vitals monitoring, appointments, incidents, staff scheduling and ambulance dispatch.**
+
+**Live demo:** [hospi-link-liart.vercel.app](https://hospi-link-liart.vercel.app/)
+
+![overview](docs/images/overview.png)
+![patients](docs/images/patients.png)
+![beds and wards](docs/images/beds-wards.png)
 
 ---
 
-## Overview
+## Table of contents
 
-HospiLink is a comprehensive hospital management system built to simplify healthcare operations and enhance the patient experience. The platform features a robust RESTful API backend powered by **Node.js** and **Express.js**, paired with a dynamic, responsive frontend using **React.js**.
-
----
-
-##  Key Features
-
-| Feature | Description |
-|---------|-------------|
-|  **Real-time Patient Flow Tracking** | Monitor bed occupancy, patient admissions, and ward capacity in real time |
-|  **Doctor-Specific Appointment Management** | Book, cancel, and reschedule appointments with intelligent scheduling |
-|  **Electronic Health Records (EHR)** | Centralized patient records with secure access and history tracking |
-|  **Role-Based Access Control** | Granular permissions for doctors, nurses, admins, and reception staff |
-|  **Bilingual UI** | Fully responsive interface supporting Arabic and English |
-|  **Real-Time Notifications** | Live updates via Socket.io for critical alerts and status changes |
-|  **Analytics Dashboard** | Visual insights into hospital operations and resource utilization |
+1. [Features](#features)
+2. [Roadmap / planned](#roadmap--planned)
+3. [Tech stack](#tech-stack)
+4. [Project structure](#project-structure)
+5. [Getting started](#getting-started)
+6. [Roles and permissions](#roles-and-permissions)
+7. [API overview](#api-overview)
+8. [Real-time events](#real-time-events)
+9. [Testing](#testing)
+10. [Deployment](#deployment)
+11. [Security notes](#security-notes)
+12. [Contributing](#contributing)
 
 ---
 
-## Live Demo
+## Features
 
- **Live Link:** [hospi-link-liart.vercel.app](https://hospi-link-liart.vercel.app/)
+Everything below exists in the code today.
 
----
+| Area | What it does |
+|------|--------------|
+| Authentication | Signup, login, logout, current user, password change. JWT in an httpOnly cookie (or `Authorization: Bearer`). Public signup always creates the lowest-privilege role (`NURSE`). |
+| Patients | Admit, list with filters and pagination, view, edit, discharge, recent patients, available beds. Report upload (jpeg, png, pdf, max 5 MB). |
+| Beds and wards | Ward list, bed CRUD and status updates, occupancy shown on the dashboard. |
+| Vitals monitoring | Record, list, update and delete vitals per patient, configurable thresholds, critical alerts, live charts. |
+| Appointments | CRUD, today's schedule, upcoming appointments. |
+| Incidents | Report, update, change status, delete, list active incidents. |
+| Staff and shifts | Staff directory (admin-managed), shift CRUD and a 24 hour shift timeline. |
+| Ambulance dispatch | Units and live status, create calls, assign a unit to a call, unit location updates. |
+| Notifications | Per-user notifications with read, read-all and delete; bell in the UI. |
+| Settings | Per-user profile, notification, security and display settings. |
+| Dashboard | Stat cards, department bars and patient-flow chart (recharts). |
+| Audit log | Most mutating routes are wrapped in `logActivity(...)` and stored in `AuditLog`. |
+| Real-time | Authenticated Socket.io for vitals, appointments, incidents, shifts and dispatch. |
 
-## Tech Stack
+## Roadmap / planned
+
+These were listed in earlier versions of this README but are **not implemented**. Verified against the code: there is no i18n library, no web manifest or service worker, no `web-vitals` package, and no Dockerfile or docker-compose file in the repository.
+
+- Arabic / English bilingual UI (i18n, RTL). The UI is English only.
+- Progressive Web App support (manifest, service worker, offline mode).
+- Web Vitals / performance monitoring.
+- Docker images and docker-compose for the full stack.
+- Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.
+- Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
+- Automated patient queue management.
+- Logistics and resource-utilisation reporting.
+- Working CI/CD: `ci-cd.yml` sits at the repo root, but GitHub only runs workflows from `.github/workflows/`, and it references a Dockerfile that does not exist.
+- Frontend tests, wider zod validation (the auth schema is wired in; the patient schema exists but is not yet used by the controller), and a logger instead of `console.*`.
+- Move uploaded reports to object storage (Render's disk is ephemeral).
+- Deliver `new-notification` socket events (see [Real-time events](#real-time-events)).
+
+## Tech stack
 
 ### Backend
 | Technology | Purpose |
 |------------|---------|
-| **Node.js** | Runtime environment |
-| **Express.js** | Web framework & RESTful API |
-| **TypeScript** | Type-safe development |
-| **Prisma** | ORM for database operations |
-| **PostgreSQL** | Primary database (hosted on Neon) |
-| **Socket.io** | Real-time bidirectional communication |
-| **Docker** | Containerization |
+| Node.js, Express 5 | REST API |
+| TypeScript | Type safety |
+| Prisma 7 (`@prisma/adapter-pg`) | ORM |
+| PostgreSQL (Neon) | Database |
+| Socket.io 4 | Real-time events |
+| zod 4 | Request validation |
+| jsonwebtoken, bcryptjs | Auth and password hashing |
+| helmet, express-rate-limit, cors, compression, cookie-parser | HTTP hardening and performance |
+| multer | File uploads |
+| jest, ts-jest, supertest, jest-mock-extended | Testing |
 
 ### Frontend
 | Technology | Purpose |
 |------------|---------|
-| **React.js** | UI library |
-| **TypeScript** | Type-safe development |
-| **Tailwind CSS** | Utility-first styling |
-| **React Query** | Server state management & caching |
-| **Sonner** | Toast notifications |
-| **Lucide React** | Icon library |
-| **i18n** | Internationalization (Arabic / English) |
+| React 19 + react-router-dom 7 | UI and routing (pages lazy-loaded) |
+| Vite 8 + TypeScript | Build tooling |
+| Tailwind CSS 4 | Styling |
+| TanStack React Query 5 | Server state, optimistic CRUD |
+| axios | HTTP client |
+| socket.io-client | Real-time |
+| recharts | Charts |
+| sonner, lucide-react | Toasts and icons |
 
-### DevOps & Tools
-| Technology | Purpose |
-|------------|---------|
-| **CI/CD Pipeline** | Automated testing & deployment |
-| **Web Vitals** | Performance monitoring |
-| **PWA** | Progressive Web App capabilities |
-
----
-
-## Deliverables
-
-- Automated patient queue management
-- Real-time appointment and bed availability tracking
-- Centralized electronic health records (EHR) system
-- Optimized medical resource allocation and staff scheduling
-- Bilingual patient portal for seamless communication
-- Data-driven logistics reporting
-
----
-
-## Project Structure
+## Project structure
 
 ```
 HospiLink/
 ├── backend/
-│   ├── src/
-│   │   ├── config/          # Database & environment config
-│   │   ├── controllers/     # Route handlers (beds, patients, appointments...)
-│   │   ├── routes/          # Express route definitions
-│   │   ├── middleware/      # Auth, validation, error handling
-│   │   └── types/           # TypeScript interfaces
 │   ├── prisma/
-│   │   └── schema.prisma    # Database schema
-│   └── Dockerfile
-├── frontend/
+│   │   ├── schema.prisma        # Data model
+│   │   └── seed.ts              # Demo data
 │   ├── src/
-│   │   ├── components/      # Reusable UI components
-│   │   ├── pages/           # Route-level pages
-│   │   ├── services/        # API client & data fetching
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── types/           # TypeScript types
-│   └── public/
-└── docker-compose.yml
+│   │   ├── config/              # db.ts (Prisma client), jwt.ts
+│   │   ├── controllers/         # Request handlers (Prisma calls)
+│   │   ├── middlewares/         # auth, audit, error, upload, socket.auth, dispatch.socket
+│   │   ├── routes/              # One file per resource
+│   │   ├── types/               # Shared types
+│   │   ├── validators/          # zod schemas
+│   │   └── server.ts            # App bootstrap, Socket.io, route mounting
+│   ├── tests/                   # jest tests and mocks
+│   ├── uploads/                 # Runtime uploads (git-ignored)
+│   ├── prisma.config.ts
+│   └── jest.config.js
+├── frontend/
+│   ├── public/
+│   ├── src/
+│   │   ├── components/          # UI components (Form/ = generic modal forms)
+│   │   ├── configs/             # entityConfigs.ts (declarative forms)
+│   │   ├── constants/
+│   │   ├── contexts/            # AuthContext
+│   │   ├── hooks/               # useCrud, use*Socket, useSettings ...
+│   │   ├── pages/               # One page per route
+│   │   ├── services/            # axios API layer
+│   │   ├── types/
+│   │   └── App.tsx              # Routes
+│   ├── vercel.json              # SPA rewrite
+│   └── vite.config.ts
+├── docs/
+│   ├── images/                  # README screenshots
+│   └── vitals/DATA_FLOW.md
+├── ci-cd.yml                    # Draft pipeline (not active, see Roadmap)
+└── CLAUDE.md                    # Contributor guidelines
 ```
 
----
-
-## Getting Started
+## Getting started
 
 ### Prerequisites
-- Node.js ≥ 18
-- PostgreSQL (or Neon account)
-- Docker (optional)
+- Node.js 20+ and npm
+- A PostgreSQL database (local, or a free [Neon](https://neon.tech) project)
 
-### Backend Setup
+### Backend
+
 ```bash
 cd backend
 npm install
-# Create .env file (see .env.example)
-npx prisma migrate dev
-npm run dev
+cp .env.example .env        # then fill in real values
+npx prisma generate
+npx prisma db push          # create tables from schema.prisma
+npx prisma db seed          # optional demo data (runs tsx prisma/seed.ts, see prisma.config.ts)
+npm run dev                 # http://localhost:5000
 ```
 
-### Frontend Setup
+The repository does not yet contain a `prisma/migrations` folder, so `db push` is the way to create the schema. Once migrations are added, use `npx prisma migrate dev` (development) and `npx prisma migrate deploy` (production).
+
+Environment variables (`backend/.env`, never commit it):
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | yes | PostgreSQL connection string |
+| `JWT_SECRET` | yes | Long random string. The server refuses to start without it. |
+| `PORT` | no | Defaults to `5000` |
+| `HOSPITAL_ID` | no | Hospital that public signups join. Defaults to the first hospital in the database. |
+| `NODE_ENV` | no | `production` disables dev logging |
+
+Backend scripts: `npm run dev` (tsx watch), `npm run build` (tsc to `dist/`), `npm start` (run `dist/server.js`), `npm test`, `npm run test:watch`, `npm run test:coverage`.
+
+### Frontend
+
 ```bash
 cd frontend
 npm install
-npm run dev
+npm run dev                 # http://localhost:5173
 ```
 
-### Docker (Full Stack)
+Set `VITE_API_URL` (for example `http://localhost:5000`) in `frontend/.env` to point at a local API; otherwise it falls back to the hosted Render API. Scripts: `npm run dev`, `npm run build` (`tsc -b && vite build`), `npm run lint`, `npm run preview`.
+
+The backend CORS allowlist (`allowedOrigins` in `backend/src/server.ts`) must include every frontend origin you use.
+
+## Roles and permissions
+
+Roles come from the database (`protect` reloads the user on every request) and are checked per route with `authorize(...)`.
+
+| Role | Can do |
+|------|--------|
+| `ADMIN` | Everything. Exclusive rights: create/update/delete staff, delete beds, delete shifts, delete vitals. |
+| `DOCTOR` | Admit, view, edit and discharge patients; record and update vitals; create, update and delete appointments; create and update beds; create, update and delete incidents; create and update shifts; create dispatch calls. |
+| `NURSE` | Admit, view and edit patients (no discharge); record and update vitals; create and update appointments; report incidents. Default role for public signup. |
+| `DISPATCHER` | List patients (read-only); update ambulance unit status; create calls and assign units. |
+
+Any authenticated user can read beds, wards, appointments, incidents, staff, shifts, vitals lists and dispatch units, upload patient reports, and use their own notifications and settings.
+
+## API overview
+
+Base path `/api`. Everything except `signup`, `login`, `logout` and the health endpoints requires authentication.
+
+| Resource | Endpoints |
+|----------|-----------|
+| Health | `GET /health`, `GET /api/health` (database check) |
+| Auth `/auth` | `POST /signup`, `POST /login`, `POST /logout`, `GET /me`, `PUT /password` |
+| Patients `/patients` | `POST /admit`, `GET /`, `GET /recent`, `GET /beds/available`, `GET /:id`, `PUT /:id`, `PUT /:id/discharge`, `GET /:id/reports`, `POST /:id/reports` (multipart `reportFile`) |
+| Beds `/beds` | `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id` |
+| Wards `/wards` | `GET /` |
+| Vitals `/vitals` | `POST /`, `GET /`, `GET /alerts`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
+| Appointments `/appointments` | `GET /`, `GET /today`, `GET /upcoming`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id` |
+| Incidents `/incidents` | `GET /`, `GET /active`, `GET /:id`, `POST /`, `PUT /:id`, `PUT /:id/status`, `DELETE /:id` |
+| Staff `/staff` | `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id`; shifts: `GET /shifts`, `GET /shifts/timeline`, `POST /shifts`, `PUT /shifts/:id`, `DELETE /shifts/:id` |
+| Dispatch `/dispatch` | `GET /units`, `GET /units/active`, `PUT /units/:id/status`, `POST /calls`, `POST /calls/:id/assign` |
+| Notifications `/notifications` | `GET /`, `PUT /read-all`, `PUT /:id/read`, `DELETE /:id` |
+| Settings `/settings` | `GET /`, `PUT /profile`, `PUT /notifications`, `PUT /security`, `PUT /display` |
+| Uploads | `GET /uploads/*` (authenticated static files) |
+
+Responses use `{ success, message?, data? }`.
+
+## Real-time events
+
+Socket.io connections must present a valid JWT (`handshake.auth.token` or the `token` cookie); unauthenticated sockets are rejected.
+
+Rooms: `patient-<id>` (client emits `join-room`; ADMIN/DOCTOR/NURSE only), `department-<name>` (`join-department` / `leave-department`), `dispatch-room` (`join-dispatch` / `leave-dispatch`), `unit-<id>` (`track-unit` / `untrack-unit`).
+
+| Event (server to client) | Sent to | Trigger |
+|--------------------------|---------|---------|
+| `new-vital` | `patient-<id>` | Vitals recorded |
+| `appointment-created`, `appointment-updated`, `appointment-cancelled` | all clients | Appointment changes |
+| `incident-created`, `incident-updated`, `incident-status-updated`, `incident-deleted` | all clients | Incident changes |
+| `shift-update`, `shift-delete` | `department-<name>` | Shift changes |
+| `unit-status-update` | `dispatch-room`, `department-<name>` | Unit status change |
+| `new-call`, `critical-alert`, `call-assigned` | `dispatch-room` | Dispatch calls |
+| `unit-assigned` | `unit-<id>` | Unit assigned to a call |
+| `new-notification` | `user-<id>` | Notification created. No handler joins the `user-<id>` room yet, so this is not delivered. |
+
+Client to server: `unit-location-update` (dispatch units).
+
+## Testing
+
 ```bash
-docker-compose up --build
+cd backend
+npm test                # jest; Prisma and Socket.io are mocked, no database needed
+npm run test:coverage
 ```
 
----
+Tests live in `backend/tests/` (controllers, middlewares, validators). The frontend has no automated tests yet; before pushing run `npm run build && npm run lint` in `frontend/`.
 
-## API Endpoints
+## Deployment
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/beds` | List all beds |
-| GET | `/api/beds/:id` | Get bed by ID |
-| POST | `/api/beds` | Create new bed |
-| PUT | `/api/beds/:id` | Update bed |
-| DELETE | `/api/beds/:id` | Delete bed |
-| GET | `/api/patients` | List patients |
-| GET | `/api/wards` | List wards |
+- **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
+- **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so uploaded reports are lost on redeploy until object storage is added.
+- **Database: Neon** PostgreSQL.
 
----
+Auth cookies use `sameSite: none` so the Vercel frontend and the Render API (different sites) can share the session over HTTPS.
 
-## Screenshots
+## Security notes
 
-![overview](image.png)
-![patients](image-1.png)
-![beds and Wards](image-2.png)
----
+- The JWT lives in an httpOnly cookie; the frontend does not keep the token in `localStorage`.
+- `JWT_SECRET` is mandatory; there is no fallback value.
+- Passwords are hashed with bcryptjs (12 rounds). Auth routes are limited to 20 requests per 15 minutes per IP, the whole API to 200 per minute.
+- `helmet` sets security headers and a Content-Security-Policy; CORS is an explicit origin allowlist with credentials.
+- Auth request bodies are validated with zod; signup ignores any client-supplied `role` or `hospitalId`.
+- Roles are loaded from the database on every request, not trusted from the token.
+- Uploads are restricted by type and size, served only to authenticated users with `nosniff`, and are not tracked in git.
+- Socket.io connections require a valid JWT, and joining patient rooms is role-restricted.
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
-
----
+Contributions are welcome. Create a branch (`feat/...`, `fix/...`, `docs/...`, `chore/...`) from `main`, keep PRs small, and open a pull request. See `CLAUDE.md` for conventions.
 
 ## License
 
-This project is licensed under the MIT License.
-
----
+MIT.
 
 ## Links
 
 - **Live:** [hospi-link-liart.vercel.app](https://hospi-link-liart.vercel.app/)
 - **GitHub:** [github.com/Ayaalmadhon2004/HospiLink](https://github.com/Ayaalmadhon2004/HospiLink)
-
----
-
-<p align="center">
-  <strong>Built with ❤️ for better healthcare</strong>
-</p>
