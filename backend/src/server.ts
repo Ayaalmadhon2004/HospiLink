@@ -28,9 +28,11 @@ import { attachDispatchEvents } from './middlewares/dispatch.socket';
 import { socketAuth, hasRole, joinUserRoom } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
 import logger from './config/logger';
+import { initSentry } from './config/sentry';
 import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
 
 dotenv.config();
+initSentry();
 
 const app = express();
 const PORT = parsePort(process.env.PORT);

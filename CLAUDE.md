@@ -59,6 +59,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `JWT_SECRET`    required, long random string; the app must not start without it
 - `PORT`          default 5000
 - `NODE_ENV`      `production` disables dev logging
+- `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
 Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
