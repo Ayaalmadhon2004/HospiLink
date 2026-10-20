@@ -102,6 +102,73 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------
+  # 2b) Real-backend E2E: Playwright -> built frontend -> real API -> throwaway PostgreSQL.
+  #     Separate job (the mocked E2E stays in frontend-ci). See docs/E2E_REAL.md.
+  # ---------------------------------------------------------
+  e2e-real:
+    name: E2E (real backend + PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          # Throwaway credentials for a container that lives only for this job.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hospilink_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hospilink_e2e"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hospilink_e2e
+      # Throwaway value, not a real secret.
+      E2E_JWT_SECRET: ci-e2e-throwaway-jwt-secret
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      - name: Install backend dependencies
+        run: npm ci
+        working-directory: backend
+
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      # The Playwright config applies `prisma migrate deploy`, seeds backend/prisma/seed.e2e.ts
+      # and starts the API and the built frontend itself.
+      - name: Run real-backend E2E tests
+        run: npm run test:e2e:real
+        working-directory: frontend
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-real
+          path: frontend/test-results-real
+          if-no-files-found: ignore
+
+  # ---------------------------------------------------------
   # 3) Deploy الـ backend على Render
   #    بيشتغل بس لما الـ push يكون على main وكل الفحوصات فوق نجحت
   # ---------------------------------------------------------

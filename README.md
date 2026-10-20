@@ -239,6 +239,8 @@ npm run test:coverage
 
 Tests live in `backend/tests/` (controllers, middlewares, validators). The frontend has Vitest tests (`npm test` in `frontend/`); before pushing also run `npm run build && npm run lint` there.
 
+Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the browser) and `npm run test:e2e:real` (real Express API + a throwaway PostgreSQL database; see [docs/E2E_REAL.md](docs/E2E_REAL.md)).
+
 ## Deployment
 
 - **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
