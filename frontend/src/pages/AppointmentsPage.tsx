@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Calendar, Clock, Stethoscope, MapPin, Plus, Search, Trash2, Pencil } from 'lucide-react';
 import { apiGet, apiDelete } from '../services/api';
+import type { ApiResponse } from '../types/api';
 import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
 import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
@@ -73,8 +74,9 @@ export const AppointmentsPage = () => {
 
     try {
       const [todayRes, upcomingRes] = await Promise.allSettled([
-        apiGet('/appointments/today'),
-        apiGet('/appointments/upcoming'),
+        // The endpoint returns either a bare list or { appointments }
+        apiGet<ApiResponse<Appointment[] & { appointments?: Appointment[] }>>('/appointments/today'),
+        apiGet<ApiResponse<Appointment[]>>('/appointments/upcoming'),
       ]);
 
       // ✅ FIX: Handle today's appointments response structure
@@ -110,12 +112,13 @@ export const AppointmentsPage = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchData();
   }, [fetchData]);
 
   useEffect(() => {
     if (!latestUpdate) return;
-    const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
+    const updateId = (latestUpdate as { id?: string } | null)?.id || JSON.stringify(latestUpdate);
     if (updateId === lastSocketId.current) return;
     lastSocketId.current = updateId as string;
     fetchData();

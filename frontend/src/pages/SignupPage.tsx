@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { apiPost } from '../services/api';
+import { getErrorMessage } from '../types/api';
 
 export const SignupPage = () => {
   const [formData, setFormData] = useState({
@@ -28,9 +29,9 @@ export const SignupPage = () => {
       await apiPost('/auth/signup', dataToSend);
       alert('تم إنشاء الحساب بنجاح!');
       navigate('/login');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Signup error details:", error);
-      setError(error.message || 'خطأ في التسجيل: تأكدي من البيانات');
+      setError(getErrorMessage(error, '') || 'خطأ في التسجيل: تأكدي من البيانات');
     } finally {
       setLoading(false);
     }

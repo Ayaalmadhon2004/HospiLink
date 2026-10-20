@@ -2,18 +2,19 @@
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { apiGet } from '../../services/api';
+import { extractList } from '../../types/api';
 import type { FieldConfig } from './types';
 
-interface FieldRendererProps<T = any> {
+interface FieldRendererProps<T = Record<string, unknown>> {
   field: FieldConfig<T>;
-  value: any;
-  setValue: (name: string, value: any) => void;
+  value: unknown;
+  setValue: (name: string, value: unknown) => void;
   formValues: T;
   error?: string;
   disabled?: boolean;
 }
 
-export const FieldRenderer = <T extends Record<string, any>>({
+export const FieldRenderer = <T extends object>({
   field,
   value,
   setValue,
@@ -45,9 +46,9 @@ export const FieldRenderer = <T extends Record<string, any>>({
         endpoint = endpoint.replace(`{${field.dependsOn}}`, String(formValues[field.dependsOn as keyof T]));
       }
       const res = await apiGet(endpoint);
-      const data = res.data?.data || res.data || [];
+      const data = extractList<Record<string, string>>(res);
       setSearchOptions(
-        data.map((item: any) => ({
+        data.map((item) => ({
           label:
             item.name ||
             item.fullName ||
@@ -58,7 +59,7 @@ export const FieldRenderer = <T extends Record<string, any>>({
           value: item.id || item.value || String(item),
         }))
       );
-    } catch (err) {
+    } catch {
       setSearchOptions([]);
     } finally {
       setSearchLoading(false);
@@ -67,9 +68,10 @@ export const FieldRenderer = <T extends Record<string, any>>({
 
   useEffect(() => {
     if (field.type === 'search-select' && field.apiEndpoint) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       fetchOptions();
     }
-  }, [fetchOptions, field.type]);
+  }, [fetchOptions, field.type, field.apiEndpoint]);
 
   const isDisabled =
     formDisabled ||
@@ -179,7 +181,7 @@ export const FieldRenderer = <T extends Record<string, any>>({
       <div className={colSpan}>
         {renderLabel()}
         <select
-          value={value || ''}
+          value={(value as string) || ''}
           onChange={(e) => setValue(field.name, e.target.value)}
           disabled={isDisabled}
           className={`${baseInputClass} appearance-none bg-white`}
@@ -202,7 +204,7 @@ export const FieldRenderer = <T extends Record<string, any>>({
       <div className={colSpan}>
         {renderLabel()}
         <textarea
-          value={value || ''}
+          value={(value as string) || ''}
           onChange={(e) => setValue(field.name, e.target.value)}
           placeholder={field.placeholder}
           rows={field.rows || 3}
@@ -279,7 +281,7 @@ export const FieldRenderer = <T extends Record<string, any>>({
       ? value === undefined || value === null
         ? ''
         : String(value)
-      : value || '';
+      : (value as string) || '';
 
   return (
     <div className={colSpan}>

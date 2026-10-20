@@ -4,6 +4,8 @@ import {
   Users, RefreshCw, Search, Plus, Pencil, Trash2
 } from 'lucide-react';
 import { getStaff, deleteStaff } from '../services/staffService';
+import { extractList } from '../types/api';
+import type { Shift } from '../types/staff';
 import { useStaffSocket } from '../hooks/useStaffSocket';
 import { StaffModal } from '../components/Staff/StaffModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
@@ -18,7 +20,7 @@ interface StaffMember {
   avatar?: string;
   phone?: string;
   isActive: boolean;
-  shifts?: any[];
+  shifts?: Shift[];
 }
 
 export const StaffDirectoryPage = () => {
@@ -44,8 +46,7 @@ export const StaffDirectoryPage = () => {
     try {
       setRefreshing(true);
       const res = await getStaff({ department: selectedDept || undefined });
-      const data = res?.data?.data || res?.data || [];
-      setStaff(Array.isArray(data) ? data : []);
+      setStaff(extractList<StaffMember>(res));
     } catch (err) {
       console.error('Failed to fetch staff:', err);
       setStaff([]);
@@ -56,10 +57,12 @@ export const StaffDirectoryPage = () => {
   }, [selectedDept]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchStaff();
   }, [fetchStaff]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     if (latestShift) fetchStaff();
   }, [latestShift, fetchStaff]);
 

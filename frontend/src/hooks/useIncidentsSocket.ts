@@ -1,12 +1,13 @@
 // frontend/src/hooks/useIncidentsSocket.ts
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import type { Incident } from '../types/incident';
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
 export const useIncidentsSocket = () => {
-  const [latestUpdate, setLatestUpdate] = useState<any>(null);
+  const [latestUpdate, setLatestUpdate] = useState<{ type: 'created' | 'updated' | 'status'; data: Incident } | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {

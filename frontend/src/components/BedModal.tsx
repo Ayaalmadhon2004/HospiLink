@@ -1,6 +1,7 @@
 // components/BedModal.tsx
 import { useEffect, useState, useRef, useCallback } from "react";
 import { apiGet, apiPost, apiPut } from '../services/api';
+import { getErrorMessage, type ApiResponse } from '../types/api';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
 interface Toast {
@@ -49,9 +50,10 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   useEffect(() => {
     const fetchWards = async () => {
       try {
-        const data = await apiGet('/wards');
+        const data = await apiGet<ApiResponse<Ward[]>>('/wards');
         if (data.success) setWards(data.data);
-      } catch (err) {
+      } catch {
+        // Ward list stays empty on failure
       }
     };
     fetchWards();
@@ -60,6 +62,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   // Auto-set status based on patient selection
   useEffect(() => {
     if (selectedPatientId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       setStatus('OCCUPIED');
     } else if (!bed?.patientId) {
       setStatus('AVAILABLE');
@@ -91,7 +94,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     setSaving(true);
 
     try {
-      const body: any = {
+      const body: Record<string, string> = {
         bedNumber,
         wardId,
         status,
@@ -113,9 +116,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
       } else {
         addToast(data.message || 'Failed to save bed', 'error');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving bed:', error);
-      addToast(error.message || 'An unexpected error occurred', 'error');
+      addToast(getErrorMessage(error, 'An unexpected error occurred'), 'error');
     } finally {
       setSaving(false);
     }

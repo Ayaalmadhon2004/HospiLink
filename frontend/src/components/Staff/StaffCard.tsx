@@ -1,5 +1,6 @@
 // frontend/src/components/Staff/StaffCard.tsx
 import { Mail, Phone, Stethoscope, Clock } from 'lucide-react';
+import type { Shift } from '../../types/staff';
 
 interface StaffMember {
   id: string;
@@ -10,7 +11,7 @@ interface StaffMember {
   avatar?: string;
   phone?: string;
   isActive: boolean;
-  shifts?: any[];
+  shifts?: Shift[];
 }
 
 interface StaffCardProps {

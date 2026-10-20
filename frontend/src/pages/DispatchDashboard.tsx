@@ -3,6 +3,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../services/api';
+import type { ApiResponse } from '../types/api';
 import { AlertCircle, X } from 'lucide-react';
 
 interface DispatchUnit {
@@ -35,7 +36,7 @@ const DispatchDashboard: React.FC = () => {
   const { data: unitsData } = useQuery({
     queryKey: ['dispatch-units'],
     queryFn: async () => {
-      const res = await apiGet('/dispatch/units/active');
+      const res = await apiGet<ApiResponse<DispatchUnit[]>>('/dispatch/units/active');
       return res?.data || [];
     },
     refetchInterval: 30000
@@ -56,12 +57,14 @@ const DispatchDashboard: React.FC = () => {
 
   // Update from useQuery
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     if (unitsData) setUnits(unitsData);
   }, [unitsData]);
 
   // Update from socket
   useEffect(() => {
     if (latestUnitUpdate) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       setUnits(prev => prev.map(u => 
         u.id === latestUnitUpdate.unitId 
           ? { ...u, status: latestUnitUpdate.status, eta: latestUnitUpdate.eta }
@@ -73,6 +76,7 @@ const DispatchDashboard: React.FC = () => {
   // Critical alert - show toast instead of alert()
   useEffect(() => {
     if (criticalAlert) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       showToast(`🚨 ${criticalAlert.message}`, 'warning');
     }
   }, [criticalAlert, showToast]);

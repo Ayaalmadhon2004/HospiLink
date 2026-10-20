@@ -1,6 +1,7 @@
 // frontend/src/hooks/useSettings.ts
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPut } from '../services/api';
+import { getErrorMessage, type ApiResponse } from '../types/api';
 
 export interface ProfileSettings {
   id: string;
@@ -47,12 +48,12 @@ const useSettings = () => {
   const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiGet<any>('/settings');
+      const res = await apiGet<UserSettings & { data?: UserSettings }>('/settings');
       setSettings(res.data || res);
       setError(null);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Settings fetch error:', err);
-      setError(err.message || 'Failed to fetch settings');
+      setError(getErrorMessage(err, 'Failed to fetch settings'));
     } finally {
       setLoading(false);
     }
@@ -61,12 +62,12 @@ const useSettings = () => {
   // Update profile (name, department, shift)
   const updateProfile = async (data: Partial<ProfileSettings>) => {
     try {
-      const res = await apiPut('/settings/profile', data);
+      const res = await apiPut<ApiResponse<{ data: Partial<ProfileSettings> }>>('/settings/profile', data);
       setSettings(prev => prev ? { ...prev, profile: { ...prev.profile, ...res.data.data } } : null);
       return { success: true, data: res.data.data };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update profile error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: getErrorMessage(err, '') };
     }
   };
 
@@ -75,9 +76,9 @@ const useSettings = () => {
       await apiPut('/settings/notifications', data);
       setSettings(prev => prev ? { ...prev, notifications: { ...prev.notifications, ...data } } : null);
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update notifications error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: getErrorMessage(err, '') };
     }
   };
 
@@ -86,9 +87,9 @@ const useSettings = () => {
       await apiPut('/settings/security', data);
       setSettings(prev => prev ? { ...prev, security: { ...prev.security, ...data } } : null);
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update security error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: getErrorMessage(err, '') };
     }
   };
 
@@ -97,13 +98,14 @@ const useSettings = () => {
       await apiPut('/settings/display', data);
       setSettings(prev => prev ? { ...prev, display: { ...prev.display, ...data } } : null);
       return { success: true };
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Update display error:', err);
-      return { success: false, error: err.message };
+      return { success: false, error: getErrorMessage(err, '') };
     }
   };
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchSettings();
   }, [fetchSettings]);
 

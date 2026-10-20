@@ -1,8 +1,9 @@
 // frontend/src/components/Staff/ShiftTimeline.tsx
 import { Users } from 'lucide-react';
+import type { Shift } from '../../types/staff';
 
 interface ShiftTimelineProps {
-  timeline: Record<string, any[]> | null;
+  timeline: Record<string, Shift[]> | null;
 }
 
 const SHIFT_COLORS: Record<string, string> = {

@@ -33,7 +33,8 @@ export const signup = async (userData: {
 export const logout = async () => {
   try {
     await apiPost('/auth/logout');
-  } catch (err) {
+  } catch {
+    // Logout is best-effort: the redirect below happens regardless
   }
   // الكوكي بيتمسح من السيرفر عبر /auth/logout
   // ✅ redirect للـ login

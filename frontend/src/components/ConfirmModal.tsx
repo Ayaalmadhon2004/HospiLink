@@ -29,7 +29,8 @@ export const ConfirmModal = ({
     try {
       await onConfirm();
       onClose();
-    } catch (err) {
+    } catch {
+      // Errors are surfaced by the caller's onConfirm handler
     } finally {
       setConfirming(false);
     }

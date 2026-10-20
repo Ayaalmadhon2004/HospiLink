@@ -235,7 +235,7 @@ const useDashboardData = () => {
         departmentLoads,
       });
 
-    } catch (err) {
+    } catch {
       if (signal?.aborted) return;
       setError('Failed to load dashboard data. Please try again.');
     } finally {
@@ -249,6 +249,7 @@ const useDashboardData = () => {
   useEffect(() => {
     const controller = new AbortController();
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchData(controller.signal);
 
     const interval = setInterval(() => {
@@ -326,7 +327,7 @@ const Dashboard = () => {
 
   // ─── Render Content ───────────────────────────────────────────────
   const renderContent = useMemo(() => {
-    let content: React.ReactNode = null;
+    let content: React.ReactNode;
     switch (activeItem) {
       case 'Patients':
         content = <PatientsPage />;

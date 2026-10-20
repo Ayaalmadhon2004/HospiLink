@@ -14,6 +14,11 @@ export interface UnitUpdate {
   timestamp: Date;
 }
 
+export interface CriticalAlert {
+  message: string;
+  [key: string]: unknown;
+}
+
 export interface DispatchCall {
   callId: string;
   type: string;
@@ -26,7 +31,7 @@ export const useDispatchSocket = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [latestUnitUpdate, setLatestUnitUpdate] = useState<UnitUpdate | null>(null);
   const [latestCall, setLatestCall] = useState<DispatchCall | null>(null);
-  const [criticalAlert, setCriticalAlert] = useState<any>(null);
+  const [criticalAlert, setCriticalAlert] = useState<CriticalAlert | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
@@ -60,14 +65,15 @@ export const useDispatchSocket = () => {
       setLatestCall(data);
     });
 
-    newSocket.on('critical-alert', (data: any) => {
+    newSocket.on('critical-alert', (data: CriticalAlert) => {
       setCriticalAlert(data);
     });
 
-    newSocket.on('call-assigned', (data: any) => {
+    newSocket.on('call-assigned', (data: UnitUpdate) => {
       setLatestUnitUpdate(data);
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     setSocket(newSocket);
 
     return () => {

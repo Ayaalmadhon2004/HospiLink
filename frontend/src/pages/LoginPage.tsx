@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from 'react';
 import { Activity } from 'lucide-react';
 import { login } from '../services/authService';
+import { getErrorMessage } from '../types/api';
 import { Link } from 'react-router-dom';
 
 export const LoginPage = () => {
@@ -29,8 +30,8 @@ export const LoginPage = () => {
       } else {
         setError(data.message || 'Login failed');
       }
-    } catch (err: any) {
-      setError(err.message || 'Login failed. Please check your credentials.');
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, '') || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
