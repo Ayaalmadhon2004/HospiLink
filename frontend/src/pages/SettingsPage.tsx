@@ -1,7 +1,9 @@
 // frontend/src/pages/SettingsPage.tsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import useSettings, { type DisplaySettings } from '../hooks/useSettings';
 import { Bell, Shield, Monitor, User, Loader2, Check } from 'lucide-react';
+import { isSupported } from '../i18n';
 
 const Toggle: React.FC<{
   enabled: boolean;
@@ -18,14 +20,15 @@ const Toggle: React.FC<{
     aria-label={label}
   >
     <span
-      className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-        enabled ? 'translate-x-5' : 'translate-x-0'
+      className={`absolute top-1 start-1 w-5 h-5 bg-white rounded-full transition-transform ${
+        enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
       }`}
     />
   </button>
 );
 
 const SettingsPage: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const { settings, loading: settingsLoading, updateProfile, updateNotifications, updateSecurity, updateDisplay } = useSettings();
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
@@ -38,7 +41,7 @@ const SettingsPage: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex items-center gap-3 text-gray-400">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading settings...</span>
+          <span>{t('settings.loading')}</span>
         </div>
       </div>
     );
@@ -48,7 +51,7 @@ const SettingsPage: React.FC = () => {
     return (
       <div className="p-8">
         <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          Failed to load settings. Please refresh the page.
+          {t('settings.loadError')}
         </div>
       </div>
     );
@@ -63,7 +66,7 @@ const SettingsPage: React.FC = () => {
     const result = await updateFn({ [key]: !currentValue });
     setSaving(false);
     if (result.success) {
-      setSaveMessage('Saved successfully');
+      setSaveMessage(t('settings.saved'));
       setTimeout(() => setSaveMessage(''), 3000);
     }
   };
@@ -77,7 +80,7 @@ const SettingsPage: React.FC = () => {
     });
     setSaving(false);
     if (result.success) {
-      setSaveMessage('Profile updated');
+      setSaveMessage(t('settings.profileUpdated'));
       setProfileEdit({ name: '', department: '', shift: '' });
       setTimeout(() => setSaveMessage(''), 3000);
     }
@@ -85,7 +88,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t('settings.title')}</h1>
 
       {saveMessage && (
         <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-2" role="alert">
@@ -98,11 +101,11 @@ const SettingsPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <User className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Profile</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{t('settings.profile.title')}</h2>
         </div>
-        <div className="grid grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profile.fullName')}</label>
             <input
               type="text"
               defaultValue={settings.profile.name}
@@ -111,7 +114,7 @@ const SettingsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profile.role')}</label>
             <input
               type="text"
               value={settings.profile.role}
@@ -120,7 +123,7 @@ const SettingsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profile.email')}</label>
             <input
               type="email"
               value={settings.profile.email}
@@ -129,7 +132,7 @@ const SettingsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profile.department')}</label>
             <input
               type="text"
               defaultValue={settings.profile.department}
@@ -138,7 +141,7 @@ const SettingsPage: React.FC = () => {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.profile.shift')}</label>
             <input
               type="text"
               defaultValue={settings.profile.shift}
@@ -152,7 +155,7 @@ const SettingsPage: React.FC = () => {
               disabled={saving}
               className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition"
             >
-              {saving ? 'Saving...' : 'Save Profile'}
+              {saving ? t('common.saving') : t('settings.profile.save')}
             </button>
           </div>
         </div>
@@ -162,62 +165,62 @@ const SettingsPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <Bell className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{t('settings.notifications.title')}</h2>
         </div>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Critical vitals alerts</h3>
-              <p className="text-sm text-gray-500">Push alerts when a patient enters a critical range.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.notifications.criticalVitalsAlerts.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.notifications.criticalVitalsAlerts.description')}</p>
             </div>
             <Toggle
               enabled={settings.notifications.criticalVitalsAlerts}
               onChange={() => handleToggle('criticalVitalsAlerts', settings.notifications.criticalVitalsAlerts, updateNotifications)}
-              label="Toggle critical vitals alerts"
+              label={t('settings.notifications.criticalVitalsAlerts.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Incident escalations</h3>
-              <p className="text-sm text-gray-500">Notify when an incident upgrades to Code Orange or higher.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.notifications.incidentEscalations.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.notifications.incidentEscalations.description')}</p>
             </div>
             <Toggle
               enabled={settings.notifications.incidentEscalations}
               onChange={() => handleToggle('incidentEscalations', settings.notifications.incidentEscalations, updateNotifications)}
-              label="Toggle incident escalation notifications"
+              label={t('settings.notifications.incidentEscalations.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Shift reminders</h3>
-              <p className="text-sm text-gray-500">Remind assigned staff 30 minutes before shift starts.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.notifications.shiftReminders.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.notifications.shiftReminders.description')}</p>
             </div>
             <Toggle
               enabled={settings.notifications.shiftReminders}
               onChange={() => handleToggle('shiftReminders', settings.notifications.shiftReminders, updateNotifications)}
-              label="Toggle shift reminders"
+              label={t('settings.notifications.shiftReminders.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Dispatch alerts</h3>
-              <p className="text-sm text-gray-500">Notify on new dispatch assignments.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.notifications.dispatchAlerts.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.notifications.dispatchAlerts.description')}</p>
             </div>
             <Toggle
               enabled={settings.notifications.dispatchAlerts}
               onChange={() => handleToggle('dispatchAlerts', settings.notifications.dispatchAlerts, updateNotifications)}
-              label="Toggle dispatch alerts"
+              label={t('settings.notifications.dispatchAlerts.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Appointment reminders</h3>
-              <p className="text-sm text-gray-500">Notify patients and staff of upcoming appointments.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.notifications.appointmentReminders.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.notifications.appointmentReminders.description')}</p>
             </div>
             <Toggle
               enabled={settings.notifications.appointmentReminders}
               onChange={() => handleToggle('appointmentReminders', settings.notifications.appointmentReminders, updateNotifications)}
-              label="Toggle appointment reminders"
+              label={t('settings.notifications.appointmentReminders.toggle')}
             />
           </div>
         </div>
@@ -227,40 +230,40 @@ const SettingsPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <Shield className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Security & Display</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{t('settings.security.title')}</h2>
         </div>
         <div className="space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Two-factor authentication</h3>
-              <p className="text-sm text-gray-500">Require a verification code on new device sign-ins.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.security.twoFactorAuth.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.security.twoFactorAuth.description')}</p>
             </div>
             <Toggle
               enabled={settings.security.twoFactorAuth}
               onChange={() => handleToggle('twoFactorAuth', settings.security.twoFactorAuth, updateSecurity)}
-              label="Toggle two-factor authentication"
+              label={t('settings.security.twoFactorAuth.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Auto-lock idle sessions</h3>
-              <p className="text-sm text-gray-500">Lock the dashboard after 10 minutes of inactivity.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.security.autoLockIdleSessions.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.security.autoLockIdleSessions.description')}</p>
             </div>
             <Toggle
               enabled={settings.security.autoLockIdleSessions}
               onChange={() => handleToggle('autoLockIdleSessions', settings.security.autoLockIdleSessions, updateSecurity)}
-              label="Toggle auto-lock idle sessions"
+              label={t('settings.security.autoLockIdleSessions.toggle')}
             />
           </div>
           <div className="border-t pt-6 flex items-center justify-between">
             <div>
-              <h3 className="font-medium text-gray-800">Compact density</h3>
-              <p className="text-sm text-gray-500">Reduce spacing to fit more information on screen.</p>
+              <h3 className="font-medium text-gray-800">{t('settings.security.compactDensity.title')}</h3>
+              <p className="text-sm text-gray-500">{t('settings.security.compactDensity.description')}</p>
             </div>
             <Toggle
               enabled={settings.security.compactDensity}
               onChange={() => handleToggle('compactDensity', settings.security.compactDensity, updateSecurity)}
-              label="Toggle compact density"
+              label={t('settings.security.compactDensity.toggle')}
             />
           </div>
         </div>
@@ -270,34 +273,37 @@ const SettingsPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center gap-3 mb-6">
           <Monitor className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Display</h2>
+          <h2 className="text-lg font-semibold text-gray-800">{t('settings.display.title')}</h2>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.display.theme')}</label>
             <select
               value={settings.display.theme}
               onChange={(e) => updateDisplay({ theme: e.target.value as DisplaySettings['theme'] })}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
             >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
+              <option value="light">{t('settings.display.light')}</option>
+              <option value="dark">{t('settings.display.dark')}</option>
+              <option value="system">{t('settings.display.system')}</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.display.language')}</label>
             <select
-              value={settings.display.language}
-              onChange={(e) => updateDisplay({ language: e.target.value })}
+              value={isSupported(i18n.language) ? i18n.language : settings.display.language}
+              onChange={(e) => {
+                updateDisplay({ language: e.target.value });
+                if (isSupported(e.target.value)) void i18n.changeLanguage(e.target.value);
+              }}
               className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
             >
               <option value="en">English</option>
-              <option value="ar">Arabic</option>
+              <option value="ar">العربية</option>
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.display.timezone')}</label>
             <input
               type="text"
               value={settings.display.timezone}

@@ -1,5 +1,6 @@
 // frontend/src/pages/Dispatch/DispatchDashboard.tsx
 import React, { useEffect, useState, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../services/api';
@@ -24,6 +25,7 @@ interface Toast {
 }
 
 const DispatchDashboard: React.FC = () => {
+  const { t } = useTranslation();
   const {
     isConnected,
     latestUnitUpdate,
@@ -47,12 +49,12 @@ const DispatchDashboard: React.FC = () => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prev => prev.filter(item => item.id !== id));
     }, 8000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts(prev => prev.filter(item => item.id !== id));
   }, []);
 
   // Update from useQuery
@@ -102,9 +104,9 @@ const DispatchDashboard: React.FC = () => {
     <div className="p-6 bg-gray-50 min-h-screen">
       {/* Toast Notifications */}
       <div 
-        className="fixed top-4 right-4 z-50 space-y-2"
+        className="fixed top-4 end-4 z-50 space-y-2"
         role="region"
-        aria-label="Notifications"
+        aria-label={t('common.notifications')}
       >
         {toasts.map((toast) => (
           <div
@@ -123,8 +125,8 @@ const DispatchDashboard: React.FC = () => {
             <span className="text-sm font-medium">{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
-              className="ml-2 text-current opacity-50 hover:opacity-100"
-              aria-label="Dismiss notification"
+              className="ms-2 text-current opacity-50 hover:opacity-100"
+              aria-label={t('dispatch.dismiss')}
             >
               <X size={14} />
             </button>
@@ -133,46 +135,46 @@ const DispatchDashboard: React.FC = () => {
       </div>
 
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Dispatch</h1>
+        <h1 className="text-2xl font-bold text-gray-800">{t('dispatch.title')}</h1>
         <div 
           className={`flex items-center gap-2 px-3 py-1 rounded-full ${isConnected ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}
           role="status"
-          aria-label={`Connection status: ${isConnected ? 'Live feed' : 'Disconnected'}`}
+          aria-label={t('dispatch.connectionStatus', { status: isConnected ? t('dispatch.liveFeed') : t('dispatch.disconnected') })}
         >
           <span className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} aria-hidden="true"></span>
-          {isConnected ? 'Live feed' : 'Disconnected'}
+          {isConnected ? t('dispatch.liveFeed') : t('dispatch.disconnected')}
         </div>
       </div>
 
-      <div className="grid grid-cols-4 gap-4 mb-6">
-        <StatCard title="Units Active" value={stats.active} />
-        <StatCard title="En Route" value={stats.enRoute} />
-        <StatCard title="On Scene" value={stats.onScene} />
-        <StatCard title="Available" value={stats.available} />
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <StatCard title={t('dispatch.stats.active')} value={stats.active} />
+        <StatCard title={t('dispatch.stats.enRoute')} value={stats.enRoute} />
+        <StatCard title={t('dispatch.stats.onScene')} value={stats.onScene} />
+        <StatCard title={t('dispatch.stats.available')} value={stats.available} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-gray-800">Active Units</h2>
-            <p className="text-sm text-gray-500">Live fleet coordination</p>
+            <h2 className="text-lg font-semibold text-gray-800">{t('dispatch.activeUnits')}</h2>
+            <p className="text-sm text-gray-500">{t('dispatch.fleetCoordination')}</p>
           </div>
           <span className="text-sm text-teal-600 flex items-center gap-1">
             <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse" aria-hidden="true"></span>
-            Live feed
+            {t('dispatch.liveFeed')}
           </span>
         </div>
 
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-left text-gray-500 text-sm border-b">
-                <th scope="col" className="pb-3 font-medium">UNIT</th>
-                <th scope="col" className="pb-3 font-medium">CALL</th>
-                <th scope="col" className="pb-3 font-medium">DESTINATION</th>
-                <th scope="col" className="pb-3 font-medium">CREW</th>
-                <th scope="col" className="pb-3 font-medium">ETA</th>
-                <th scope="col" className="pb-3 font-medium">STATUS</th>
+              <tr className="text-start text-gray-500 text-sm border-b">
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.unit')}</th>
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.call')}</th>
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.destination')}</th>
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.crew')}</th>
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.eta')}</th>
+                <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.status')}</th>
               </tr>
             </thead>
             <tbody>
@@ -185,7 +187,7 @@ const DispatchDashboard: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-800">{unit.unitCode}</p>
-                        <p className="text-xs text-gray-500">{unit.unitType}</p>
+                        <p className="text-xs text-gray-500">{t(`dispatch.unitTypes.${unit.unitType}`, { defaultValue: unit.unitType })}</p>
                       </div>
                     </div>
                   </td>
@@ -196,15 +198,15 @@ const DispatchDashboard: React.FC = () => {
                     <p className="text-gray-700">{unit.destination || '—'}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.crew.join(', ')}</p>
+                    <p className="text-gray-700">{unit.crew.join(t('common.listSeparator'))}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.eta ? `${unit.eta} min` : '—'}</p>
+                    <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { n: unit.eta }) : '—'}</p>
                   </td>
                   <td className="py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
-                      <span className="mr-1" aria-hidden="true">●</span>
-                      {unit.status.replace('_', ' ')}
+                      <span className="me-1" aria-hidden="true">●</span>
+                      {t(`dispatch.status.${unit.status}`, { defaultValue: unit.status.replace('_', ' ') })}
                     </span>
                   </td>
                 </tr>
