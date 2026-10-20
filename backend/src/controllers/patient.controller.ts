@@ -5,8 +5,6 @@ import logger from '../config/logger';
 import { randomUUID } from 'crypto';
 import type { Bed, PatientStatus, Prisma } from '@prisma/client';
 
-// protect() only sets { id, email, role }; older code also read a `userId` claim that is never set.
-type LegacyTokenUser = { userId?: string };
 type BedWithWard = Bed & { ward?: { id: string; name: string } | null };
 
 const PATIENT_CODE_BASE = 2040;
@@ -86,7 +84,7 @@ export const admitPatient = async (req: Request, res: Response) => {
   const { name, age, gender, department, diagnosis, bedId, hospitalId, doctorId } = req.body;
 
   try {
-    const userId = (req.user as LegacyTokenUser | undefined)?.userId || req.user?.id;
+    const userId = req.user?.id; // set by protect()
     
     if (!userId) {
       return res.status(401).json({ 
@@ -205,7 +203,7 @@ export const uploadReport = async (req: Request, res: Response) => {
         fileType: req.file.mimetype,
         fileData: new Uint8Array(req.file.buffer),
         patientId: patientId,
-        uploadedBy: (req.user as LegacyTokenUser | undefined)?.userId,
+        uploadedBy: req.user?.id, // set by protect(); the old `userId` claim was never set, so this was always empty
       },
     });
     const { fileData: _fileData, ...report } = created;

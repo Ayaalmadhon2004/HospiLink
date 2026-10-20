@@ -453,6 +453,7 @@ describe('patient.controller', () => {
       prismaMock.report.create.mockImplementation(async ({ data }: any) => ({ ...data, createdAt: new Date() }));
       const req = mockRequest({
         params: { id: 'p1' },
+        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' },
         file: { originalname: 'xray.pdf', mimetype: 'application/pdf', buffer: Buffer.from('%PDF') },
       } as any);
       const res = mockResponse();
@@ -460,6 +461,7 @@ describe('patient.controller', () => {
       await uploadReport(req, res);
 
       const data = prismaMock.report.create.mock.calls[0][0].data as any;
+      expect(data.uploadedBy).toBe('u1'); // who uploaded it, from req.user.id
       expect(data.fileData).toBeInstanceOf(Uint8Array);
       expect(data.fileUrl).toBe(`/api/patients/reports/${data.id}/file`);
       expect(res.status).toHaveBeenCalledWith(201);
