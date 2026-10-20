@@ -34,6 +34,20 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 };
 
 // ============================================
+// GET /api/patients/critical-count
+// عدد المرضى بحالة CRITICAL (للـ badge في الـ Sidebar)
+// ============================================
+export const getCriticalPatientCount = async (_req: Request, res: Response) => {
+  try {
+    const count = await prisma.patient.count({ where: { status: 'CRITICAL' } });
+    res.status(200).json({ success: true, data: { count } });
+  } catch (error) {
+    logger.error({ err: error }, 'getCriticalPatientCount error:');
+    res.status(500).json({ success: false, message: 'Failed to fetch critical patients count' });
+  }
+};
+
+// ============================================
 // POST /api/patients/admit
 // ============================================
 // Business-rule failure inside the admit transaction: safe to show to the client.

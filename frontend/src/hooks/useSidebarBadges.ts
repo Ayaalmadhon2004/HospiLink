@@ -4,7 +4,7 @@ import { getTodaySchedule } from '../services/appointmentsService';
 import { apiGet } from '../services/api';
 import type { ApiResponse } from '../types/api';
 
-export type BadgeItemId = 'Patients' | 'Appointments' | 'Incidents';
+export type BadgeItemId = 'Patients' | 'Appointments' | 'Vitals' | 'Incidents';
 
 const STALE_TIME = 60_000;
 
@@ -12,6 +12,7 @@ const STALE_TIME = 60_000;
 export const BADGE_ROLES: Record<BadgeItemId, readonly string[]> = {
   Patients: ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER'],
   Appointments: ['ADMIN', 'DOCTOR', 'NURSE'],
+  Vitals: ['ADMIN', 'DOCTOR', 'NURSE'],
   Incidents: ['ADMIN', 'DOCTOR', 'NURSE'],
 };
 
@@ -52,6 +53,14 @@ export const useSidebarBadges = (role?: string): Record<BadgeItemId, string | nu
     staleTime: STALE_TIME,
     retry: false,
   });
+  const vitals = useQuery({
+    queryKey: ['sidebar-badge', 'patients-critical'],
+    queryFn: async () =>
+      (await apiGet<ApiResponse<{ count?: number }>>('/patients/critical-count')).data?.count ?? null,
+    enabled: canSeeBadge('Vitals', role),
+    staleTime: STALE_TIME,
+    retry: false,
+  });
   const incidents = useQuery({
     queryKey: ['sidebar-badge', 'incidents-active'],
     queryFn: async () =>
@@ -64,6 +73,7 @@ export const useSidebarBadges = (role?: string): Record<BadgeItemId, string | nu
   return {
     Patients: patients.isSuccess ? formatBadge(patients.data) : null,
     Appointments: appointments.isSuccess ? formatBadge(appointments.data) : null,
+    Vitals: vitals.isSuccess ? formatBadge(vitals.data) : null,
     Incidents: incidents.isSuccess ? formatBadge(incidents.data) : null,
   };
 };

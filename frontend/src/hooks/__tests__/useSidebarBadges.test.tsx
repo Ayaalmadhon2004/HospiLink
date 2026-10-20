@@ -33,7 +33,9 @@ describe('formatBadge', () => {
 });
 
 describe('canSeeBadge', () => {
-  it('limits appointments and incidents to ADMIN/DOCTOR/NURSE', () => {
+  it('limits appointments, vitals and incidents to ADMIN/DOCTOR/NURSE', () => {
+    expect(canSeeBadge('Vitals', 'DISPATCHER')).toBe(false);
+    expect(canSeeBadge('Vitals', 'DOCTOR')).toBe(true);
     expect(canSeeBadge('Appointments', 'DISPATCHER')).toBe(false);
     expect(canSeeBadge('Incidents', 'DISPATCHER')).toBe(false);
     expect(canSeeBadge('Incidents', 'NURSE')).toBe(true);
@@ -54,14 +56,16 @@ describe('useSidebarBadges', () => {
     vi.mocked(appointmentsService.getTodaySchedule).mockResolvedValue({
       data: { appointments: [{}, {}, {}] as never[] },
     });
-    vi.mocked(api.apiGet).mockResolvedValue({ data: { total: 0 } });
+    vi.mocked(api.apiGet).mockImplementation((async (url: string) =>
+      url === '/patients/critical-count' ? { data: { count: 5 } } : { data: { total: 0 } }) as never);
   });
 
   it('renders nothing while loading, then real counts (zero hidden)', async () => {
     const { result } = renderHook(() => useSidebarBadges('ADMIN'), { wrapper });
-    expect(result.current).toEqual({ Patients: null, Appointments: null, Incidents: null });
+    expect(result.current).toEqual({ Patients: null, Appointments: null, Vitals: null, Incidents: null });
     await waitFor(() => expect(result.current.Patients).toBe('1.2k'));
     await waitFor(() => expect(result.current.Appointments).toBe('3'));
+    await waitFor(() => expect(result.current.Vitals).toBe('5'));
     expect(result.current.Incidents).toBeNull();
   });
 
@@ -71,7 +75,18 @@ describe('useSidebarBadges', () => {
     expect(appointmentsService.getTodaySchedule).not.toHaveBeenCalled();
     expect(api.apiGet).not.toHaveBeenCalled();
     expect(result.current.Appointments).toBeNull();
+    expect(result.current.Vitals).toBeNull();
     expect(result.current.Incidents).toBeNull();
+  });
+
+  it('hides the vitals badge when the critical count request fails', async () => {
+    vi.mocked(api.apiGet).mockImplementation((async (url: string) => {
+      if (url === '/patients/critical-count') throw new Error('boom');
+      return { data: { total: 2 } };
+    }) as never);
+    const { result } = renderHook(() => useSidebarBadges('NURSE'), { wrapper });
+    await waitFor(() => expect(result.current.Incidents).toBe('2'));
+    expect(result.current.Vitals).toBeNull();
   });
 
   it('renders nothing on error', async () => {

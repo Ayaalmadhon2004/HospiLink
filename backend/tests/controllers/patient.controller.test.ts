@@ -2,6 +2,7 @@ import { prismaMock } from '../mocks/prisma';
 import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getRecentPatients,
+  getCriticalPatientCount,
   admitPatient,
   getPatientById,
   getPatients,
@@ -41,6 +42,29 @@ describe('patient.controller', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true, count: 2, data: patients })
       );
+    });
+  });
+
+  describe('getCriticalPatientCount', () => {
+    it('returns the number of CRITICAL patients', async () => {
+      prismaMock.patient.count.mockResolvedValue(4);
+      const res = mockResponse();
+
+      await getCriticalPatientCount(mockRequest(), res);
+
+      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL' } });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: { count: 4 } });
+    });
+
+    it('returns 500 without leaking the error message', async () => {
+      prismaMock.patient.count.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+
+      await getCriticalPatientCount(mockRequest(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
     });
   });
 

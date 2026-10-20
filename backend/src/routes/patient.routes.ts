@@ -3,7 +3,8 @@ import {
   admitPatient, 
   uploadReport, 
   getRecentPatients,
-  getPatients,        
+  getCriticalPatientCount,
+  getPatients,       
   getPatientById,     
   updatePatient,      
   dischargePatient,    
@@ -60,6 +61,18 @@ router.get(
   protect, 
   authorize('DOCTOR', 'NURSE', 'ADMIN'), 
   getRecentPatients
+);
+
+// ============================================
+// GET /api/patients/critical-count
+// عدد المرضى الحرجين - DOCTOR, NURSE, ADMIN (no input, so no validator)
+// ⚠️ MUST be BEFORE /:id route!
+// ============================================
+router.get(
+  '/critical-count',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  getCriticalPatientCount
 );
 
 // ============================================
