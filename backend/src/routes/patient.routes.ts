@@ -83,6 +83,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN', 'DISPATCHER'),
   validate({ query: listPatientsQuerySchema }),
+  logActivity('LIST_PATIENTS'),
   getPatients
 );
 
@@ -97,6 +98,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   validate({ params: idParams }),
+  logActivity('VIEW_PATIENT'),
   getPatientById
 );
 
@@ -105,6 +107,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   validate({ params: idParams }),
+  logActivity('VIEW_PATIENT_REPORTS'),
   getPatientReports
 );
 
