@@ -25,7 +25,7 @@ import notificationRoutes from './routes/notifications.routes';
 import { protect } from './middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
-import { socketAuth, hasRole, joinUserRoom } from './middlewares/socket.auth';
+import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
 import logger from './config/logger';
 import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
@@ -111,14 +111,19 @@ io.on('connection', (socket: Socket) => {
     socket.join(`patient-${patientId}`);
   });
 
-  socket.on('join-department', (department: string) => {
+  joinClinicalRoom(socket);
+
+  socket.on('join-department', (department: unknown) => {
+    if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return;
+    if (typeof department !== 'string' || !department || department.length > 64) return;
     socket.join(`department-${department}`);
     if (isDev) {
       logger.debug({ department }, 'Socket joined department');
     }
   });
 
-  socket.on('leave-department', (department: string) => {
+  socket.on('leave-department', (department: unknown) => {
+    if (typeof department !== 'string' || !department || department.length > 64) return;
     socket.leave(`department-${department}`);
     if (isDev) {
       logger.debug({ department }, 'Socket left department');

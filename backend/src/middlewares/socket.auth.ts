@@ -72,3 +72,12 @@ export const joinUserRoom = (socket: Socket): string | null => {
   socket.join(room);
   return room;
 };
+
+// غرفة الطاقم السريري: نفس الأدوار المسموح لها بالـ REST لمواعيد وحوادث المرضى
+export const CLINICAL_ROOM = 'clinical-staff';
+
+export const joinClinicalRoom = (socket: Socket): boolean => {
+  if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return false;
+  socket.join(CLINICAL_ROOM);
+  return true;
+};

@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import { createNotification } from './notifications.controller';
 import logger from '../config/logger';
 
@@ -104,7 +105,7 @@ export const createIncident = async (req: Request, res: Response) => {
       },
     });
 
-    io.emit('incident-created', incident);
+    io.to(CLINICAL_ROOM).emit('incident-created', incident);
 
     // Notify all connected users about new incident
     await createNotification({
@@ -139,7 +140,7 @@ export const updateIncident = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    io.emit('incident-updated', incident);
+    io.to(CLINICAL_ROOM).emit('incident-updated', incident);
     res.status(200).json({ success: true, data: incident });
   } catch (error: any) {
     handleError(res, error, 'Failed to update incident');
@@ -161,7 +162,7 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    io.emit('incident-status-updated', incident);
+    io.to(CLINICAL_ROOM).emit('incident-status-updated', incident);
 
     // Notify when incident is resolved
     if (status === 'RESOLVED') {
@@ -187,7 +188,7 @@ export const deleteIncident = async (req: Request, res: Response) => {
 
     await prisma.incident.delete({ where: { id } });
 
-    io.emit('incident-deleted', { id });
+    io.to(CLINICAL_ROOM).emit('incident-deleted', { id });
     res.status(200).json({ success: true, message: 'Incident deleted successfully' });
   } catch (error: any) {
     handleError(res, error, 'Failed to delete incident');

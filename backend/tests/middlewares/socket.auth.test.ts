@@ -121,3 +121,20 @@ describe('joinUserRoom', () => {
     expect(socket.join).not.toHaveBeenCalled();
   });
 });
+
+describe('joinClinicalRoom', () => {
+  const { joinClinicalRoom, CLINICAL_ROOM } = require('../../src/middlewares/socket.auth');
+  const sockWith = (role: string) => ({ data: { user: { id: 'u1', role } }, join: jest.fn() }) as any;
+
+  it.each(['ADMIN', 'DOCTOR', 'NURSE'])('يضم %s لغرفة الطاقم السريري', (role) => {
+    const s = sockWith(role);
+    expect(joinClinicalRoom(s)).toBe(true);
+    expect(s.join).toHaveBeenCalledWith(CLINICAL_ROOM);
+  });
+
+  it('ما يضم DISPATCHER', () => {
+    const s = sockWith('DISPATCHER');
+    expect(joinClinicalRoom(s)).toBe(false);
+    expect(s.join).not.toHaveBeenCalled();
+  });
+});
