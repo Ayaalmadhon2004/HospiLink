@@ -1,17 +1,72 @@
 @import "tailwindcss";
 
 @theme {
-  --font-sans: 'Poppins', sans-serif;
+  --font-sans: 'Instrument Sans', 'IBM Plex Sans Arabic', system-ui, sans-serif;
+  --font-display: 'Fraunces', 'IBM Plex Sans Arabic', Georgia, serif;
 
-  /* تعريف الألوان بأسماء واضحة ليتمكن Tailwind من استخدامها */
-  --color-hospital-navy: #1e293b;
-  --color-medical-teal: #2dd4bf;
-  --color-clinic-bg: #f8fafc;
-  --color-clinic-text: #0f172a;
+  /* Brand green. blue and teal are remapped so existing utility classes pick it up. */
+  --color-blue-50: #effaf6;
+  --color-blue-100: #d6f2e8;
+  --color-blue-200: #aee4d1;
+  --color-blue-300: #7ccfb6;
+  --color-blue-400: #4ab59a;
+  --color-blue-500: #2a9a80;
+  --color-blue-600: #0f7a64;
+  --color-blue-700: #0f5c4d;
+  --color-blue-800: #0d4a3f;
+  --color-blue-900: #0b3c34;
+  --color-blue-950: #06241f;
+  --color-teal-50: #effaf6;
+  --color-teal-100: #d6f2e8;
+  --color-teal-200: #aee4d1;
+  --color-teal-300: #7ccfb6;
+  --color-teal-400: #4ab59a;
+  --color-teal-500: #2a9a80;
+  --color-teal-600: #0f7a64;
+  --color-teal-700: #0f5c4d;
+  --color-teal-800: #0d4a3f;
+  --color-teal-900: #0b3c34;
+  --color-teal-950: #06241f;
+
+  /* Warm neutrals instead of the cold default gray/slate. */
+  --color-gray-50: #faf8f4;
+  --color-gray-100: #f3f0ea;
+  --color-gray-200: #e7e2d9;
+  --color-gray-300: #d4cec2;
+  --color-gray-400: #a39d92;
+  --color-gray-500: #78726a;
+  --color-gray-600: #5c574f;
+  --color-gray-700: #45413b;
+  --color-gray-800: #2e2b27;
+  --color-gray-900: #1e1c19;
+  --color-gray-950: #12110f;
+  --color-slate-50: #faf8f4;
+  --color-slate-100: #f3f0ea;
+  --color-slate-200: #e7e2d9;
+  --color-slate-300: #d4cec2;
+  --color-slate-400: #a39d92;
+  --color-slate-500: #78726a;
+  --color-slate-600: #5c574f;
+  --color-slate-700: #45413b;
+  --color-slate-800: #2e2b27;
+  --color-slate-900: #1e1c19;
+  --color-slate-950: #12110f;
+
+  --color-hospital-navy: #0b3c34;
+  --color-medical-teal: #2a9a80;
+  --color-clinic-bg: #faf8f4;
+  --color-clinic-text: #1e1c19;
 }
 
 @layer base {
   body {
-    @apply bg-clinic-bg text-clinic-text font-sans;
+    @apply bg-clinic-bg text-clinic-text font-sans antialiased;
+    font-feature-settings: 'tnum' 1;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display tracking-tight;
   }
 }
