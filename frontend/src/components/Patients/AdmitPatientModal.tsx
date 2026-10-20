@@ -23,7 +23,7 @@ const DEPARTMENTS = [
   'General',
 ] as const;
 
-const GENDERS = ['MALE', 'FEMALE', 'OTHER'] as const;
+const GENDERS = ['MALE', 'FEMALE'] as const;
 
 // ─── Types ──────────────────────────────────────────────────────────
 interface FormData {
