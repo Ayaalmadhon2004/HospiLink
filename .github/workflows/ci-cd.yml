@@ -45,10 +45,7 @@ jobs:
       # The backend has no lint script, so there is no lint step here.
 
       - name: Build (TypeScript)
-        # TODO: tsc fails with TS6059 (tests/ is outside rootDir 'src'); a separate PR
-        # fixes tsconfig. Remove continue-on-error once that PR is merged.
         run: npm run build
-        continue-on-error: true
 
       - name: Run tests
         run: npm test
@@ -82,15 +79,13 @@ jobs:
         run: npm ci
 
       - name: Lint
-        # TODO: lint currently fails; the ESLint fix PR addresses it.
-        # Remove continue-on-error once that PR is merged.
         run: npm run lint
-        continue-on-error: true
 
       - name: Build
         run: npm run build
 
-      # The frontend has no test script yet, so there is no test step here.
+      - name: Run tests
+        run: npm test
 
   # ---------------------------------------------------------
   # 3) Deploy الـ backend على Render
@@ -107,27 +102,15 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-          cache-dependency-path: backend/package-lock.json
-
-      - name: Install backend dependencies
-        working-directory: backend
-        run: npm ci
-
-      - name: Run database migrations (Prisma)
-        working-directory: backend
-        run: npx prisma migrate deploy
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      # No prisma/migrations folder yet (schema is applied with `prisma db push`),
+      # so there is nothing for CI to migrate. Add a migrate step once migrations exist.
 
       - name: Trigger Render Deploy Hook
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
-          if [ -z "${{ secrets.RENDER_DEPLOY_HOOK_URL }}" ]; then
-            echo "RENDER_DEPLOY_HOOK_URL secret مش مضاف، بلش أضيفه من إعدادات الريبو." >&2
-            exit 1
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL secret is not set; skipping (Render auto-deploys from main)."
+            exit 0
           fi
-          curl -fsS -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
