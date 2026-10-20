@@ -173,7 +173,7 @@ describe('pages in Arabic', () => {
     renderPage(<DispatchDashboard />);
     expect(screen.getByRole('heading', { name: 'الإسعاف' })).toBeInTheDocument();
     expect(await screen.findByText('سيارة إسعاف')).toBeInTheDocument();
-    expect(screen.getByText(`${UNIT_ETA} دقيقة`)).toBeInTheDocument();
+    expect(screen.getByText(`${UNIT_ETA} دقائق`)).toBeInTheDocument();
     expect(screen.getAllByText('بث مباشر').length).toBeGreaterThan(0);
   });
 
