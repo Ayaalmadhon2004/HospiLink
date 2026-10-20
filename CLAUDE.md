@@ -49,7 +49,7 @@ Frontend (`cd frontend`):
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
 - `npm run lint`           eslint (currently clean)
-- `npm test`               vitest (44 tests)
+- `npm test`               vitest (46 tests)
 - `npm run preview`        serves build on :4173
 - `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
                            First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
@@ -124,7 +124,6 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 Open:
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
-- Some `console.*` calls remain in the frontend (33 calls in 13 files under `frontend/src`; none in `backend/src`); use a logger.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; no real-backend E2E).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).

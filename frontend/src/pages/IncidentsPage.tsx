@@ -1,4 +1,5 @@
 // pages/IncidentsPage.tsx
+import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   AlertTriangle,
@@ -96,7 +97,7 @@ export const IncidentsPage = () => {
       const res = await getIncidents();
       setIncidents(res?.data || []);
     } catch (err) {
-      console.error('Failed to fetch incidents:', err);
+      logger.error('Failed to fetch incidents:', err);
     } finally {
       setLoading(false);
       isFetching.current = false;
@@ -132,7 +133,7 @@ export const IncidentsPage = () => {
       await updateIncidentStatus(id, newStatus, progress);
       fetchIncidents();
     } catch (err) {
-      console.error('Failed to update status:', err);
+      logger.error('Failed to update status:', err);
     } finally {
       setUpdatingStatus(null);
     }
