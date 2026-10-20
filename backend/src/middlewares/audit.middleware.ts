@@ -12,7 +12,7 @@ export const logActivity = (action: string) => {
           data: {
             action,
             userId,
-            entityId: req.body.patientId || req.params.id || 'N/A',
+            entityId: req.body?.patientId || req.params.id || 'N/A',
             details: `User ${userId} performed ${action} on ${req.originalUrl}`
           }
         });

@@ -80,3 +80,24 @@ describe('audit.middleware - logActivity', () => {
     expect(next).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('audit.middleware - logActivity on read requests', () => {
+  it('يسجل VIEW_PATIENT حتى لو req.body undefined (طلب GET)', async () => {
+    const req = mockRequest({
+      user: { id: 'user-1', email: 'a@a.com', role: 'NURSE' },
+      params: { id: 'patient-9' },
+      originalUrl: '/api/patients/patient-9',
+    } as any);
+    (req as any).body = undefined;
+
+    prismaMock.auditLog.create.mockResolvedValue({} as any);
+    const next = mockNext();
+
+    await logActivity('VIEW_PATIENT')(req, mockResponse(), next);
+
+    expect(prismaMock.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ action: 'VIEW_PATIENT', entityId: 'patient-9' }),
+    });
+    expect(next).toHaveBeenCalledTimes(1);
+  });
+});
