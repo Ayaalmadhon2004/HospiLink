@@ -4,6 +4,26 @@ import prisma from '../config/db';
 import logger from '../config/logger';
 import { randomUUID } from 'crypto';
 
+const PATIENT_CODE_BASE = 2040;
+const MAX_CODE_ATTEMPTS = 10;
+
+const isPatientCodeConflict = (error: unknown): boolean => {
+  const e = error as { code?: string; meta?: { target?: unknown } };
+  return e?.code === 'P2002' && String(e.meta?.target ?? 'patientCode').includes('patientCode');
+};
+
+// Next free number: above both the row count and the highest existing PT-<n>,
+// so deleted or seeded rows can't make the count-based guess collide.
+const nextPatientNumber = async (): Promise<number> => {
+  const count = await prisma.patient.count();
+  const agg = await prisma.patient.aggregate({
+    _max: { patientCode: true },
+    where: { patientCode: { startsWith: 'PT-' } },
+  });
+  const highest = Number(agg?._max?.patientCode?.slice(3));
+  return Math.max(PATIENT_CODE_BASE + count, Number.isFinite(highest) ? highest : 0) + 1;
+};
+
 // ============================================
 // GET /api/patients/recent
 // ============================================
@@ -91,44 +111,54 @@ export const admitPatient = async (req: Request, res: Response) => {
 
     const effectiveHospitalId = hospitalId || userFromDB.hospitalId;
 
-    const count = await prisma.patient.count();
-    const patientCode = `PT-${2040 + count + 1}`;
+    const firstNumber = await nextPatientNumber();
 
-    const result = await prisma.$transaction(async (tx) => {
-      let validBedId = null;
-      
-      if (bedId) {
-        const bed = await tx.bed.findUnique({ where: { id: bedId } });
-        if (!bed) throw new AdmitError('السرير غير موجود', 404);
-        if (bed.status !== 'AVAILABLE') throw new AdmitError('السرير غير متاح حالياً', 400);
-        validBedId = bedId;
-      }
+    let result;
+    for (let attempt = 0; ; attempt++) {
+      const patientCode = `PT-${firstNumber + attempt}`;
+      try {
+        result = await prisma.$transaction(async (tx) => {
+          let validBedId = null;
 
-      const patientData: any = {
-        patientCode,
-        name,
-        age: parseInt(age),
-        gender,
-        department,
-        diagnosis,
-        status: 'OBSERVATION',
-        hospitalId: effectiveHospitalId, 
-      };
+          if (bedId) {
+            const bed = await tx.bed.findUnique({ where: { id: bedId } });
+            if (!bed) throw new AdmitError('السرير غير موجود', 404);
+            if (bed.status !== 'AVAILABLE') throw new AdmitError('السرير غير متاح حالياً', 400);
+            validBedId = bedId;
+          }
 
-      if (validBedId) patientData.bedId = validBedId;
-      if (doctorId) patientData.doctorId = doctorId;
+          const patientData: any = {
+            patientCode,
+            name,
+            age: parseInt(age),
+            gender,
+            department,
+            diagnosis,
+            status: 'OBSERVATION',
+            hospitalId: effectiveHospitalId,
+          };
 
-      const newPatient = await tx.patient.create({ data: patientData });
+          if (validBedId) patientData.bedId = validBedId;
+          if (doctorId) patientData.doctorId = doctorId;
 
-      if (validBedId) {
-        await tx.bed.update({
-          where: { id: bedId },
-          data: { status: 'OCCUPIED' }
+          const newPatient = await tx.patient.create({ data: patientData });
+
+          if (validBedId) {
+            await tx.bed.update({
+              where: { id: bedId },
+              data: { status: 'OCCUPIED' }
+            });
+          }
+
+          return newPatient;
         });
+        break;
+      } catch (error) {
+        // Concurrent admits can pick the same number; the unique index rejects one, so retry with the next.
+        if (isPatientCodeConflict(error) && attempt < MAX_CODE_ATTEMPTS - 1) continue;
+        throw error;
       }
-
-      return newPatient;
-    });
+    }
 
     res.status(201).json({ success: true, data: result });
   } catch (error: any) {
