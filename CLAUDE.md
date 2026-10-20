@@ -31,7 +31,7 @@ frontend/
   src/services/            axios API layer (api.ts = instance + interceptors)
   src/contexts/AuthContext.tsx
 docs/                      design notes (docs/vitals/DATA_FLOW.md)
-ci-cd.yml                  intended GitHub Actions pipeline (see "Known issues")
+ci-cd.yml (.github/workflows)  GitHub Actions pipeline (see "Known issues")
 ```
 
 ## Commands
@@ -41,14 +41,15 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (140 tests, no DB needed: Prisma is mocked)
+- `npm test`               jest (231 tests, no DB needed: Prisma is mocked)
 - `npm run test:coverage`  current coverage ~82% statements
 
 Frontend (`cd frontend`):
 - `npm install`
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
-- `npm run lint`           eslint (currently ~143 errors, mostly `no-explicit-any`)
+- `npm run lint`           eslint (currently clean)
+- `npm test`               vitest (36 tests)
 - `npm run preview`        serves build on :4173
 
 ## Environment variables
@@ -113,19 +114,17 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 - Backend tests live in `backend/tests/**` mirroring `src/`. Prisma and socket.io are mocked via
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
-- Frontend has no tests yet. Preferred stack when adding: Vitest + Testing Library; Playwright for E2E.
+- Frontend uses Vitest (few tests so far). Add Testing Library for components and Playwright for E2E.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 
 ## Known issues / priorities (keep this list current)
 
 Open:
-- `ci-cd.yml` is at repo root; GitHub only runs workflows from `.github/workflows/`. It also references a
-  Dockerfile and docker-compose.yml that do not exist.
+- `.github/workflows/ci-cd.yml` still has `continue-on-error: true` on the lint and build steps, so they never fail the pipeline.
 - No `prisma/migrations` folder yet (schema is applied with `prisma db push`).
-- ESLint reports ~143 errors; ~213 `any` usages; ~76 `console.*` calls (use a logger).
+- Some `console.*` calls remain in the code (use a logger).
 - zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
-- `new-notification` is emitted to `user-<id>` but no socket handler joins that room.
-- Uploads live on Render's ephemeral disk (move to S3/Cloudinary). No frontend tests.
+- Uploads live on Render's ephemeral disk (move to S3/Cloudinary). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
@@ -133,7 +132,11 @@ Fixed on main (do not reintroduce): `.env.example` holds placeholders only; `JWT
 public signup ignores `role`/`hospitalId`; staff, shifts, reports and `/uploads` require auth; Socket.io
 requires a JWT (`socketAuth`); the token is no longer kept in `localStorage` (httpOnly cookie);
 `backend/uploads/` contents are untracked; both `package-lock.json` files are committed; README was
-rewritten and stray root files and "Muraqib" wording were removed.
+rewritten and stray root files and "Muraqib" wording were removed; zod validation is wired into every
+resource route (patients included); `new-notification` reaches users through the `user-<id>` room joined in
+`socketAuth`; vitals with missing metrics no longer produce NaN; list requests no longer send
+`status=undefined` (use `toQueryString()` from `types/api.ts` for query strings, never raw `URLSearchParams`
+with possibly-undefined values); the patient admit form offers only MALE/FEMALE (the `Gender` enum).
 
 ## Working rules for Claude
 
