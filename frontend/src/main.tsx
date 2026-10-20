@@ -12,6 +12,7 @@ import './index.css';
 import './i18n';
 import { AuthProvider } from './contexts/AuthContext';
 import { initWebVitals } from './utils/webVitals';
+import { registerPwa } from './pwa';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,4 +35,5 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
   </React.StrictMode>
 );
 
+registerPwa();
 initWebVitals();
