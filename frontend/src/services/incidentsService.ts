@@ -1,5 +1,7 @@
 // frontend/src/services/incidentsService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
+import type { ApiResponse } from '../types/api';
+import type { CreateIncidentData, Incident } from '../types/incident';
 
 export const getIncidents = (params?: {
   status?: string;
@@ -7,18 +9,18 @@ export const getIncidents = (params?: {
   type?: string;
 }) => {
   const query = params
-    ? '?' + new URLSearchParams(params as any).toString()
+    ? '?' + new URLSearchParams(params as Record<string, string>).toString()
     : '';
-  return apiGet(`/incidents${query}`);
+  return apiGet<ApiResponse<Incident[]>>(`/incidents${query}`);
 };
 
 export const getActiveIncidents = () => apiGet('/incidents?status=ACTIVE');
 
 export const getIncidentById = (id: string) => apiGet(`/incidents/${id}`);
 
-export const createIncident = (data: any) => apiPost('/incidents', data);
+export const createIncident = (data: CreateIncidentData) => apiPost('/incidents', data);
 
-export const updateIncident = (id: string, data: any) =>
+export const updateIncident = (id: string, data: CreateIncidentData) =>
   apiPut(`/incidents/${id}`, data);
 
 export const updateIncidentStatus = (

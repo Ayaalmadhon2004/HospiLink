@@ -1,5 +1,6 @@
 // frontend/src/services/api.ts
 import axios from 'axios';
+import type { ApiResponse, QueryParams } from '../types/api';
 const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
 
 // ============================================
@@ -51,27 +52,27 @@ api.interceptors.response.use(
 // MODERN HTTP METHODS
 // ============================================
 
-export const apiGet = async <T = any>(url: string, params?: Record<string, any>): Promise<T> => {
+export const apiGet = async <T = ApiResponse>(url: string, params?: QueryParams): Promise<T> => {
   const response = await api.get(url, { params });
   return response.data;
 };
 
-export const apiPost = async <T = any>(url: string, body?: any): Promise<T> => {
+export const apiPost = async <T = ApiResponse>(url: string, body?: unknown): Promise<T> => {
   const response = await api.post(url, body);
   return response.data;
 };
 
-export const apiPut = async <T = any>(url: string, body?: any): Promise<T> => {
+export const apiPut = async <T = ApiResponse>(url: string, body?: unknown): Promise<T> => {
   const response = await api.put(url, body);
   return response.data;
 };
 
-export const apiPatch = async <T = any>(url: string, body?: any): Promise<T> => {
+export const apiPatch = async <T = ApiResponse>(url: string, body?: unknown): Promise<T> => {
   const response = await api.patch(url, body);
   return response.data;
 };
 
-export const apiDelete = async <T = any>(url: string): Promise<T> => {
+export const apiDelete = async <T = ApiResponse>(url: string): Promise<T> => {
   const response = await api.delete(url);
   return response.data;
 };
@@ -80,7 +81,7 @@ export const apiDelete = async <T = any>(url: string): Promise<T> => {
 // FILE UPLOAD METHOD
 // ============================================
 
-export const apiUpload = async <T = any>(url: string, formData: FormData): Promise<T> => {
+export const apiUpload = async <T = ApiResponse>(url: string, formData: FormData): Promise<T> => {
   const response = await api.post(url, formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -127,7 +128,8 @@ export const apiFetch = async (url: string, options: RequestInit = {}) => {
       json: async () => response.data,
       text: async () => JSON.stringify(response.data),
     };
-  } catch (error: any) {
+  } catch (caught: unknown) {
+    const error = caught as { response?: { status?: number; data?: unknown }; message?: string };
     return {
       ok: false,
       status: error.response?.status || 500,

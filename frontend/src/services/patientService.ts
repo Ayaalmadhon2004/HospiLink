@@ -1,27 +1,29 @@
 // services/patientService.ts
 import { apiFetch, apiGet, apiPost, apiPut } from './api';
+import type { ApiResponse, Pagination, QueryParams } from '../types/api';
+import type { Patient, PatientDetail, PatientReport, RecentPatient } from '../types/patient';
 
-export const getPatients = async (params?: any) => {
+export const getPatients = async (params?: QueryParams) => {
   const queryString = params 
     ? '?' + new URLSearchParams(params as Record<string, string>).toString() 
     : '';
 
-  return await apiGet(`/patients${queryString}`);
+  return await apiGet<ApiResponse<Patient[]> & { pagination?: Pagination }>(`/patients${queryString}`);
 };
 
 export const getRecentPatients = async () => {
-  return await apiGet('/patients/recent');
+  return await apiGet<ApiResponse<RecentPatient[]>>('/patients/recent');
 };
 
 export const getPatientById = async (id: string) => {
-  return await apiGet(`/patients/${id}`);
+  return await apiGet<ApiResponse<PatientDetail>>(`/patients/${id}`);
 };
 
-export const admitPatient = async (data: any) => {
+export const admitPatient = async (data: Partial<Patient>) => {
   return await apiPost('/patients/admit', data);
 };
 
-export const updatePatient = async (id: string, data: any) => {
+export const updatePatient = async (id: string, data: Partial<Patient>) => {
   return await apiPut(`/patients/${id}`, data);
 };
 
@@ -39,7 +41,7 @@ export const uploadReport = async (file: File, patientId: string) => {
 };
 
 export const getPatientReports = async (patientId: string) => {
-  return await apiGet(`/patients/${patientId}/reports`);
+  return await apiGet<ApiResponse<PatientReport[]>>(`/patients/${patientId}/reports`);
 };
 
 export const getAvailableBeds = async (department?: string) => {

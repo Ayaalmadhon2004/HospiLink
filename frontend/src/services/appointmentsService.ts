@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
+import type { ApiResponse, QueryParams } from '../types/api';
 
 export interface Appointment {
   id: string;
@@ -37,14 +38,14 @@ export interface CreateAppointmentData {
   duration?: number;
 }
 
-export const getAppointments = (params?: Record<string, any>) => 
+export const getAppointments = (params?: QueryParams) => 
   apiGet('/appointments', params);
 
 export const getTodaySchedule = () => 
-  apiGet('/appointments/today');
+  apiGet<ApiResponse<{ appointments?: Appointment[] }>>('/appointments/today');
 
 export const getUpcomingAppointments = () => 
-  apiGet('/appointments/upcoming');
+  apiGet<ApiResponse<Appointment[]>>('/appointments/upcoming');
 
 export const getAppointmentById = (id: string) => 
   apiGet(`/appointments/${id}`);

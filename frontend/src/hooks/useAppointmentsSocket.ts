@@ -1,12 +1,18 @@
 // frontend/src/hooks/useAppointmentsSocket.ts
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
+import type { Appointment } from '../services/appointmentsService';
+
+interface AppointmentUpdate {
+  type: 'created' | 'updated' | 'cancelled';
+  data: Appointment;
+}
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
 export const useAppointmentsSocket = () => {
-  const [latestUpdate, setLatestUpdate] = useState<any>(null);
+  const [latestUpdate, setLatestUpdate] = useState<AppointmentUpdate | null>(null);
   const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
