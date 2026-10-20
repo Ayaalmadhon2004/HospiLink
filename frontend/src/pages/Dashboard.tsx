@@ -12,6 +12,7 @@ import { getTodaySchedule } from '../services/appointmentsService';
 import { getStaff } from '../services/staffService';
 import { getBeds } from '../services/bedService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
+import { useAuth } from '../contexts/AuthContext';
 
 // ✅ Lazy-loaded tabs — code-split per page
 import { lazy, Suspense } from 'react';
@@ -41,6 +42,13 @@ const VALID_TABS = [
 ] as const;
 
 type TabName = typeof VALID_TABS[number];
+
+const getGreeting = (date: Date): string => {
+  const hour = date.getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 18) return 'Good afternoon';
+  return 'Good evening';
+};
 
 // ─── Interfaces ─────────────────────────────────────────────────────
 interface Patient {
@@ -79,6 +87,8 @@ interface DashboardStats {
   todaySchedule: TodayAppointment[];
   staffCount: number;
   bedOccupancy: number;
+  totalBeds: number;
+  occupiedBeds: number;
   departmentLoads: DepartmentLoad[];
 }
 
@@ -92,13 +102,6 @@ const DEPARTMENT_COLORS: Record<string, string> = {
   Maternity: 'purple',
   Cardiology: 'teal',
   General: 'gray',
-};
-
-const APPOINTMENT_TYPE_COLORS: Record<string, string> = {
-  SURGERY: 'bg-red-50 text-red-700 border-red-200',
-  CONSULTATION: 'bg-teal-50 text-teal-700 border-teal-200',
-  IMAGING: 'bg-blue-50 text-blue-700 border-blue-200',
-  FOLLOW_UP: 'bg-amber-50 text-amber-700 border-amber-200',
 };
 
 const APPOINTMENT_TYPE_DOTS: Record<string, string> = {
@@ -141,7 +144,7 @@ const EmptyState = memo(({ message }: { message: string }) => (
 
 const CrisisDispatchCard = memo(({ onOpen }: { onOpen: () => void }) => (
   <section 
-    className="bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl shadow-sm p-6 text-white"
+    className="bg-blue-800 rounded-lg p-6 text-white"
     aria-labelledby="crisis-dispatch-heading"
   >
     <h2 id="crisis-dispatch-heading" className="text-lg font-bold mb-2">Crisis Dispatch</h2>
@@ -163,6 +166,8 @@ const useDashboardData = () => {
     todaySchedule: [],
     staffCount: 0,
     bedOccupancy: 0,
+    totalBeds: 0,
+    occupiedBeds: 0,
     departmentLoads: [],
   });
   const [loading, setLoading] = useState(true);
@@ -232,6 +237,8 @@ const useDashboardData = () => {
         todaySchedule,
         staffCount: staff.length,
         bedOccupancy,
+        totalBeds,
+        occupiedBeds,
         departmentLoads,
       });
 
@@ -285,11 +292,14 @@ const Dashboard = () => {
     todaySchedule,
     staffCount,
     bedOccupancy,
+    totalBeds,
+    occupiedBeds,
     departmentLoads,
     loading,
     error,
     refetch,
   } = useDashboardData();
+  const { user } = useAuth();
 
   // Persist active tab
   useEffect(() => {
@@ -305,17 +315,13 @@ const Dashboard = () => {
     });
   }, []);
 
-  const getTypeColor = useCallback((type: string) => {
-    return APPOINTMENT_TYPE_COLORS[type] || 'bg-gray-50 text-gray-700';
-  }, []);
-
   const getTypeDot = useCallback((type: string) => {
     return APPOINTMENT_TYPE_DOTS[type] || 'bg-gray-400';
   }, []);
 
   // ─── SEO: Document Title ──────────────────────────────────────────
   useEffect(() => {
-    document.title = `${activeItem} | Muraqib Hospital Dashboard`;
+    document.title = `${activeItem} | HospiLink`;
   }, [activeItem]);
 
   // ─── Handle Sidebar Click ─────────────────────────────────────────
@@ -365,62 +371,57 @@ const Dashboard = () => {
   }, [activeItem]);
 
   // ─── Overview Panel ───────────────────────────────────────────────
+  const firstName = user?.name?.replace(/^dr\.?\s+/i, '').split(' ')[0] ?? '';
+  const now = new Date();
+  const greeting = getGreeting(now);
+  const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+
   const OverviewPanel = useMemo(() => (
     <div className="space-y-6">
       {/* Header */}
-      <header className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Operations Overview</h1>
-          <p className="text-gray-500 text-sm mt-1">Real-time hospital metrics and activity</p>
-        </div>
+      <header>
+        <p className="text-sm text-gray-500">
+          {dateLabel}
+        </p>
+        <h1 className="text-2xl font-semibold text-gray-900 mt-1">
+          {greeting}{firstName ? `, ${firstName}` : ''}
+        </h1>
       </header>
 
       {/* Error Banner */}
       {error && <ErrorBanner message={error} onRetry={refetch} />}
 
-      {/* Stats Grid */}
-      <section 
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+      {/* Stats: bed occupancy leads, the rest support it */}
+      <section
+        className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4"
         aria-label="Key statistics"
       >
-        <StatCard 
-          title="Active Patients" 
-          value={patients.length.toString()} 
-          trend="+12%" 
-          trendUp={true}
-          icon="users"
-        />
-        <StatCard 
-          title="Bed Occupancy" 
-          value={`${bedOccupancy}%`} 
-          trend={`${bedOccupancy > 80 ? '+' : '-'}${Math.abs(bedOccupancy - 75)}%`} 
-          trendUp={bedOccupancy > 75}
-          icon="bed"
-        />
-        <StatCard 
-          title="Avg. Wait Time" 
-          value="18m" 
-          trend="-3m" 
-          trendUp={true}
-          icon="clock"
-        />
-        <StatCard 
-          title="Staff On Duty" 
-          value={loading ? '...' : staffCount.toString()} 
-          trend="-2" 
-          trendUp={false}
-          icon="staff"
-        />
+        <div className="sm:col-span-3 lg:col-span-1 bg-blue-800 text-white rounded-lg p-6">
+          <h3 className="text-xs font-medium uppercase tracking-wider text-blue-200">Bed occupancy</h3>
+          <p className="text-5xl font-semibold mt-3">{loading ? '...' : `${bedOccupancy}%`}</p>
+          <p className="text-sm text-blue-100 mt-2">
+            {loading ? '' : `${occupiedBeds} of ${totalBeds} beds in use`}
+          </p>
+          <div className="mt-4 h-1.5 w-full rounded-full bg-white/20">
+            <div
+              className="h-1.5 rounded-full bg-white transition-all duration-500"
+              style={{ width: `${bedOccupancy}%` }}
+            />
+          </div>
+        </div>
+        <StatCard title="Patients" value={loading ? '...' : patients.length.toString()} hint="recently admitted" />
+        <StatCard title="Appointments" value={loading ? '...' : todaySchedule.length.toString()} hint="scheduled today" />
+        <StatCard title="Staff" value={loading ? '...' : staffCount.toString()} hint="registered members" />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Department Load */}
         <section 
-          className="lg:col-span-2 bg-white rounded-xl shadow-sm border p-6"
+          className="lg:col-span-2 bg-white rounded-lg border border-gray-200 p-6"
           aria-labelledby="dept-load-heading"
         >
           <div className="flex justify-between items-center mb-6">
-            <h2 id="dept-load-heading" className="text-lg font-bold text-gray-900">Department Load</h2>
+            <h2 id="dept-load-heading" className="text-base font-semibold text-gray-900">Department Load</h2>
           </div>
           <div className="space-y-4">
             {loading ? (
@@ -445,11 +446,11 @@ const Dashboard = () => {
         <div className="space-y-4">
           {/* Today's Schedule */}
           <section 
-            className="bg-white rounded-xl shadow-sm border p-6"
+            className="bg-white rounded-lg border border-gray-200 p-6"
             aria-labelledby="schedule-heading"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 id="schedule-heading" className="text-lg font-bold text-gray-900">Today's Schedule</h2>
+              <h2 id="schedule-heading" className="text-base font-semibold text-gray-900">Today's Schedule</h2>
               <button 
                 onClick={() => setActiveItem('Appointments')}
                 className="text-teal-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded px-1"
@@ -462,11 +463,11 @@ const Dashboard = () => {
             {loading ? (
               <LoadingSpinner />
             ) : todaySchedule.length > 0 ? (
-              <ul className="space-y-3" role="list" aria-label="Today's appointments">
+              <ul className="divide-y divide-gray-100" role="list" aria-label="Today's appointments">
                 {todaySchedule.slice(0, 5).map((apt) => (
                   <li 
                     key={apt.id} 
-                    className={`flex items-center gap-3 p-3 rounded-lg border-l-4 ${getTypeColor(apt.type)}`}
+                    className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
                   >
                     <div className="flex-shrink-0">
                       <span className={`w-2 h-2 rounded-full ${getTypeDot(apt.type)} block`} aria-hidden="true" />
@@ -502,6 +503,11 @@ const Dashboard = () => {
   ), [
     patients.length, 
     bedOccupancy, 
+    totalBeds,
+    occupiedBeds,
+    firstName,
+    greeting,
+    dateLabel,
     staffCount, 
     loading, 
     error, 
@@ -509,7 +515,6 @@ const Dashboard = () => {
     todaySchedule, 
     refetch,
     formatTime,
-    getTypeColor,
     getTypeDot
   ]);
 
