@@ -49,9 +49,9 @@ Everything below exists in the code today.
 
 ## Roadmap / planned
 
-These were listed in earlier versions of this README but are **not implemented**. Verified against the code: there is no i18n library, no web manifest or service worker, and no `web-vitals` package.
+These were listed in earlier versions of this README. Except for the partial i18n item, they are **not implemented**. Verified against the code: there is no web manifest or service worker and no `web-vitals` package.
 
-- Arabic / English bilingual UI (i18n, RTL). The UI is English only.
+- Translate the remaining pages. Arabic / English (RTL) is in place for the shell, Login, Sidebar and Dashboard; see `docs/I18N.md`.
 - Progressive Web App support (manifest, service worker, offline mode).
 - Web Vitals / performance monitoring.
 - Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.

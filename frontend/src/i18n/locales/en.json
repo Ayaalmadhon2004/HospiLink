@@ -1,0 +1,85 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "retry": "Retry",
+    "unknown": "Unknown",
+    "switchLanguage": "Switch language"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "signInSubtitle": "Sign in to your account",
+    "email": "Email",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "signIn": "Sign In",
+    "signingIn": "Signing in...",
+    "noAccount": "Don't have an account?",
+    "signUp": "Sign Up",
+    "loginFailed": "Login failed",
+    "loginFailedCheck": "Login failed. Please check your credentials."
+  },
+  "sidebar": {
+    "central": "Central",
+    "clinicalOperations": "Clinical Operations",
+    "notLoggedIn": "Not logged in",
+    "tabs": {
+      "Overview": "Overview",
+      "Patients": "Patients",
+      "Beds & Wards": "Beds & Wards",
+      "Staff & Shifts": "Staff & Shifts",
+      "Appointments": "Appointments",
+      "Vitals Monitor": "Vitals Monitor",
+      "Incidents": "Incidents",
+      "Dispatch": "Dispatch",
+      "Settings": "Settings"
+    }
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "Good morning",
+      "afternoon": "Good afternoon",
+      "evening": "Good evening"
+    },
+    "loadError": "Failed to load dashboard data. Please try again.",
+    "loadingData": "Loading dashboard data...",
+    "loadingPage": "Loading page content...",
+    "retryLabel": "Retry loading dashboard data",
+    "keyStats": "Key statistics",
+    "bedOccupancy": "Bed occupancy",
+    "bedsInUse": "{{occupied}} of {{total}} beds in use",
+    "patients": "Patients",
+    "patientsHint": "recently admitted",
+    "appointments": "Appointments",
+    "appointmentsHint": "scheduled today",
+    "staff": "Staff",
+    "staffHint": "registered members",
+    "departmentLoad": "Department Load",
+    "noDepartments": "No active departments",
+    "todaysSchedule": "Today's Schedule",
+    "todaysAppointments": "Today's appointments",
+    "viewAll": "View All",
+    "viewAllLabel": "View all appointments",
+    "noAppointments": "No appointments today",
+    "doctorPrefix": "Dr. {{name}}",
+    "crisisDispatch": "Crisis Dispatch",
+    "crisisDispatchText": "Emergency response system active",
+    "openDispatch": "Open Dispatch",
+    "openDispatchLabel": "Open dispatch dashboard",
+    "mainLabel": "{{tab}} dashboard",
+    "appointmentTypes": {
+      "SURGERY": "Surgery",
+      "CONSULTATION": "Consultation",
+      "IMAGING": "Imaging",
+      "FOLLOW_UP": "Follow-up"
+    },
+    "departments": {
+      "Emergency": "Emergency",
+      "ICU": "ICU",
+      "Surgery": "Surgery",
+      "Pediatrics": "Pediatrics",
+      "Maternity": "Maternity",
+      "Cardiology": "Cardiology",
+      "General": "General"
+    }
+  }
+}

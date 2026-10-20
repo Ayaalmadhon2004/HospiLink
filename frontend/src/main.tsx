@@ -9,6 +9,7 @@ import '@fontsource/poppins/latin-500.css';
 import '@fontsource/poppins/latin-600.css';
 import '@fontsource/poppins/latin-700.css';
 import './index.css';
+import './i18n';
 import { AuthProvider } from './contexts/AuthContext';
 
 const queryClient = new QueryClient({
