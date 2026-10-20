@@ -13,16 +13,10 @@ export const useVitalsSocket = (patientId: string) => {
   useEffect(() => {
     if (!patientId) return;
 
-    const token = localStorage.getItem('token')
-      || localStorage.getItem('accessToken')
-      || localStorage.getItem('authToken')
-      || '';
-
     const socket = io(SOCKET_URL, {
       autoConnect: false,
       transports: ['websocket', 'polling'],
       withCredentials: true,
-      auth: { token }, // ✅ أرسل JWT مع الـ handshake
     });
 
     socketRef.current = socket;

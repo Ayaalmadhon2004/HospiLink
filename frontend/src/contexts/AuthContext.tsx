@@ -26,29 +26,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-
-    if (!token) {
-      setLoading(false);
-      return;
-    }
-
+    // الجلسة بتعتمد على كوكي httpOnly — بنسأل السيرفر مين المستخدم
     apiGet('/auth/me')
       .then((res: any) => {
-        const userData = res.user || res.data?.user;
-        setUser(userData);
+        setUser(res.user || res.data?.user || null);
       })
-      .catch((err: any) => {
-        // ✅ امسح التوكن فقط إذا كان السيرفر رفضه فعلاً (401)
-        if (err?.response?.status === 401) {
-          localStorage.removeItem('token');
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('authToken');
-          setUser(null);
-        } else {
-          // Network/server issue — keeping token
-          // لو null، التوكن لسه موجود والـ PrivateRoute رح يسمح بالمرور
-        }
+      .catch(() => {
+        setUser(null);
       })
       .finally(() => setLoading(false));
   }, []);
