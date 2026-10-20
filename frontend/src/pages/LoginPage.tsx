@@ -101,14 +101,14 @@ export const LoginPage = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-teal-500 text-white py-2.5 rounded-lg hover:bg-teal-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="w-full bg-teal-700 text-white py-2.5 rounded-lg hover:bg-teal-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             {loading ? 'Signing in...' : 'Sign In'}
           </button>
 
-          <p className="text-center text-slate-400 mt-6 text-sm">
+          <p className="text-center text-slate-600 mt-6 text-sm">
           Don't have an account? 
-          <Link to="/signup" className="text-medical-teal font-medium hover:underline"> Sign Up</Link>
+          <Link to="/signup" className="text-teal-700 font-medium hover:underline"> Sign Up</Link>
         </p>
         </form>
       </div>

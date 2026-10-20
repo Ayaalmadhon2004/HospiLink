@@ -82,7 +82,7 @@ const RecentPatientsTable = memo(() => {
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead>
-              <tr className="text-xs uppercase text-slate-400 tracking-wider">
+              <tr className="text-xs uppercase text-slate-500 tracking-wider">
                 <th scope="col" className="pb-4 font-semibold px-4">Patient</th>
                 <th scope="col" className="pb-4 font-semibold px-4">Dept</th>
                 <th scope="col" className="pb-4 font-semibold px-4">Room</th>
@@ -123,7 +123,7 @@ const RecentPatientsTable = memo(() => {
       <div className="overflow-x-auto">
         <table className="w-full text-left">
           <thead>
-            <tr className="text-xs uppercase text-slate-400 tracking-wider">
+            <tr className="text-xs uppercase text-slate-500 tracking-wider">
               <th scope="col" className="pb-4 font-semibold px-4">Patient</th>
               <th scope="col" className="pb-4 font-semibold px-4">Dept</th>
               <th scope="col" className="pb-4 font-semibold px-4">Room</th>
@@ -154,7 +154,7 @@ const RecentPatientsTable = memo(() => {
               ))
             ) : (
               <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400">
+                <td colSpan={5} className="py-12 text-center text-slate-500">
                   <User className="w-12 h-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
                   <p className="text-sm">No patients currently admitted</p>
                 </td>

@@ -28,7 +28,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
     >
       <div className="flex items-start gap-4">
         {/* Avatar */}
-        <div className="w-12 h-12 rounded-full bg-medical-teal/10 flex items-center justify-center text-medical-teal font-bold text-lg flex-shrink-0 overflow-hidden">
+        <div className="w-12 h-12 rounded-full bg-medical-teal/10 flex items-center justify-center text-teal-700 font-bold text-lg flex-shrink-0 overflow-hidden">
           {member.avatar ? (
             <img
               src={member.avatar}
@@ -95,7 +95,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
         <div className="mt-3 pt-3 border-t border-slate-100">
           <div className="flex items-center gap-2 text-sm">
             <Clock size={14} className="text-medical-teal" aria-hidden="true" />
-            <span className="text-medical-teal font-medium">
+            <span className="text-teal-700 font-medium">
               {currentShift.type}
             </span>
             <span className="text-clinic-text/40 text-xs">

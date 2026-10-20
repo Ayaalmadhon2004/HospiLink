@@ -481,7 +481,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             <button
               type="submit"
               disabled={loading}
-              className="flex-1 px-4 py-2.5 bg-teal-500 text-white rounded-lg hover:bg-teal-600 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+              className="flex-1 px-4 py-2.5 bg-teal-700 text-white rounded-lg hover:bg-teal-800 transition disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
               {loading ? 'Saving...' : isEditing ? 'Update' : 'Create'}
             </button>

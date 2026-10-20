@@ -17,7 +17,7 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <Activity className="text-teal-500 animate-pulse" size={40} />
-          <p className="text-gray-400 text-sm">Loading your session...</p>
+          <p className="text-gray-600 text-sm">Loading your session...</p>
         </div>
       </div>
     );
