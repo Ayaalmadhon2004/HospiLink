@@ -1,6 +1,6 @@
 import type { Metric } from 'web-vitals';
 
-// Anonymous payload: metric name, value, rating and pathname only. No ids, no query string.
+// Anonymous payload: metric name, value, rating and a normalised route (no record ids, no query string).
 export interface VitalsPayload {
   name: string;
   value: number;
@@ -9,12 +9,30 @@ export interface VitalsPayload {
 }
 
 const VALUE_PRECISION = 1000; // keep 3 decimals
+const UNKNOWN_PATH = '/other';
+
+// Known routes (mirrors App.tsx). Dynamic segments are replaced by their param name so record ids
+// never leave the browser; any pathname that matches nothing is reported as UNKNOWN_PATH.
+const ROUTE_PATTERNS: ReadonlyArray<{ regex: RegExp; template: string }> = [
+  { regex: /^\/patients\/[^/]+\/edit$/, template: '/patients/:id/edit' },
+  { regex: /^\/patients\/[^/]+$/, template: '/patients/:id' },
+];
+const STATIC_PATHS: ReadonlySet<string> = new Set([
+  '/login', '/signup', '/dashboard', '/patients', '/beds', '/appointments',
+  '/dispatch', '/vitals', '/incidents', '/staff', '/settings',
+]);
+
+export const normalizePath = (pathname: string): string => {
+  const trimmed = pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname;
+  if (trimmed === '/' || STATIC_PATHS.has(trimmed)) return trimmed;
+  return ROUTE_PATTERNS.find(({ regex }) => regex.test(trimmed))?.template ?? UNKNOWN_PATH;
+};
 
 export const toPayload = (metric: Metric): VitalsPayload => ({
   name: metric.name,
   value: Math.round(metric.value * VALUE_PRECISION) / VALUE_PRECISION,
   rating: metric.rating,
-  path: window.location.pathname,
+  path: normalizePath(window.location.pathname),
 });
 
 // Anonymous, unauthenticated beacon to an optional collector. It intentionally
