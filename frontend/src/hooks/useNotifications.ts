@@ -1,5 +1,6 @@
 // frontend/src/hooks/useNotifications.ts
 import { useState, useEffect, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import { apiGet, apiPut, apiDelete } from '../services/api';
 import type { ApiResponse } from '../types/api';
 
@@ -12,6 +13,9 @@ export interface Notification {
   link?: string;
   createdAt: string;
 }
+
+const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
+  .replace('/api', '');
 
 export const useNotifications = () => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -66,6 +70,24 @@ export const useNotifications = () => {
     const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
   }, [fetchNotifications]);
+
+  // Real-time: backend emits 'new-notification' to room user-<id> (joined on connect)
+  useEffect(() => {
+    const socket = io(SOCKET_URL, {
+      transports: ['polling', 'websocket'],
+      withCredentials: true,
+    });
+
+    socket.on('new-notification', (n: Notification) => {
+      setNotifications(prev => (prev.some(x => x.id === n.id) ? prev : [n, ...prev]));
+      if (!n.read) setUnreadCount(prev => prev + 1);
+    });
+
+    return () => {
+      socket.off('new-notification');
+      socket.disconnect();
+    };
+  }, []);
 
   return {
     notifications,

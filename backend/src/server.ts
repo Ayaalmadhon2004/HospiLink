@@ -25,7 +25,7 @@ import notificationRoutes from './routes/notifications.routes';
 import { protect } from './middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
-import { socketAuth, hasRole } from './middlewares/socket.auth';
+import { socketAuth, hasRole, joinUserRoom } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
 import logger from './config/logger';
 import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
@@ -97,6 +97,9 @@ io.on('connection', (socket: Socket) => {
   if (isDev) {
     logger.debug({ socketId: socket.id }, 'User connected to HospiLink stream');
   }
+
+  // Personal room: target of createNotification() -> 'new-notification'
+  joinUserRoom(socket);
 
   socket.on('join-room', (patientId: unknown) => {
     if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return;
