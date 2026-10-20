@@ -41,8 +41,8 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (231 tests, no DB needed: Prisma is mocked)
-- `npm run test:coverage`  current coverage ~82% statements
+- `npm test`               jest (243 tests, no DB needed: Prisma is mocked)
+- `npm run test:coverage`  current coverage ~88% statements
 
 Frontend (`cd frontend`):
 - `npm install`
@@ -121,15 +121,13 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 ## Known issues / priorities (keep this list current)
 
 Open:
-- `.github/workflows/ci-cd.yml` still has `continue-on-error: true` on the lint and build steps, so they never fail the pipeline.
-- `prisma/migrations` has a baseline only; production must run `migrate resolve --applied` once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
-- Some `console.*` calls remain in the code (use a logger).
-- zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
+- `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
+- Some `console.*` calls remain in the frontend (33 calls in 13 files under `frontend/src`; none in `backend/src`); use a logger.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
-Fixed on main (do not reintroduce): `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
+Fixed on main (do not reintroduce): `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
 public signup ignores `role`/`hospitalId`; staff, shifts, reports and `/uploads` require auth; Socket.io
 requires a JWT (`socketAuth`); the token is no longer kept in `localStorage` (httpOnly cookie);
 `backend/uploads/` contents are untracked; both `package-lock.json` files are committed; README was
