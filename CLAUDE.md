@@ -41,7 +41,7 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (268 tests, no DB needed: Prisma is mocked)
+- `npm test`               jest (271 tests, no DB needed: Prisma is mocked)
 - `npm run test:coverage`  current coverage ~88% statements
 
 Frontend (`cd frontend`):
@@ -129,12 +129,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## Known issues / priorities (keep this list current)
 
-Open:
-- `POST /patients/admit` builds `patientCode` as `PT-${2040 + count + 1}`, which collides with an existing code (unique violation -> 500
-  "Failed to admit patient") whenever codes are not contiguous, e.g. after `seed.ts` (8 patients, PT-2044..2051). The real-backend E2E found
   it and works around it with its own seed (`seed.e2e.ts`, codes `E2E-000x`); fix the generator (sequence/retry) in its own PR.
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
-- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; no real-backend E2E).
+- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; the real-backend suite is `npm run test:e2e:real`).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 

@@ -141,6 +141,7 @@ describe('patient.controller', () => {
 
       prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(10);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
       prismaMock.bed.findUnique.mockResolvedValue({ id: 'bed-x', status: 'AVAILABLE' } as any);
       prismaMock.patient.create.mockResolvedValue({ id: 'new-patient', patientCode: 'PT-2051' } as any);
       prismaMock.bed.update.mockResolvedValue({} as any);
@@ -180,6 +181,61 @@ describe('patient.controller', () => {
       expect(prismaMock.bed.findUnique).not.toHaveBeenCalled();
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+  });
+
+  describe('admitPatient patientCode', () => {
+    const admitReq = () =>
+      mockRequest({
+        user: { id: 'u1' } as any,
+        body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu' },
+      });
+
+    beforeEach(() => {
+      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
+    });
+
+    it('يبدأ بعد أعلى كود موجود لما العدد أقل منه (seed)', async () => {
+      prismaMock.patient.count.mockResolvedValue(8);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: 'PT-2051' } } as any);
+      prismaMock.patient.create.mockResolvedValue({ id: 'p' } as any);
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientCode: 'PT-2052' }) })
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('يعيد المحاولة بالكود التالي لما يصير تعارض P2002 على patientCode', async () => {
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
+      prismaMock.patient.create
+        .mockRejectedValueOnce({ code: 'P2002', meta: { target: ['patientCode'] } })
+        .mockResolvedValueOnce({ id: 'p' } as any);
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledTimes(2);
+      expect(prismaMock.patient.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientCode: 'PT-2042' }) })
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('يرجع 500 بعد استنفاد المحاولات ولا يسرّب الخطأ', async () => {
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
+      prismaMock.patient.create.mockRejectedValue({ code: 'P2002', meta: { target: ['patientCode'] } });
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledTimes(10);
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 
