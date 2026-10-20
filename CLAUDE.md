@@ -66,7 +66,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Layering: route -> middleware(s) -> controller -> Prisma. Keep business logic out of routes.
 - Every route except login/signup/health must use `protect`; restrict with
   `authorize('ADMIN', 'DOCTOR', ...)`. Roles come from the DB (`protect` reloads the user), never from the token body.
-- Roles: ADMIN, DOCTOR, NURSE, STAFF, DISPATCHER (see `Role` enum in schema.prisma).
+- Roles: ADMIN, DOCTOR, NURSE, DISPATCHER (see `Role` enum in schema.prisma).
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
 - Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.

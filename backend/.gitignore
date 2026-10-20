@@ -7,3 +7,7 @@ dist/
 
 # ملفات النظام المؤقتة
 .DS_Store
+# الملفات المرفوعة (بيانات مرضى) وتقارير التغطية
+uploads/*
+!uploads/.gitkeep
+coverage/

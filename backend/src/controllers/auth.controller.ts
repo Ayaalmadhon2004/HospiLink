@@ -4,6 +4,20 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
+import { registerSchema, loginSchema, formatZodError } from '../validators/auth.validator';
+
+// Public signup always creates the lowest-privilege role. (The Prisma Role enum
+// has no STAFF value; NURSE is the least privileged.) Elevated roles can only be
+// granted by an authenticated ADMIN, never through this endpoint.
+const PUBLIC_SIGNUP_ROLE = 'NURSE' as const;
+
+// Hospital for public signups comes from the server, never from the request body:
+// HOSPITAL_ID env var if set, otherwise the first hospital (single-tenant deployment).
+const resolveSignupHospitalId = async (): Promise<string | null> => {
+  if (process.env.HOSPITAL_ID) return process.env.HOSPITAL_ID;
+  const hospital = await prisma.hospital.findFirst({ select: { id: true }, orderBy: { createdAt: 'asc' } });
+  return hospital?.id ?? null;
+};
 
 // ============================================
 // Generate JWT Token
@@ -25,7 +39,20 @@ const generateToken = (user: { id: string; email: string; role: string }): strin
 // ============================================
 export const register = async (req: Request, res: Response) => {
   try {
-    const { email, password, name, role, department, shift, hospitalId } = req.body;
+    const parsed = registerSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ success: false, message: formatZodError(parsed.error) });
+      return;
+    }
+    // role / hospitalId from the body are intentionally ignored.
+    const { email, password, name, department, shift } = parsed.data;
+
+    const hospitalId = await resolveSignupHospitalId();
+    if (!hospitalId) {
+      console.error('Register error: no hospital configured for signup');
+      res.status(500).json({ success: false, message: 'Registration is currently unavailable' });
+      return;
+    }
 
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -46,7 +73,7 @@ export const register = async (req: Request, res: Response) => {
         email,
         password: hashedPassword,
         name,
-        role: role || 'STAFF',
+        role: PUBLIC_SIGNUP_ROLE,
         department,
         shift,
         hospitalId,
@@ -83,7 +110,7 @@ export const register = async (req: Request, res: Response) => {
     console.error('Register error:', error);
     res.status(500).json({
       success: false,
-      message: error.message || 'Registration failed',
+      message: 'Registration failed',
     });
   }
 };
@@ -93,15 +120,15 @@ export const register = async (req: Request, res: Response) => {
 // ============================================
 export const login = async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
+    const parsed = loginSchema.safeParse(req.body);
+    if (!parsed.success) {
       res.status(400).json({
         success: false,
-        message: 'Email and password are required',
+        message: 'Email and password are required: ' + formatZodError(parsed.error),
       });
       return;
     }
+    const { email, password } = parsed.data;
 
     const user = await prisma.user.findUnique({
       where: { email },

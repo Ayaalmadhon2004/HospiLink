@@ -21,10 +21,8 @@ export const LoginPage = () => {
     try {
       const data = await login(formData);
 
-      if (data.token && data.user) {
-        // ✅ تخزين الـ token في localStorage
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
+      if (data.user) {
+        // الجلسة بتنحفظ بكوكي httpOnly (ما في token بالـ localStorage)
 
         // ✅ توجيه للـ Dashboard
         window.location.href = '/dashboard';
