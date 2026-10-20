@@ -5,6 +5,11 @@ PostgreSQL database**. Nothing is mocked. They complement the mocked-API suite i
 
 Covered: sign in with a seeded user (and wrong-password / private-route redirect), session kept across a reload,
 seeded patients listed, admitting a patient through the UI and finding it in the list after a reload.
+Report upload (`reports.e2e.ts`): uploading a PDF through the UI, finding it listed after a reload, and fetching it back with the
+same bytes; the 5 MB limit is enforced by the UI and by the API, and a non PDF/JPEG/PNG file is refused by the API.
+
+The auth endpoints are rate limited (20 requests per 15 minutes), so `login()` in `e2e-real/helpers.ts` signs in through the form
+once and reuses that session cookie for the rest of the run; use `loginViaUi()` only where the sign-in itself is under test.
 
 ## How it works
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login, SEED_ADMIN } from './helpers';
+import { loginViaUi, SEED_ADMIN } from './helpers';
 
 // URL endings: "http://localhost:4173/login" matches LOGIN_URL, ".../patients" does not.
 const LOGIN_URL = /\/login$/;
@@ -22,7 +22,7 @@ test.describe('authentication (real backend)', () => {
   });
 
   test('signs in with the seeded user and keeps the session across a reload', async ({ page }) => {
-    await login(page);
+    await loginViaUi(page);
 
     await page.goto('/patients');
     await page.reload();
