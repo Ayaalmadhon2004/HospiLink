@@ -129,7 +129,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## Known issues / priorities (keep this list current)
 
-  it and works around it with its own seed (`seed.e2e.ts`, codes `E2E-000x`); fix the generator (sequence/retry) in its own PR.
+Open:
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; the real-backend suite is `npm run test:e2e:real`).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
