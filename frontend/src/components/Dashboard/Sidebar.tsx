@@ -31,7 +31,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
     { id: 'Beds & Wards', label: 'Beds & Wards', icon: BedDouble, badge: null },
     { id: 'Staff & Shifts', label: 'Staff & Shifts', icon: Stethoscope, badge: null },
     { id: 'Appointments', label: 'Appointments', icon: Calendar, badge: badges.Appointments },
-    { id: 'Vitals Monitor', label: 'Vitals Monitor', icon: Activity, badge: null },
+    { id: 'Vitals Monitor', label: 'Vitals Monitor', icon: Activity, badge: badges.Vitals },
     { id: 'Incidents', label: 'Incidents', icon: AlertTriangle, badge: badges.Incidents },
     { id: 'Dispatch', label: 'Dispatch', icon: Truck, badge: null },
   ];
