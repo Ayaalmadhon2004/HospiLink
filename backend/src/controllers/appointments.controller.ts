@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string) => {
@@ -235,7 +236,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.emit('appointment-created', appointment);
+    io.to(CLINICAL_ROOM).emit('appointment-created', appointment);
 
     res.status(201).json({ success: true, data: appointment });
   } catch (error: any) {
@@ -262,7 +263,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.emit('appointment-updated', appointment);
+    io.to(CLINICAL_ROOM).emit('appointment-updated', appointment);
 
     res.status(200).json({ success: true, data: appointment });
   } catch (error: any) {
@@ -280,7 +281,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
       data: { status: 'CANCELLED' },
     });
 
-    io.emit('appointment-cancelled', { id });
+    io.to(CLINICAL_ROOM).emit('appointment-cancelled', { id });
 
     res.status(200).json({ success: true, message: 'Appointment cancelled', data: appointment });
   } catch (error: any) {

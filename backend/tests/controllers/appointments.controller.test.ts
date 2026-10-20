@@ -1,5 +1,5 @@
 import { prismaMock } from '../mocks/prisma';
-import { mockEmit } from '../mocks/io';
+import { mockRoomEmit } from '../mocks/io';
 import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getAppointments,
@@ -73,7 +73,7 @@ describe('appointments.controller', () => {
       expect(prismaMock.appointment.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ patientId: 'p1' }) })
       );
-      expect(mockEmit).toHaveBeenCalledWith('appointment-created', { id: 'apt-1' });
+      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'appointment-created', { id: 'apt-1' });
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
@@ -145,7 +145,7 @@ describe('appointments.controller', () => {
 
       const dataArg = (prismaMock.appointment.update.mock.calls[0][0] as any).data;
       expect(dataArg.scheduledAt).toBeInstanceOf(Date);
-      expect(mockEmit).toHaveBeenCalledWith('appointment-updated', { id: 'apt-1' });
+      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'appointment-updated', { id: 'apt-1' });
     });
   });
 
@@ -161,7 +161,7 @@ describe('appointments.controller', () => {
         where: { id: 'apt-1' },
         data: { status: 'CANCELLED' },
       });
-      expect(mockEmit).toHaveBeenCalledWith('appointment-cancelled', { id: 'apt-1' });
+      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'appointment-cancelled', { id: 'apt-1' });
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

@@ -1,5 +1,5 @@
 import { prismaMock } from '../mocks/prisma';
-import { mockEmit } from '../mocks/io';
+import { mockRoomEmit } from '../mocks/io';
 import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getIncidents,
@@ -85,7 +85,7 @@ describe('incidents.controller', () => {
       expect(prismaMock.incident.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ code: 'INC-0100', progress: 0 }) })
       );
-      expect(mockEmit).toHaveBeenCalledWith('incident-created', expect.objectContaining({ id: 'inc-1' }));
+      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'incident-created', expect.objectContaining({ id: 'inc-1' }));
       expect(prismaMock.notification.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ type: 'INCIDENT', userId: 'u1' }),
@@ -169,7 +169,7 @@ describe('incidents.controller', () => {
 
       await deleteIncident(req, res);
 
-      expect(mockEmit).toHaveBeenCalledWith('incident-deleted', { id: 'inc-1' });
+      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'incident-deleted', { id: 'inc-1' });
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });
