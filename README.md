@@ -49,11 +49,8 @@ Everything below exists in the code today.
 
 ## Roadmap / planned
 
-These were listed in earlier versions of this README. Except for the partial i18n item, they are **not implemented**. Verified against the code: there is no web manifest or service worker and no `web-vitals` package.
+Done since the first roadmap: Arabic / English (RTL) on every page (`docs/I18N.md`), PWA support with an app-shell precache only (`docs/PWA.md`), and opt-in Web Vitals reporting (`docs/WEB_VITALS.md`). The rest below is **not implemented**.
 
-- Translate the remaining pages. Arabic / English (RTL) is in place for the shell, Login, Sidebar and Dashboard; see `docs/I18N.md`.
-- Progressive Web App support (manifest, service worker, offline mode).
-- Web Vitals / performance monitoring.
 - Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.
 - Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
 - Automated patient queue management.
