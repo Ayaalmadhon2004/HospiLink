@@ -68,7 +68,9 @@
       "Incidents": "الحوادث",
       "Dispatch": "الإسعاف",
       "Settings": "الإعدادات"
-    }
+    },
+    "openMenu": "فتح القائمة",
+    "closeMenu": "إغلاق القائمة"
   },
   "dashboard": {
     "greeting": {

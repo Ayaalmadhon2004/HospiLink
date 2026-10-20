@@ -68,7 +68,9 @@
       "Incidents": "Incidents",
       "Dispatch": "Dispatch",
       "Settings": "Settings"
-    }
+    },
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
   },
   "dashboard": {
     "greeting": {

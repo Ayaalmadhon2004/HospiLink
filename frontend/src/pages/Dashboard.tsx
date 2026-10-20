@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/Dashboard/Sidebar';
+import { DashboardShell } from '../components/Dashboard/DashboardShell';
 import StatCard from '../components/Dashboard/StatCard';
 import { getRecentPatients } from '../services/patientService';
 import { getTodaySchedule } from '../services/appointmentsService';
@@ -535,22 +536,21 @@ const Dashboard = () => {
   ]);
 
   return (
-    <div className="flex w-full h-screen overflow-hidden bg-gray-50">
-      <div className="flex-shrink-0">
-        <Sidebar 
-          activeItem={activeItem} 
-          onItemClick={handleItemClick} 
+    <DashboardShell
+      title={t(`sidebar.tabs.${activeItem}`)}
+      mainLabel={t('dashboard.mainLabel', { tab: t(`sidebar.tabs.${activeItem}`) })}
+      renderSidebar={(closeMenu) => (
+        <Sidebar
+          activeItem={activeItem}
+          onItemClick={(item) => {
+            handleItemClick(item);
+            closeMenu();
+          }}
         />
-      </div>
-
-      <main 
-        className="flex-1 overflow-y-auto p-8"
-        role="main"
-        aria-label={t('dashboard.mainLabel', { tab: t(`sidebar.tabs.${activeItem}`) })}
-      >
-        {activeItem === 'Overview' ? OverviewPanel : renderContent}
-      </main>
-    </div>
+      )}
+    >
+      {activeItem === 'Overview' ? OverviewPanel : renderContent}
+    </DashboardShell>
   );
 };
 
