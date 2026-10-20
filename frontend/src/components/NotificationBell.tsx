@@ -58,6 +58,7 @@ export const NotificationBell = () => {
                   onClick={markAllAsRead}
                   className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition"
                   title="Mark all as read"
+                  aria-label="Mark all as read"
                 >
                   <Check className="w-4 h-4" />
                 </button>
@@ -65,6 +66,7 @@ export const NotificationBell = () => {
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded transition"
+                aria-label="Close notifications"
               >
                 <X className="w-4 h-4" />
               </button>
