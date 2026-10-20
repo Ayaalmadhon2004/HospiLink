@@ -18,13 +18,15 @@ export const login = async (credentials: { email: string; password: string }) =>
 // ============================================
 // SIGNUP
 // ============================================
-export const signup = async (userData: any) => {
+// role / hospitalId are intentionally not accepted: the server assigns them.
+export const signup = async (userData: {
+  name: string;
+  email: string;
+  password: string;
+  department: string;
+  shift: string;
+}) => {
   const data = await apiPost('/auth/signup', userData);
-
-  // ✅ خزن token في localStorage
-  if (data.token) {
-    localStorage.setItem('token', data.token);
-  }
 
   return data;
 };
