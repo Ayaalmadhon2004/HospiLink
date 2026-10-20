@@ -37,7 +37,7 @@ ci-cd.yml                  intended GitHub Actions pipeline (see "Known issues")
 ## Commands
 
 Backend (`cd backend`):
-- `npm install`            install (no lockfile committed yet)
+- `npm install`            install (use `npm ci` in CI)
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
@@ -118,23 +118,22 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## Known issues / priorities (keep this list current)
 
-Security (critical, being fixed):
-1. Real credentials were committed in `backend/.env.example` (DB URL + JWT secret) -> must be rotated.
-2. `POST /api/auth/signup` accepted `role`/`hospitalId` from the body (privilege escalation).
-3. `JWT_SECRET` had a hard-coded fallback.
-4. Unauthenticated routes: `GET /api/staff`, `/staff/shifts*`, `GET /patients/:id/reports`, `/uploads/*`.
-5. Socket.io connections are unauthenticated; any client can join patient rooms or update dispatch units.
-6. `backend/uploads/` files are tracked in git; Render disk is ephemeral (move to S3/Cloudinary).
-7. JWT stored in `localStorage` (XSS risk); prefer the httpOnly cookie.
-
-Engineering:
-- `ci-cd.yml` is at repo root; GitHub only runs workflows from `.github/workflows/`.
-- `backend/package-lock.json` is missing and `frontend/package-lock.json` is out of sync, so `npm ci` fails.
-- CI references a Dockerfile and docker-compose.yml that do not exist.
+Open:
+- `ci-cd.yml` is at repo root; GitHub only runs workflows from `.github/workflows/`. It also references a
+  Dockerfile and docker-compose.yml that do not exist.
+- No `prisma/migrations` folder yet (schema is applied with `prisma db push`).
 - ESLint reports ~143 errors; ~213 `any` usages; ~76 `console.*` calls (use a logger).
-- zod validation exists only for patients.
-- README claims i18n (AR/EN), PWA, Web Vitals and Docker, none of which are implemented yet.
-- Stray root files: `habits.html`, `image*.png`; `robots.txt` mentions "Muraqib".
+- zod validation is wired for auth only; `validators/patient.validator.ts` exists but the patient controller does not use it.
+- `new-notification` is emitted to `user-<id>` but no socket handler joins that room.
+- Uploads live on Render's ephemeral disk (move to S3/Cloudinary). No frontend tests.
+- i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
+- The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
+
+Fixed on main (do not reintroduce): `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
+public signup ignores `role`/`hospitalId`; staff, shifts, reports and `/uploads` require auth; Socket.io
+requires a JWT (`socketAuth`); the token is no longer kept in `localStorage` (httpOnly cookie);
+`backend/uploads/` contents are untracked; both `package-lock.json` files are committed; README was
+rewritten and stray root files and "Muraqib" wording were removed.
 
 ## Working rules for Claude
 
