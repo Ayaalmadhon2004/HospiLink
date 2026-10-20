@@ -13,6 +13,14 @@ import {
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { upload } from '../middlewares/upload.middleware';
+import { validate } from '../middlewares/validate.middleware';
+import { idParams } from '../validators/common.validator';
+import {
+  admitPatientSchema,
+  updatePatientSchema,
+  listPatientsQuerySchema,
+  availableBedsQuerySchema,
+} from '../validators/patient.validator';
 
 const router = Router();
 
@@ -24,7 +32,8 @@ router.post(
   '/admit', 
   protect, 
   authorize('DOCTOR', 'NURSE','ADMIN'), 
-  logActivity('ADMIT_PATIENT'), 
+  validate({ body: admitPatientSchema }),
+  logActivity('ADMIT_PATIENT'),
   admitPatient
 );
 
@@ -34,7 +43,8 @@ router.post(
 // ============================================
 router.post(
   '/:id/reports', 
-  protect, 
+  protect,
+  validate({ params: idParams }), // params only: body is multipart
   upload.single('reportFile'), 
   logActivity('UPLOAD_REPORT'),
   uploadReport
@@ -60,6 +70,7 @@ router.get(
   '/beds/available',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ query: availableBedsQuerySchema }),
   getAvailableBeds
 );
 
@@ -71,6 +82,7 @@ router.get(
   '/',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN', 'DISPATCHER'),
+  validate({ query: listPatientsQuerySchema }),
   getPatients
 );
 
@@ -84,6 +96,7 @@ router.get(
   '/:id',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ params: idParams }),
   getPatientById
 );
 
@@ -91,6 +104,7 @@ router.get(
   '/:id/reports',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ params: idParams }),
   getPatientReports
 );
 
@@ -103,6 +117,7 @@ router.put(
   '/:id',
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ params: idParams, body: updatePatientSchema }),
   logActivity('UPDATE_PATIENT'),
   updatePatient
 );
@@ -115,6 +130,7 @@ router.put(
   '/:id/discharge',
   protect,
   authorize('DOCTOR', 'ADMIN'),
+  validate({ params: idParams }),
   logActivity('DISCHARGE_PATIENT'),
   dischargePatient
 );

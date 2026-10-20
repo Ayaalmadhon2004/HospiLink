@@ -18,7 +18,7 @@ backend/
   src/routes/              one file per resource -> /api/<resource>
   src/controllers/         request handlers (Prisma calls live here)
   src/middlewares/         auth (protect/authorize), audit (logActivity), error, upload, dispatch.socket
-  src/validators/          zod schemas (only patient so far)
+  src/validators/          zod schemas, one file per resource (wired via middlewares/validate)
   src/types/               shared types, express.d.ts
   prisma/schema.prisma     data model;  prisma/seed.ts
   tests/                   jest + ts-jest; mocks in tests/mocks (prisma, io, http)
@@ -123,7 +123,7 @@ Open:
   Dockerfile and docker-compose.yml that do not exist.
 - No `prisma/migrations` folder yet (schema is applied with `prisma db push`).
 - ESLint reports ~143 errors; ~213 `any` usages; ~76 `console.*` calls (use a logger).
-- zod validation is wired for auth only; `validators/patient.validator.ts` exists but the patient controller does not use it.
+- zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
 - `new-notification` is emitted to `user-<id>` but no socket handler joins that room.
 - Uploads live on Render's ephemeral disk (move to S3/Cloudinary). No frontend tests.
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
