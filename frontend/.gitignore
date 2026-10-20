@@ -29,5 +29,7 @@ dist-ssr
 
 coverage
 dist-e2e
+dist-e2e-real
 test-results
+test-results-real
 playwright-report

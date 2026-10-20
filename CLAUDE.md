@@ -53,6 +53,10 @@ Frontend (`cd frontend`):
 - `npm run preview`        serves build on :4173
 - `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
                            First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
+- `npm run test:e2e:real`  Playwright against the REAL backend + a throwaway PostgreSQL (`playwright.real.config.ts`, files in
+                           `e2e-real/*.e2e.ts`). Needs `E2E_DATABASE_URL` (db name must contain `e2e` or `test`); the config runs
+                           `prisma migrate deploy` + `backend/prisma/seed.e2e.ts`, starts the API on :5000 and the built app on
+                           localhost:4173. Recreate the database between runs. See `docs/E2E_REAL.md`.
 
 ## Environment variables
 
@@ -117,12 +121,18 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 - Backend tests live in `backend/tests/**` mirroring `src/`. Prisma and socket.io are mocked via
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
-- Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. These do NOT exercise the real backend.
+- Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. The mocked suite does NOT exercise the real backend.
+  The separate real-backend suite (`frontend/e2e-real`, `npm run test:e2e:real`, CI job `e2e-real` with a `services: postgres` container)
+  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, with no mocks.
+  It uses its own seed (`backend/prisma/seed.e2e.ts`), never `seed.ts`, and refuses a database whose name lacks `e2e`/`test`.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 
 ## Known issues / priorities (keep this list current)
 
 Open:
+- `POST /patients/admit` builds `patientCode` as `PT-${2040 + count + 1}`, which collides with an existing code (unique violation -> 500
+  "Failed to admit patient") whenever codes are not contiguous, e.g. after `seed.ts` (8 patients, PT-2044..2051). The real-backend E2E found
+  it and works around it with its own seed (`seed.e2e.ts`, codes `E2E-000x`); fix the generator (sequence/retry) in its own PR.
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Some `console.*` calls remain in the frontend (33 calls in 13 files under `frontend/src`; none in `backend/src`); use a logger.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; no real-backend E2E).
