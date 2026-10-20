@@ -56,7 +56,7 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
       return { previousData };
     },
 
-    onError: (err: any, context: any) => {
+    onError: (err: any, _id: string, context: any) => {
       // Rollback on error
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
@@ -162,7 +162,7 @@ export function useOptimisticUpdate<T>(config: CrudConfig<T>) {
       return { previousData };
     },
 
-    onError: (err: any,  context: any) => {
+    onError: (err: any, _vars: { id: string; data: any }, context: any) => {
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
       }
