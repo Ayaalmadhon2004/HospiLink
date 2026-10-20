@@ -36,6 +36,13 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 // ============================================
 // POST /api/patients/admit
 // ============================================
+// Business-rule failure inside the admit transaction: safe to show to the client.
+class AdmitError extends Error {
+  constructor(message: string, readonly status: number) {
+    super(message);
+  }
+}
+
 export const admitPatient = async (req: Request, res: Response) => {
   const { name, age, gender, department, diagnosis, bedId, hospitalId, doctorId } = req.body;
 
@@ -78,8 +85,8 @@ export const admitPatient = async (req: Request, res: Response) => {
       
       if (bedId) {
         const bed = await tx.bed.findUnique({ where: { id: bedId } });
-        if (!bed) throw new Error('السرير غير موجود');
-        if (bed.status !== 'AVAILABLE') throw new Error('السرير غير متاح حالياً');
+        if (!bed) throw new AdmitError('السرير غير موجود', 404);
+        if (bed.status !== 'AVAILABLE') throw new AdmitError('السرير غير متاح حالياً', 400);
         validBedId = bedId;
       }
 
@@ -111,6 +118,9 @@ export const admitPatient = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: result });
   } catch (error: any) {
+    if (error instanceof AdmitError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     logger.error({ err: error }, '🔥 Admit error:');
     res.status(500).json({ 
       success: false, 
