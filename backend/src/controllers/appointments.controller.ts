@@ -4,8 +4,9 @@ import prisma from '../config/db';
 import { io } from '../server';
 import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
   res.status(500).json({ success: false, message });
 };
@@ -15,7 +16,7 @@ export const getAppointments = async (req: Request, res: Response) => {
   try {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
-    const where: any = {};
+    const where: Prisma.AppointmentWhereInput = {};
 
     if (date) {
       const d = new Date(date as string);
@@ -39,7 +40,7 @@ export const getAppointments = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: appointments.length, data: appointments });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch appointments');
   }
 };
@@ -65,7 +66,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
     });
 
     // Group by hour for timeline view
-    const schedule = appointments.reduce((acc: any, apt: any) => {
+    const schedule = appointments.reduce<Record<string, typeof appointments>>((acc, apt) => {
       const hour = new Date(apt.scheduledAt).getHours();
       const timeKey = `${hour.toString().padStart(2, '0')}:00`;
       if (!acc[timeKey]) acc[timeKey] = [];
@@ -74,7 +75,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
     }, {});
 
     res.status(200).json({ success: true, data: { appointments, schedule } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch today schedule');
   }
 };
@@ -98,7 +99,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: appointments.length, data: appointments });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch upcoming appointments');
   }
 };
@@ -121,7 +122,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch appointment');
   }
 };
@@ -239,7 +240,7 @@ export const createAppointment = async (req: Request, res: Response) => {
     io.to(CLINICAL_ROOM).emit('appointment-created', appointment);
 
     res.status(201).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create appointment');
   }
 };
@@ -266,7 +267,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
     io.to(CLINICAL_ROOM).emit('appointment-updated', appointment);
 
     res.status(200).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update appointment');
   }
 };
@@ -284,7 +285,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
     io.to(CLINICAL_ROOM).emit('appointment-cancelled', { id });
 
     res.status(200).json({ success: true, message: 'Appointment cancelled', data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to cancel appointment');
   }
 };

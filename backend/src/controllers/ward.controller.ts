@@ -9,7 +9,7 @@ export const getAllWards = async (req: Request, res: Response) => {
       orderBy: { name: 'asc' }
     });
     res.status(200).json({ success: true, data: wards });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Ward error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
@@ -31,7 +31,7 @@ export const getWardById = async (req: Request, res: Response) => {
     });
     if (!ward) return res.status(404).json({ success: false, message: 'Ward not found' });
     res.status(200).json({ success: true, data: ward });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Ward error:');
     res.status(500).json({ success: false, message: 'Internal server error' });
   }

@@ -5,7 +5,7 @@ import logger from '../config/logger';
 export const logActivity = (action: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const userId = (req as any).user?.id; 
+      const userId = req.user?.id;
 
       if (userId) {
         await prisma.auditLog.create({

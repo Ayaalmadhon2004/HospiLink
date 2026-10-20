@@ -3,6 +3,11 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { randomUUID } from 'crypto';
+import type { Bed, PatientStatus, Prisma } from '@prisma/client';
+
+// protect() only sets { id, email, role }; older code also read a `userId` claim that is never set.
+type LegacyTokenUser = { userId?: string };
+type BedWithWard = Bed & { ward?: { id: string; name: string } | null };
 
 const PATIENT_CODE_BASE = 2040;
 const MAX_CODE_ATTEMPTS = 10;
@@ -45,7 +50,7 @@ export const getRecentPatients = async (req: Request, res: Response) => {
       data: recentPatients 
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, "🔥 getRecentPatients error:");
     res.status(500).json({ 
       success: false, 
@@ -81,7 +86,7 @@ export const admitPatient = async (req: Request, res: Response) => {
   const { name, age, gender, department, diagnosis, bedId, hospitalId, doctorId } = req.body;
 
   try {
-    const userId = (req.user as any)?.userId || (req.user as any)?.id;
+    const userId = (req.user as LegacyTokenUser | undefined)?.userId || req.user?.id;
     
     if (!userId) {
       return res.status(401).json({ 
@@ -127,7 +132,7 @@ export const admitPatient = async (req: Request, res: Response) => {
             validBedId = bedId;
           }
 
-          const patientData: any = {
+          const patientData: Prisma.PatientUncheckedCreateInput = {
             patientCode,
             name,
             age: parseInt(age),
@@ -161,7 +166,7 @@ export const admitPatient = async (req: Request, res: Response) => {
     }
 
     res.status(201).json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof AdmitError) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
@@ -200,13 +205,13 @@ export const uploadReport = async (req: Request, res: Response) => {
         fileType: req.file.mimetype,
         fileData: new Uint8Array(req.file.buffer),
         patientId: patientId,
-        uploadedBy: (req.user as any)?.userId,
+        uploadedBy: (req.user as LegacyTokenUser | undefined)?.userId,
       },
     });
     const { fileData: _fileData, ...report } = created;
 
     res.status(201).json({ success: true, message: 'Report uploaded', data: report });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Upload error:');
     res.status(500).json({ success: false, message: 'Failed to upload report' });
   }
@@ -252,7 +257,7 @@ export const getPatientReports = async (req: Request, res: Response) => {
       count: reports.length,
       data: reports,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get reports error:');
     res.status(500).json({
       success: false,
@@ -285,7 +290,7 @@ export const getPatientById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: patient });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get patient error:');
     res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض' });
   }
@@ -302,14 +307,14 @@ export const getPatients = async (req: Request, res: Response) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const whereClause: any = {};
+    const whereClause: Prisma.PatientWhereInput = {};
 
     if (status && status !== 'undefined' && status !== 'ALL' && status !== '' && status !== 'All') {
-      whereClause.status = (status as string).toUpperCase(); 
+      whereClause.status = (status as string).toUpperCase() as PatientStatus;
     }
 
     if (department && department !== 'undefined' && department !== 'ALL' && department !== '' && department !== 'All') {
-      whereClause.department = department;
+      whereClause.department = department as string;
     }
 
     if (search && search !== 'undefined' && search !== '') {
@@ -362,7 +367,7 @@ export const getPatients = async (req: Request, res: Response) => {
         hasPrevPage: pageNum > 1,
       }
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, "🔥 Error:");
     res.status(500).json({ success: false, message: 'فشل جلب المرضى' });
   }
@@ -374,16 +379,16 @@ export const getPatients = async (req: Request, res: Response) => {
 export const getAvailableBeds = async (req: Request, res: Response) => {
   try {
     const { department } = req.query;
-    let beds: any[] = [];
+    let beds: Bed[] = [];
     
     try {
       beds = await prisma.bed.findMany({ where: { status: 'AVAILABLE' }, orderBy: { bedNumber: 'asc' } });
-    } catch (err: any) {
+    } catch (err: unknown) {
       logger.error({ err }, 'Get available beds error:');
       return res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
     }
 
-    let bedsWithWard: any[] = [];
+    let bedsWithWard: BedWithWard[] = [];
     
     try {
       const testQuery = await prisma.bed.findFirst({ include: { ward: true } });
@@ -398,15 +403,15 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
           orderBy: { bedNumber: 'asc' }
         });
       }
-    } catch (wardErr: any) {
+    } catch (wardErr: unknown) {
       bedsWithWard = beds.map(bed => ({
         ...bed, ward: { id: bed.wardId || 'unknown', name: 'General Ward' }
       }));
     }
 
-    const finalBeds = bedsWithWard.length > 0 ? bedsWithWard : beds;
+    const finalBeds: BedWithWard[] = bedsWithWard.length > 0 ? bedsWithWard : beds;
 
-    const groupedByWard = finalBeds.reduce((acc: any, bed: any) => {
+    const groupedByWard = finalBeds.reduce<Record<string, BedWithWard[]>>((acc, bed) => {
       const wardName = bed.ward?.name || 'General Ward';
       if (!acc[wardName]) acc[wardName] = [];
       acc[wardName].push(bed);
@@ -414,7 +419,7 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
     }, {});
 
     res.status(200).json({ success: true, count: finalBeds.length, data: finalBeds, groupedByWard });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get available beds error:');
     res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
   }
@@ -435,7 +440,7 @@ export const updatePatient = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Update patient error:');
     res.status(500).json({ success: false, message: 'فشل تحديث المريض' });
   }
@@ -478,7 +483,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: result });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Discharge patient error:');
     res.status(500).json({ success: false, message: 'فشل تسريح المريض' });
   }

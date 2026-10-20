@@ -107,7 +107,7 @@ export const register = async (req: Request, res: Response) => {
       token,
       user,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Register error:');
     res.status(500).json({
       success: false,
@@ -182,7 +182,7 @@ export const login = async (req: Request, res: Response) => {
       token,
       user: userWithoutPassword,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Login error:');
     res.status(500).json({
       success: false,
@@ -206,7 +206,7 @@ export const logout = async (req: Request, res: Response) => {
       success: true,
       message: 'Logged out successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Logout error:');
     res.status(500).json({
       success: false,
@@ -220,7 +220,7 @@ export const logout = async (req: Request, res: Response) => {
 // ============================================
 export const getMe = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
 
     if (!userId) {
       res.status(401).json({
@@ -264,7 +264,7 @@ export const getMe = async (req: Request, res: Response) => {
       success: true,
       user,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'GetMe error:');
     res.status(500).json({
       success: false,
@@ -278,7 +278,7 @@ export const getMe = async (req: Request, res: Response) => {
 // ============================================
 export const updatePassword = async (req: Request, res: Response) => {
   try {
-    const userId = (req as any).user?.id;
+    const userId = req.user?.id;
     const { currentPassword, newPassword } = req.body;
 
     if (!userId) {
@@ -321,7 +321,7 @@ export const updatePassword = async (req: Request, res: Response) => {
       success: true,
       message: 'Password updated successfully',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'UpdatePassword error:');
     res.status(500).json({
       success: false,

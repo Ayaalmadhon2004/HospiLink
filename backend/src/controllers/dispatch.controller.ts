@@ -8,7 +8,7 @@ import logger from '../config/logger';
 // import { errorHandler } from '../middlewares/error.middleware';
 
 // ✅ استبدليه بـ helper function بسيط
-const handleError = (res: Response, error: any, message: string, statusCode: number = 500) => {
+const handleError = (res: Response, error: unknown, message: string, statusCode: number = 500) => {
   logger.error({ err: error }, `[Dispatch Error] ${message}:`);
   res.status(statusCode).json({
     success: false,
@@ -24,7 +24,7 @@ export const getAllUnits = async (req: Request, res: Response) => {
       orderBy: { unitCode: 'asc' }
     });
     res.status(200).json({ success: true, data: units });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch units');
   }
 };
@@ -39,7 +39,7 @@ export const getActiveUnits = async (req: Request, res: Response) => {
       include: { currentCall: true }
     });
     res.status(200).json({ success: true, data: units });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch active units');
   }
 };
@@ -79,7 +79,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: unit });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update unit status');
   }
 };
@@ -117,7 +117,7 @@ export const createCall = async (req: Request, res: Response) => {
     }
 
     res.status(201).json({ success: true, data: call });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create call');
   }
 };
@@ -153,7 +153,7 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: { call: updatedCall, unit: updatedUnit } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to assign unit');
   }
 };

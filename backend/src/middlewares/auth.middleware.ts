@@ -37,7 +37,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;  // ← ✅ Unified secret
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & { userId: string };  // ← ✅ Unified secret
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
