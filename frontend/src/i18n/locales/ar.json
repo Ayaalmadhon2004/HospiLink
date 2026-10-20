@@ -1,0 +1,85 @@
+{
+  "common": {
+    "loading": "جارٍ التحميل...",
+    "retry": "إعادة المحاولة",
+    "unknown": "غير معروف",
+    "switchLanguage": "تغيير اللغة"
+  },
+  "auth": {
+    "welcomeBack": "مرحبًا بعودتك",
+    "signInSubtitle": "سجّل الدخول إلى حسابك",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "rememberMe": "تذكّرني",
+    "signIn": "تسجيل الدخول",
+    "signingIn": "جارٍ تسجيل الدخول...",
+    "noAccount": "ليس لديك حساب؟",
+    "signUp": "إنشاء حساب",
+    "loginFailed": "فشل تسجيل الدخول",
+    "loginFailedCheck": "فشل تسجيل الدخول. يرجى التحقق من بياناتك."
+  },
+  "sidebar": {
+    "central": "المركزي",
+    "clinicalOperations": "العمليات السريرية",
+    "notLoggedIn": "غير مسجّل الدخول",
+    "tabs": {
+      "Overview": "نظرة عامة",
+      "Patients": "المرضى",
+      "Beds & Wards": "الأسرّة والأقسام",
+      "Staff & Shifts": "الطاقم والمناوبات",
+      "Appointments": "المواعيد",
+      "Vitals Monitor": "مراقبة العلامات الحيوية",
+      "Incidents": "الحوادث",
+      "Dispatch": "الإسعاف",
+      "Settings": "الإعدادات"
+    }
+  },
+  "dashboard": {
+    "greeting": {
+      "morning": "صباح الخير",
+      "afternoon": "مساء الخير",
+      "evening": "مساء الخير"
+    },
+    "loadError": "تعذّر تحميل بيانات لوحة التحكم. يرجى المحاولة مرة أخرى.",
+    "loadingData": "جارٍ تحميل بيانات لوحة التحكم...",
+    "loadingPage": "جارٍ تحميل محتوى الصفحة...",
+    "retryLabel": "إعادة تحميل بيانات لوحة التحكم",
+    "keyStats": "الإحصائيات الرئيسية",
+    "bedOccupancy": "إشغال الأسرّة",
+    "bedsInUse": "{{occupied}} من {{total}} سرير قيد الاستخدام",
+    "patients": "المرضى",
+    "patientsHint": "دخلوا مؤخرًا",
+    "appointments": "المواعيد",
+    "appointmentsHint": "مجدولة اليوم",
+    "staff": "الطاقم",
+    "staffHint": "أعضاء مسجّلون",
+    "departmentLoad": "الضغط على الأقسام",
+    "noDepartments": "لا توجد أقسام نشطة",
+    "todaysSchedule": "جدول اليوم",
+    "todaysAppointments": "مواعيد اليوم",
+    "viewAll": "عرض الكل",
+    "viewAllLabel": "عرض جميع المواعيد",
+    "noAppointments": "لا توجد مواعيد اليوم",
+    "doctorPrefix": "د. {{name}}",
+    "crisisDispatch": "إسعاف الطوارئ",
+    "crisisDispatchText": "نظام الاستجابة للطوارئ فعّال",
+    "openDispatch": "فتح الإسعاف",
+    "openDispatchLabel": "فتح لوحة الإسعاف",
+    "mainLabel": "لوحة {{tab}}",
+    "appointmentTypes": {
+      "SURGERY": "جراحة",
+      "CONSULTATION": "استشارة",
+      "IMAGING": "تصوير",
+      "FOLLOW_UP": "متابعة"
+    },
+    "departments": {
+      "Emergency": "الطوارئ",
+      "ICU": "العناية المركزة",
+      "Surgery": "الجراحة",
+      "Pediatrics": "الأطفال",
+      "Maternity": "الولادة",
+      "Cardiology": "القلب",
+      "General": "عام"
+    }
+  }
+}

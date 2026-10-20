@@ -5,6 +5,7 @@ import {
   useMemo, 
   memo 
 } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '../components/Dashboard/Sidebar';
 import StatCard from '../components/Dashboard/StatCard';
 import { getRecentPatients } from '../services/patientService';
@@ -43,11 +44,11 @@ const VALID_TABS = [
 
 type TabName = typeof VALID_TABS[number];
 
-const getGreeting = (date: Date): string => {
+const getGreetingKey = (date: Date): string => {
   const hour = date.getHours();
-  if (hour < 12) return 'Good morning';
-  if (hour < 18) return 'Good afternoon';
-  return 'Good evening';
+  if (hour < 12) return 'dashboard.greeting.morning';
+  if (hour < 18) return 'dashboard.greeting.afternoon';
+  return 'dashboard.greeting.evening';
 };
 
 // ─── Interfaces ─────────────────────────────────────────────────────
@@ -112,14 +113,19 @@ const APPOINTMENT_TYPE_DOTS: Record<string, string> = {
 };
 
 // ─── Memoized Sub-Components ────────────────────────────────────────
-const LoadingSpinner = memo(() => (
-  <div className="flex items-center justify-center py-12" role="status" aria-label="Loading">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
-    <span className="sr-only">Loading dashboard data...</span>
-  </div>
-));
+const LoadingSpinner = memo(() => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center py-12" role="status" aria-label={t('common.loading')}>
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600" />
+      <span className="sr-only">{t('dashboard.loadingData')}</span>
+    </div>
+  );
+});
 
-const ErrorBanner = memo(({ message, onRetry }: { message: string; onRetry: () => void }) => (
+const ErrorBanner = memo(({ message, onRetry }: { message: string; onRetry: () => void }) => {
+  const { t } = useTranslation();
+  return (
   <div 
     className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between"
     role="alert"
@@ -129,12 +135,13 @@ const ErrorBanner = memo(({ message, onRetry }: { message: string; onRetry: () =
     <button
       onClick={onRetry}
       className="text-sm font-semibold underline hover:no-underline focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-2"
-      aria-label="Retry loading dashboard data"
+      aria-label={t('dashboard.retryLabel')}
     >
-      Retry
+      {t('common.retry')}
     </button>
   </div>
-));
+  );
+});
 
 const EmptyState = memo(({ message }: { message: string }) => (
   <div className="text-center py-6 text-gray-400">
@@ -142,22 +149,25 @@ const EmptyState = memo(({ message }: { message: string }) => (
   </div>
 ));
 
-const CrisisDispatchCard = memo(({ onOpen }: { onOpen: () => void }) => (
+const CrisisDispatchCard = memo(({ onOpen }: { onOpen: () => void }) => {
+  const { t } = useTranslation();
+  return (
   <section 
     className="bg-blue-800 rounded-lg p-6 text-white"
     aria-labelledby="crisis-dispatch-heading"
   >
-    <h2 id="crisis-dispatch-heading" className="text-lg font-bold mb-2">Crisis Dispatch</h2>
-    <p className="text-blue-100 text-sm mb-4">Emergency response system active</p>
+    <h2 id="crisis-dispatch-heading" className="text-lg font-bold mb-2">{t('dashboard.crisisDispatch')}</h2>
+    <p className="text-blue-100 text-sm mb-4">{t('dashboard.crisisDispatchText')}</p>
     <button
       onClick={onOpen}
       className="block w-full bg-white/20 hover:bg-white/30 focus:bg-white/30 focus:outline-none focus:ring-2 focus:ring-white/50 text-white py-2 rounded-lg transition text-sm font-medium text-center"
-      aria-label="Open dispatch dashboard"
+      aria-label={t('dashboard.openDispatchLabel')}
     >
-      Open Dispatch
+      {t('dashboard.openDispatch')}
     </button>
   </section>
-));
+  );
+});
 
 // ─── Custom Hook: Dashboard Data ────────────────────────────────────
 const useDashboardData = () => {
@@ -244,7 +254,7 @@ const useDashboardData = () => {
 
     } catch {
       if (signal?.aborted) return;
-      setError('Failed to load dashboard data. Please try again.');
+      setError('dashboard.loadError');
     } finally {
       if (!signal?.aborted) {
         setLoading(false);
@@ -273,15 +283,20 @@ const useDashboardData = () => {
 };
 
 // ─── Tab Loading Fallback ───────────────────────────────────────────
-const TabFallback = memo(() => (
-  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading page">
-    <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
-    <span className="sr-only">Loading page content...</span>
-  </div>
-));
+const TabFallback = memo(() => {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-center py-24" role="status" aria-label={t('common.loading')}>
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-teal-600" />
+      <span className="sr-only">{t('dashboard.loadingPage')}</span>
+    </div>
+  );
+});
 
 // ─── Main Component ─────────────────────────────────────────────────
 const Dashboard = () => {
+  const { t, i18n } = useTranslation();
+  const locale = i18n.language;
   const [activeItem, setActiveItem] = useState<TabName>(() => {
     const saved = getCookie('dashboard_active_tab');
     return VALID_TABS.includes(saved as TabName) ? (saved as TabName) : 'Overview';
@@ -308,12 +323,12 @@ const Dashboard = () => {
 
   // ─── Memoized Helpers ─────────────────────────────────────────────
   const formatTime = useCallback((dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString('en-US', {
+    return new Date(dateStr).toLocaleTimeString(locale, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true,
     });
-  }, []);
+  }, [locale]);
 
   const getTypeDot = useCallback((type: string) => {
     return APPOINTMENT_TYPE_DOTS[type] || 'bg-gray-400';
@@ -321,8 +336,8 @@ const Dashboard = () => {
 
   // ─── SEO: Document Title ──────────────────────────────────────────
   useEffect(() => {
-    document.title = `${activeItem} | HospiLink`;
-  }, [activeItem]);
+    document.title = `${t(`sidebar.tabs.${activeItem}`)} | HospiLink`;
+  }, [activeItem, t]);
 
   // ─── Handle Sidebar Click ─────────────────────────────────────────
   const handleItemClick = useCallback((item: string) => {
@@ -373,8 +388,8 @@ const Dashboard = () => {
   // ─── Overview Panel ───────────────────────────────────────────────
   const firstName = user?.name?.replace(/^dr\.?\s+/i, '').split(' ')[0] ?? '';
   const now = new Date();
-  const greeting = getGreeting(now);
-  const dateLabel = now.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long' });
+  const greeting = t(getGreetingKey(now));
+  const dateLabel = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
 
   const OverviewPanel = useMemo(() => (
     <div className="space-y-6">
@@ -389,18 +404,18 @@ const Dashboard = () => {
       </header>
 
       {/* Error Banner */}
-      {error && <ErrorBanner message={error} onRetry={refetch} />}
+      {error && <ErrorBanner message={t(error)} onRetry={refetch} />}
 
       {/* Stats: bed occupancy leads, the rest support it */}
       <section
         className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-[2fr_1fr_1fr_1fr] gap-4"
-        aria-label="Key statistics"
+        aria-label={t('dashboard.keyStats')}
       >
         <div className="sm:col-span-3 lg:col-span-1 bg-blue-800 text-white rounded-lg p-6">
-          <h3 className="text-xs font-medium uppercase tracking-wider text-blue-200">Bed occupancy</h3>
+          <h3 className="text-xs font-medium uppercase tracking-wider text-blue-200">{t('dashboard.bedOccupancy')}</h3>
           <p className="text-5xl font-semibold mt-3">{loading ? '...' : `${bedOccupancy}%`}</p>
           <p className="text-sm text-blue-100 mt-2">
-            {loading ? '' : `${occupiedBeds} of ${totalBeds} beds in use`}
+            {loading ? '' : t('dashboard.bedsInUse', { occupied: occupiedBeds, total: totalBeds })}
           </p>
           <div className="mt-4 h-1.5 w-full rounded-full bg-white/20">
             <div
@@ -409,9 +424,9 @@ const Dashboard = () => {
             />
           </div>
         </div>
-        <StatCard title="Patients" value={loading ? '...' : patients.length.toString()} hint="recently admitted" />
-        <StatCard title="Appointments" value={loading ? '...' : todaySchedule.length.toString()} hint="scheduled today" />
-        <StatCard title="Staff" value={loading ? '...' : staffCount.toString()} hint="registered members" />
+        <StatCard title={t('dashboard.patients')} value={loading ? '...' : patients.length.toString()} hint={t('dashboard.patientsHint')} />
+        <StatCard title={t('dashboard.appointments')} value={loading ? '...' : todaySchedule.length.toString()} hint={t('dashboard.appointmentsHint')} />
+        <StatCard title={t('dashboard.staff')} value={loading ? '...' : staffCount.toString()} hint={t('dashboard.staffHint')} />
       </section>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -421,7 +436,7 @@ const Dashboard = () => {
           aria-labelledby="dept-load-heading"
         >
           <div className="flex justify-between items-center mb-6">
-            <h2 id="dept-load-heading" className="text-base font-semibold text-gray-900">Department Load</h2>
+            <h2 id="dept-load-heading" className="text-base font-semibold text-gray-900">{t('dashboard.departmentLoad')}</h2>
           </div>
           <div className="space-y-4">
             {loading ? (
@@ -430,14 +445,14 @@ const Dashboard = () => {
               departmentLoads.map((dept) => (
                 <DepartmentBar 
                   key={dept.name} 
-                  title={dept.name} 
+                  title={t(`dashboard.departments.${dept.name}`, { defaultValue: dept.name })} 
                   current={dept.current} 
                   max={dept.max} 
                   color={dept.color} 
                 />
               ))
             ) : (
-              <EmptyState message="No active departments" />
+              <EmptyState message={t('dashboard.noDepartments')} />
             )}
           </div>
         </section>
@@ -450,20 +465,20 @@ const Dashboard = () => {
             aria-labelledby="schedule-heading"
           >
             <div className="flex justify-between items-center mb-4">
-              <h2 id="schedule-heading" className="text-base font-semibold text-gray-900">Today's Schedule</h2>
+              <h2 id="schedule-heading" className="text-base font-semibold text-gray-900">{t('dashboard.todaysSchedule')}</h2>
               <button 
                 onClick={() => setActiveItem('Appointments')}
                 className="text-teal-600 text-sm hover:underline focus:outline-none focus:ring-2 focus:ring-teal-500 rounded px-1"
-                aria-label="View all appointments"
+                aria-label={t('dashboard.viewAllLabel')}
               >
-                View All
+                {t('dashboard.viewAll')}
               </button>
             </div>
 
             {loading ? (
               <LoadingSpinner />
             ) : todaySchedule.length > 0 ? (
-              <ul className="divide-y divide-gray-100" role="list" aria-label="Today's appointments">
+              <ul className="divide-y divide-gray-100" role="list" aria-label={t('dashboard.todaysAppointments')}>
                 {todaySchedule.slice(0, 5).map((apt) => (
                   <li 
                     key={apt.id} 
@@ -474,10 +489,10 @@ const Dashboard = () => {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {apt.patient?.name || 'Unknown'}
+                        {apt.patient?.name || t('common.unknown')}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {apt.type} · Dr. {apt.doctor?.name || 'Unknown'}
+                        {t(`dashboard.appointmentTypes.${apt.type}`, { defaultValue: apt.type })} · {t('dashboard.doctorPrefix', { name: apt.doctor?.name || t('common.unknown') })}
                         {apt.room && ` · ${apt.room}`}
                       </p>
                     </div>
@@ -491,7 +506,7 @@ const Dashboard = () => {
                 ))}
               </ul>
             ) : (
-              <EmptyState message="No appointments today" />
+              <EmptyState message={t('dashboard.noAppointments')} />
             )}
           </section>
 
@@ -515,7 +530,8 @@ const Dashboard = () => {
     todaySchedule, 
     refetch,
     formatTime,
-    getTypeDot
+    getTypeDot,
+    t
   ]);
 
   return (
@@ -530,7 +546,7 @@ const Dashboard = () => {
       <main 
         className="flex-1 overflow-y-auto p-8"
         role="main"
-        aria-label={`${activeItem} dashboard`}
+        aria-label={t('dashboard.mainLabel', { tab: t(`sidebar.tabs.${activeItem}`) })}
       >
         {activeItem === 'Overview' ? OverviewPanel : renderContent}
       </main>
