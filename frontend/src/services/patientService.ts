@@ -30,10 +30,16 @@ export const dischargePatient = async (id: string) => {
 export const uploadReport = async (file: File, patientId: string) => {
   const formData = new FormData();
   formData.append('reportFile', file);
-  return await apiFetch(`/patients/${patientId}/reports`, {
+  const res = await apiFetch(`/patients/${patientId}/reports`, {
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) {
+    // apiFetch never throws; surface the failure so the UI does not report a false success.
+    const data = (await res.json()) as { message?: string; error?: string };
+    throw new Error(data.message ?? data.error ?? res.statusText);
+  }
+  return res;
 };
 
 export const getPatientReports = async (patientId: string) => {
