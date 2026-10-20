@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
 import { getErrorMessage } from '../types/api';
 
 export interface CrudConfig<T> {
@@ -33,6 +34,7 @@ export interface UseCreateResult<T> {
 // ─── useOptimisticDelete ────────────────────────────────────────────
 
 export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [confirmDelete, setConfirmDelete] = useState<{ id: string; name: string } | null>(null);
 
@@ -52,7 +54,7 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
       });
 
       // Show success toast immediately
-      toast.success(`${config.itemName} deleted`);
+      toast.success(t('crud.deleted', { item: config.itemName }));
 
       return { previousData };
     },
@@ -62,7 +64,7 @@ export function useOptimisticDelete<T>(config: CrudConfig<T>): UseDeleteResult {
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
       }
-      toast.error(getErrorMessage(err, '') || `Failed to delete ${config.itemName.toLowerCase()}`);
+      toast.error(getErrorMessage(err, '') || t('crud.deleteFailed', { item: config.itemName.toLowerCase() }));
     },
 
     onSettled: () => {
@@ -125,18 +127,19 @@ export function useCrudModal<T>(): UseCreateResult<T> {
 // ─── useOptimisticCreate ────────────────────────────────────────────
 // شو يساوي اليوز ابوتيمستك بالكريت والابديت 
 export function useOptimisticCreate<T>(config: CrudConfig<T>) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: config.createFn!,
 
     onSuccess: () => {
-      toast.success(`${config.itemName} created successfully`);
+      toast.success(t('crud.created', { item: config.itemName }));
       queryClient.invalidateQueries({ queryKey: config.queryKey });
     },
 
     onError: (err: unknown) => {
-      toast.error(getErrorMessage(err, '') || `Failed to create ${config.itemName.toLowerCase()}`);
+      toast.error(getErrorMessage(err, '') || t('crud.createFailed', { item: config.itemName.toLowerCase() }));
     },
   });
 }
@@ -144,6 +147,7 @@ export function useOptimisticCreate<T>(config: CrudConfig<T>) {
 // ─── useOptimisticUpdate ───────────────────────────────────────────
 
 export function useOptimisticUpdate<T>(config: CrudConfig<T>) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
 
   return useMutation({
@@ -167,11 +171,11 @@ export function useOptimisticUpdate<T>(config: CrudConfig<T>) {
       if (context?.previousData) {
         queryClient.setQueryData(config.queryKey, context.previousData);
       }
-      toast.error(getErrorMessage(err, '') || `Failed to update ${config.itemName.toLowerCase()}`);
+      toast.error(getErrorMessage(err, '') || t('crud.updateFailed', { item: config.itemName.toLowerCase() }));
     },
 
     onSuccess: () => {
-      toast.success(`${config.itemName} updated successfully`);
+      toast.success(t('crud.updated', { item: config.itemName }));
     },
 
     onSettled: () => {

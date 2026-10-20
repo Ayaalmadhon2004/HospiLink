@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { usePatients } from '../hooks/usePatients';
 import { AdmitPatientModal } from '../components/Patients/AdmitPatientModal';
@@ -97,15 +98,16 @@ SkeletonRow.displayName = 'SkeletonRow';
 
 // ─── Status Badge ─────────────────────────────────────────────────
 const StatusBadge = memo(({ status }: { status: string }) => {
+  const { t } = useTranslation();
   const colorClass = STATUS_COLORS[status] || STATUS_COLORS.STABLE;
   return (
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}
       role="status"
-      aria-label={`Status: ${status}`}
+      aria-label={t('patients.listStatusAria', { status: t(`status.${status}`, { defaultValue: status }) })}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
-      {status}
+      {t(`status.${status}`, { defaultValue: status })}
     </span>
   );
 });
@@ -113,6 +115,7 @@ StatusBadge.displayName = 'StatusBadge';
 
 // ─── Main Component ───────────────────────────────────────────────
 export const PatientsPage = () => {
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -134,8 +137,8 @@ export const PatientsPage = () => {
 
   // ─── SEO: Dynamic title ─────────────────────────────────────────
   useEffect(() => {
-    document.title = `Patients - Page ${page} | HospiLink`;
-  }, [page]);
+    document.title = t('patients.documentTitle', { page });
+  }, [page, t]);
 
   const handlePatientAdded = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['patients'] });
@@ -172,17 +175,17 @@ export const PatientsPage = () => {
       {/* Header */}
       <header className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-hospital-navy">Patients</h1>
-          <p className="text-slate-500">Admitted patient records</p>
+          <h1 className="text-2xl font-bold text-hospital-navy">{t('patients.title')}</h1>
+          <p className="text-slate-500">{t('patients.subtitle')}</p>
         </div>
 
         <button
           onClick={() => setIsModalOpen(true)}
           className="bg-hospital-navy text-white px-4 py-2 rounded-lg hover:bg-hospital-navy/90 transition flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-hospital-navy focus:ring-offset-2"
-          aria-label="Admit new patient"
+          aria-label={t('patients.admitLabel')}
         >
           <UserPlus size={18} aria-hidden="true" />
-          Admit Patient
+          {t('patients.admit')}
         </button>
       </header>
 
@@ -193,8 +196,8 @@ export const PatientsPage = () => {
       />
 
       {/* Filters */}
-      <section className="flex flex-wrap gap-3 mb-6" aria-label="Patient filters">
-        <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter by status">
+      <section className="flex flex-wrap gap-3 mb-6" aria-label={t('patients.filtersLabel')}>
+        <div className="flex gap-2 flex-wrap" role="group" aria-label={t('patients.filterByStatus')}>
           {['All', 'Stable', 'Observation', 'Critical', 'Discharged'].map((s) => (
             <button
               key={s}
@@ -206,24 +209,24 @@ export const PatientsPage = () => {
               }`}
               aria-pressed={statusFilter === s}
             >
-              {s}
+              {t(`patients.filters.${s}`)}
             </button>
           ))}
         </div>
 
-        <div className="relative ml-auto">
+        <div className="relative ms-auto">
           <Search 
             size={16} 
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" 
+            className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" 
             aria-hidden="true" 
           />
           <input
             type="text"
-            placeholder="Search by name or ID..."
+            placeholder={t('patients.searchPlaceholder')}
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}
-            className="border border-slate-200 pl-9 pr-4 py-2 rounded-xl focus:ring-2 focus:ring-medical-teal focus:border-medical-teal outline-none w-64 transition"
-            aria-label="Search patients by name or ID"
+            className="border border-slate-200 ps-9 pe-4 py-2 rounded-xl focus:ring-2 focus:ring-medical-teal focus:border-medical-teal outline-none w-64 transition"
+            aria-label={t('patients.searchLabel')}
             autoComplete="off"
           />
         </div>
@@ -237,7 +240,7 @@ export const PatientsPage = () => {
             <div 
               className="absolute inset-0 bg-white/60 flex items-center justify-center z-10 rounded-2xl"
               role="status"
-              aria-label="Loading page data"
+              aria-label={t('patients.loadingPage')}
             >
               <Loader2 className="w-6 h-6 animate-spin text-medical-teal" aria-hidden="true" />
             </div>
@@ -247,12 +250,12 @@ export const PatientsPage = () => {
             <table className="w-full">
               <thead className="bg-slate-50 text-slate-500 text-sm uppercase">
                 <tr>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Patient ID</th>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Name</th>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Age</th>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Department</th>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Admission Date</th>
-                  <th scope="col" className="px-6 py-4 text-left font-medium">Status</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.patientId')}</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.name')}</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.age')}</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.department')}</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.admissionDate')}</th>
+                  <th scope="col" className="px-6 py-4 text-start font-medium">{t('patients.columns.status')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -270,8 +273,8 @@ export const PatientsPage = () => {
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
                       <Search className="w-12 h-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
-                      <p>No patients found</p>
-                      {search && <p className="text-sm mt-1">Try different search terms</p>}
+                      <p>{t('patients.empty')}</p>
+                      {search && <p className="text-sm mt-1">{t('patients.emptyHint')}</p>}
                     </td>
                   </tr>
                 ) : (
@@ -282,7 +285,7 @@ export const PatientsPage = () => {
                       onClick={() => navigate(`/patients/${patient.id}`)}
                       tabIndex={0}
                       role="link"
-                      aria-label={`View details for ${patient.name}`}
+                      aria-label={t('patients.viewDetails', { name: patient.name })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -297,10 +300,10 @@ export const PatientsPage = () => {
                         {patient.name}
                       </td>
                       <td className="px-6 py-4 text-clinic-text/70">{patient.age}</td>
-                      <td className="px-6 py-4 text-clinic-text/70">{patient.department}</td>
+                      <td className="px-6 py-4 text-clinic-text/70">{t(`departments.${patient.department}`, { defaultValue: patient.department })}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">
                         <time dateTime={patient.admissionDate}>
-                          {new Date(patient.admissionDate).toLocaleDateString('en-US', {
+                          {new Date(patient.admissionDate).toLocaleDateString(i18n.language, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',
@@ -323,22 +326,22 @@ export const PatientsPage = () => {
           <footer className="px-6 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-4">
             {/* Info */}
             <div className="text-sm text-slate-500">
-              Showing <span className="font-medium text-clinic-text">{startItem}</span>
-              {' - '}
-              <span className="font-medium text-clinic-text">{endItem}</span>
-              {' of '}
-              <span className="font-medium text-clinic-text">{pagination.totalCount}</span> patients
+              {t('patients.showing', {
+                start: startItem.toLocaleString(i18n.language),
+                end: endItem.toLocaleString(i18n.language),
+                total: pagination.totalCount.toLocaleString(i18n.language),
+              })}
             </div>
 
             {/* Items per page */}
             <div className="flex items-center gap-2 text-sm text-slate-500">
-              <label htmlFor="rows-per-page">Rows per page:</label>
+              <label htmlFor="rows-per-page">{t('patients.rowsPerPage')}</label>
               <select
                 id="rows-per-page"
                 value={limit}
                 onChange={(e) => handleLimitChange(Number(e.target.value))}
                 className="border border-slate-200 rounded-lg px-2 py-1 text-sm focus:ring-2 focus:ring-medical-teal outline-none bg-white"
-                aria-label="Select number of rows per page"
+                aria-label={t('patients.rowsPerPageLabel')}
               >
                 {ITEMS_PER_PAGE_OPTIONS.map((opt) => (
                   <option key={opt} value={opt}>{opt}</option>
@@ -347,16 +350,16 @@ export const PatientsPage = () => {
             </div>
 
             {/* Page Navigation */}
-            <nav aria-label="Pagination" className="flex items-center gap-1">
+            <nav aria-label={t('pagination.label')} className="flex items-center gap-1">
               {/* First */}
               <button
                 onClick={() => setPage(1)}
                 disabled={page === 1 || isFetching}
                 className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
-                aria-label="Go to first page"
-                title="First page"
+                aria-label={t('pagination.first')}
+                title={t('pagination.firstTitle')}
               >
-                <ChevronsLeft size={16} aria-hidden="true" />
+                <ChevronsLeft size={16} className="rtl:rotate-180" aria-hidden="true" />
               </button>
 
               {/* Previous */}
@@ -364,14 +367,14 @@ export const PatientsPage = () => {
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1 || isFetching}
                 className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
-                aria-label="Go to previous page"
-                title="Previous page"
+                aria-label={t('pagination.previous')}
+                title={t('pagination.previousTitle')}
               >
-                <ChevronLeft size={16} aria-hidden="true" />
+                <ChevronLeft size={16} className="rtl:rotate-180" aria-hidden="true" />
               </button>
 
               {/* Page Numbers */}
-              <div className="flex items-center gap-1 mx-1" role="group" aria-label="Page numbers">
+              <div className="flex items-center gap-1 mx-1" role="group" aria-label={t('pagination.pageNumbers')}>
                 {paginationRange.map((item, idx) => (
                   item === '...' ? (
                     <span key={`dots-${idx}`} className="px-2 text-slate-400" aria-hidden="true">...</span>
@@ -385,10 +388,10 @@ export const PatientsPage = () => {
                           ? 'bg-hospital-navy text-white'
                           : 'text-clinic-text hover:bg-slate-100'
                       } disabled:opacity-50`}
-                      aria-label={`Go to page ${item}`}
+                      aria-label={t('pagination.goToPage', { page: item })}
                       aria-current={page === item ? 'page' : undefined}
                     >
-                      {item}
+                      {typeof item === 'number' ? item.toLocaleString(i18n.language) : item}
                     </button>
                   )
                 ))}
@@ -399,10 +402,10 @@ export const PatientsPage = () => {
                 onClick={() => setPage(page + 1)}
                 disabled={page === totalPages || isFetching}
                 className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
-                aria-label="Go to next page"
-                title="Next page"
+                aria-label={t('pagination.next')}
+                title={t('pagination.nextTitle')}
               >
-                <ChevronRight size={16} aria-hidden="true" />
+                <ChevronRight size={16} className="rtl:rotate-180" aria-hidden="true" />
               </button>
 
               {/* Last */}
@@ -410,10 +413,10 @@ export const PatientsPage = () => {
                 onClick={() => setPage(totalPages)}
                 disabled={page === totalPages || isFetching}
                 className="p-2 rounded-lg hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
-                aria-label="Go to last page"
-                title="Last page"
+                aria-label={t('pagination.last')}
+                title={t('pagination.lastTitle')}
               >
-                <ChevronsRight size={16} aria-hidden="true" />
+                <ChevronsRight size={16} className="rtl:rotate-180" aria-hidden="true" />
               </button>
             </nav>
           </footer>

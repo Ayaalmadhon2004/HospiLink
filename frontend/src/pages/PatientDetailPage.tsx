@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { logger } from '../utils/logger';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation, Trans } from 'react-i18next';
 import { api } from '../services/api';
 import { getResponseData } from '../types/api';
 import type { PatientDetail, PatientReport } from '../types/patient';
@@ -24,6 +25,7 @@ const openReportFile = async (fileUrl: string): Promise<void> => {
 };
 
 export const PatientDetailPage = () => {
+  const { t, i18n } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -53,13 +55,13 @@ export const PatientDetailPage = () => {
         const res = await getPatientById(id);
         setPatient(res.data);
       } catch (err: unknown) {
-        setError(getResponseData(err)?.message || 'Failed to load patient');
+        setError(getResponseData(err)?.message || t('patientDetail.loadError'));
       } finally {
         setLoading(false);
       }
     };
     fetchPatient();
-  }, [id]);
+  }, [id, t]);
 
   // Fetch reports
   useEffect(() => {
@@ -87,7 +89,7 @@ export const PatientDetailPage = () => {
       const res = await getPatientById(id);
       setPatient(res.data);
     } catch (err: unknown) {
-      setError(getResponseData(err)?.message || 'Failed to discharge patient');
+      setError(getResponseData(err)?.message || t('patientDetail.dischargeError'));
     } finally {
       setDischarging(false);
     }
@@ -98,11 +100,11 @@ export const PatientDetailPage = () => {
     if (file) {
       const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
       if (!allowedTypes.includes(file.type)) {
-        setUploadError('Please select a PDF or image file (JPG, PNG)');
+        setUploadError(t('patientDetail.invalidFileType'));
         return;
       }
       if (file.size > 10 * 1024 * 1024) {
-        setUploadError('File size must be less than 10MB');
+        setUploadError(t('patientDetail.fileTooLarge'));
         return;
       }
       setSelectedFile(file);
@@ -130,7 +132,7 @@ export const PatientDetailPage = () => {
         setShowUploadModal(false);
       }, 3000);
     } catch (err: unknown) {
-      setUploadError(getResponseData(err)?.message || 'Failed to upload report');
+      setUploadError(getResponseData(err)?.message || t('patientDetail.uploadError'));
     } finally {
       setUploading(false);
     }
@@ -149,7 +151,7 @@ export const PatientDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="text-clinic-text/50">Loading...</div>
+        <div className="text-clinic-text/50">{t('common.loading')}</div>
       </div>
     );
   }
@@ -158,9 +160,9 @@ export const PatientDetailPage = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
         <div className="bg-red-50 text-red-600 px-6 py-4 rounded-xl">
-          {error || 'Patient not found'}
+          {error || t('patientDetail.notFound')}
           <button onClick={() => navigate('/dashboard')} className="block mt-4 text-hospital-navy hover:underline">
-            Back to Dashboard
+            {t('patientDetail.backToDashboard')}
           </button>
         </div>
       </div>
@@ -173,10 +175,10 @@ export const PatientDetailPage = () => {
       <button 
         onClick={() => navigate(-1)} 
         className="flex items-center gap-2 text-clinic-text/70 hover:text-clinic-text mb-6 transition"
-        aria-label="Go back"
+        aria-label={t('common.goBack')}
       >
-        <ArrowLeft size={20} aria-hidden="true" />
-        Back
+        <ArrowLeft size={20} className="rtl:rotate-180" aria-hidden="true" />
+        {t('common.back')}
       </button>
 
       <div className="max-w-4xl mx-auto">
@@ -198,9 +200,9 @@ export const PatientDetailPage = () => {
             <span 
               className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[patient.status as keyof typeof STATUS_COLORS]}`}
               role="status"
-              aria-label={`Patient status: ${patient.status}`}
+              aria-label={t('patients.statusAria', { status: t(`status.${patient.status}`, { defaultValue: patient.status }) })}
             >
-              {patient.status}
+              {t(`status.${patient.status}`, { defaultValue: patient.status })}
             </span>
           </div>
         </div>
@@ -211,31 +213,31 @@ export const PatientDetailPage = () => {
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
               <User size={20} className="text-medical-teal" aria-hidden="true" />
-              Personal Information
+              {t('patientDetail.personalInfo')}
             </h2>
             <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Age</dt>
-                <dd className="font-medium text-clinic-text">{patient.age} years</dd>
+                <dt className="text-clinic-text/50">{t('patientDetail.age')}</dt>
+                <dd className="font-medium text-clinic-text">{t('patientDetail.years', { count: patient.age })}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Gender</dt>
-                <dd className="font-medium text-clinic-text">{patient.gender}</dd>
+                <dt className="text-clinic-text/50">{t('patientDetail.gender')}</dt>
+                <dd className="font-medium text-clinic-text">{t(`gender.${patient.gender}`, { defaultValue: patient.gender })}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Admission Date</dt>
+                <dt className="text-clinic-text/50">{t('patientDetail.admissionDate')}</dt>
                 <dd className="font-medium text-clinic-text">
                   <time dateTime={patient.admissionDate}>
-                    {new Date(patient.admissionDate).toLocaleDateString('en-US')}
+                    {new Date(patient.admissionDate).toLocaleDateString(i18n.language)}
                   </time>
                 </dd>
               </div>
               {patient.dischargeDate && (
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">Discharge Date</dt>
+                  <dt className="text-clinic-text/50">{t('patientDetail.dischargeDate')}</dt>
                   <dd className="font-medium text-medical-teal">
                     <time dateTime={patient.dischargeDate}>
-                      {new Date(patient.dischargeDate).toLocaleDateString('en-US')}
+                      {new Date(patient.dischargeDate).toLocaleDateString(i18n.language)}
                     </time>
                   </dd>
                 </div>
@@ -247,20 +249,20 @@ export const PatientDetailPage = () => {
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
               <Stethoscope size={20} className="text-red-500" aria-hidden="true" />
-              Medical Information
+              {t('patientDetail.medicalInfo')}
             </h2>
             <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Department</dt>
-                <dd className="font-medium text-clinic-text">{patient.department}</dd>
+                <dt className="text-clinic-text/50">{t('patientDetail.department')}</dt>
+                <dd className="font-medium text-clinic-text">{t(`departments.${patient.department}`, { defaultValue: patient.department })}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Diagnosis</dt>
+                <dt className="text-clinic-text/50">{t('patientDetail.diagnosis')}</dt>
                 <dd className="font-medium text-clinic-text">{patient.diagnosis}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">Attending Physician</dt>
-                <dd className="font-medium text-clinic-text">{patient.doctor?.name || 'Not assigned'}</dd>
+                <dt className="text-clinic-text/50">{t('patientDetail.attendingPhysician')}</dt>
+                <dd className="font-medium text-clinic-text">{patient.doctor?.name || t('patientDetail.notAssigned')}</dd>
               </div>
             </dl>
           </section>
@@ -269,21 +271,21 @@ export const PatientDetailPage = () => {
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
               <Bed size={20} className="text-medical-teal" aria-hidden="true" />
-              Bed Information
+              {t('patientDetail.bedInfo')}
             </h2>
             {patient.bed ? (
               <dl className="space-y-3">
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">Bed Number</dt>
+                  <dt className="text-clinic-text/50">{t('patientDetail.bedNumber')}</dt>
                   <dd className="font-medium text-clinic-text">{patient.bed.bedNumber}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">Ward</dt>
+                  <dt className="text-clinic-text/50">{t('patientDetail.ward')}</dt>
                   <dd className="font-medium text-clinic-text">{patient.bed.wardName}</dd>
                 </div>
               </dl>
             ) : (
-              <p className="text-clinic-text/40">No bed assigned</p>
+              <p className="text-clinic-text/40">{t('patientDetail.noBed')}</p>
             )}
           </section>
 
@@ -291,9 +293,9 @@ export const PatientDetailPage = () => {
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
               <Activity size={20} className="text-purple-500" aria-hidden="true" />
-              Vitals
+              {t('patientDetail.vitals')}
             </h2>
-            <p className="text-clinic-text/40 text-sm">Coming soon - vitals tracking section</p>
+            <p className="text-clinic-text/40 text-sm">{t('patientDetail.vitalsSoon')}</p>
           </section>
         </div>
 
@@ -301,15 +303,15 @@ export const PatientDetailPage = () => {
         <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6">
           <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
             <FileText size={20} className="text-medical-teal" aria-hidden="true" />
-            Reports ({reports.length})
+            {t('patientDetail.reports', { count: reports.length })}
           </h2>
 
           {reportsLoading ? (
-            <div className="text-clinic-text/40 text-sm">Loading reports...</div>
+            <div className="text-clinic-text/40 text-sm">{t('patientDetail.loadingReports')}</div>
           ) : reports.length === 0 ? (
-            <p className="text-clinic-text/40 text-sm">No reports uploaded yet</p>
+            <p className="text-clinic-text/40 text-sm">{t('patientDetail.noReports')}</p>
           ) : (
-            <ul className="space-y-2" role="list" aria-label="Patient reports">
+            <ul className="space-y-2" role="list" aria-label={t('patientDetail.reportsLabel')}>
               {reports.map((report) => (
                 <li key={report.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition">
                   <FileText size={16} className="text-medical-teal" aria-hidden="true" />
@@ -317,7 +319,7 @@ export const PatientDetailPage = () => {
                     <p className="text-sm font-medium text-clinic-text truncate">{report.fileName}</p>
                     <p className="text-xs text-clinic-text/40">
                       <time dateTime={report.createdAt}>
-                        {new Date(report.createdAt).toLocaleDateString('en-US')}
+                        {new Date(report.createdAt).toLocaleDateString(i18n.language)}
                       </time>
                       {' • '}
                       {report.fileType.split('/')[1].toUpperCase()}
@@ -325,12 +327,12 @@ export const PatientDetailPage = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => { openReportFile(report.fileUrl).catch(() => setError('Failed to open report')); }}
+                    onClick={() => { openReportFile(report.fileUrl).catch(() => setError(t('patientDetail.openReportError'))); }}
                     className="text-medical-teal hover:underline text-sm flex items-center gap-1"
-                    aria-label={`View report: ${report.fileName}`}
+                    aria-label={t('patientDetail.viewReport', { name: report.fileName })}
                   >
                     <Download size={14} aria-hidden="true" />
-                    View
+                    {t('patientDetail.view')}
                   </button>
                 </li>
               ))}
@@ -344,7 +346,7 @@ export const PatientDetailPage = () => {
             onClick={() => navigate(`/patients/${id}/edit`)}
             className="bg-hospital-navy text-white px-6 py-3 rounded-xl hover:bg-hospital-navy/90 transition"
           >
-            Edit Patient
+            {t('patientDetail.edit')}
           </button>
 
           <button
@@ -352,7 +354,7 @@ export const PatientDetailPage = () => {
             className="bg-medical-teal/10 text-medical-teal border border-medical-teal/20 px-6 py-3 rounded-xl hover:bg-medical-teal/20 transition flex items-center gap-2"
           >
             <Upload size={18} aria-hidden="true" />
-            Upload Report
+            {t('patientDetail.uploadReport')}
           </button>
 
           {patient.status !== 'DISCHARGED' && (
@@ -361,7 +363,7 @@ export const PatientDetailPage = () => {
               className="bg-red-50 text-red-600 border border-red-200 px-6 py-3 rounded-xl hover:bg-red-100 transition flex items-center gap-2"
             >
               <LogOut size={18} aria-hidden="true" />
-              Discharge Patient
+              {t('patientDetail.discharge')}
             </button>
           )}
         </div>
@@ -376,10 +378,13 @@ export const PatientDetailPage = () => {
           aria-labelledby="discharge-title"
         >
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
-            <h2 id="discharge-title" className="text-xl font-bold text-hospital-navy mb-2">Confirm Discharge</h2>
+            <h2 id="discharge-title" className="text-xl font-bold text-hospital-navy mb-2">{t('patientDetail.confirmDischarge')}</h2>
             <p className="text-clinic-text/50 mb-6">
-              Are you sure you want to discharge <strong className="text-clinic-text">{patient.name}</strong>?
-              This will free the bed and mark the patient as discharged.
+              <Trans
+                i18nKey="patientDetail.dischargeQuestion"
+                values={{ name: patient.name }}
+                components={{ strong: <strong className="text-clinic-text" /> }}
+              />
             </p>
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-3 rounded-xl mb-4 text-sm" role="alert">{error}</div>
@@ -390,7 +395,7 @@ export const PatientDetailPage = () => {
                 className="bg-slate-100 text-clinic-text px-4 py-2 rounded-xl hover:bg-slate-200 transition"
                 disabled={discharging}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleDischarge}
@@ -398,7 +403,7 @@ export const PatientDetailPage = () => {
                 disabled={discharging}
                 aria-busy={discharging}
               >
-                {discharging ? 'Discharging...' : 'Confirm Discharge'}
+                {discharging ? t('patientDetail.discharging') : t('patientDetail.confirmDischarge')}
               </button>
             </div>
           </div>
@@ -415,18 +420,18 @@ export const PatientDetailPage = () => {
         >
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
             <div className="flex justify-between items-center mb-4">
-              <h2 id="upload-title" className="text-xl font-bold text-hospital-navy">Upload Report</h2>
+              <h2 id="upload-title" className="text-xl font-bold text-hospital-navy">{t('patientDetail.uploadReport')}</h2>
               <button 
                 onClick={closeUploadModal} 
                 className="text-clinic-text/50 hover:text-clinic-text"
-                aria-label="Close upload modal"
+                aria-label={t('patientDetail.closeUpload')}
               >
                 <X size={20} />
               </button>
             </div>
 
             <p className="text-clinic-text/50 mb-4">
-              Upload a medical report (PDF, JPG, PNG) for {patient.name}
+              {t('patientDetail.uploadPrompt', { name: patient.name })}
             </p>
 
             {/* File Input Area */}
@@ -443,9 +448,9 @@ export const PatientDetailPage = () => {
               <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center gap-2">
                 <Upload size={32} className="text-medical-teal" aria-hidden="true" />
                 <span className="text-clinic-text/70">
-                  {selectedFile ? selectedFile.name : 'Click to select file'}
+                  {selectedFile ? selectedFile.name : t('patientDetail.selectFile')}
                 </span>
-                <span id="file-help" className="text-xs text-clinic-text/40">PDF, JPG, PNG (max 10MB)</span>
+                <span id="file-help" className="text-xs text-clinic-text/40">{t('patientDetail.fileHelp')}</span>
               </label>
             </div>
 
@@ -454,8 +459,8 @@ export const PatientDetailPage = () => {
               <div className="bg-medical-teal/5 border border-medical-teal/20 rounded-lg p-3 mb-4 flex items-center gap-2">
                 <FileText size={16} className="text-medical-teal" aria-hidden="true" />
                 <span className="text-sm text-clinic-text">{selectedFile.name}</span>
-                <span className="text-xs text-clinic-text/40 ml-auto">
-                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                <span className="text-xs text-clinic-text/40 ms-auto">
+                  {t('patientDetail.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
                 </span>
               </div>
             )}
@@ -479,7 +484,7 @@ export const PatientDetailPage = () => {
                 aria-live="polite"
               >
                 <CheckCircle size={16} aria-hidden="true" />
-                Report uploaded successfully!
+                {t('patientDetail.uploadSuccess')}
               </div>
             )}
 
@@ -490,7 +495,7 @@ export const PatientDetailPage = () => {
                 className="bg-slate-100 text-clinic-text px-4 py-2 rounded-xl hover:bg-slate-200 transition"
                 disabled={uploading}
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 onClick={handleUpload}
@@ -501,12 +506,12 @@ export const PatientDetailPage = () => {
                 {uploading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" aria-hidden="true" />
-                    Uploading...
+                    {t('patientDetail.uploading')}
                   </>
                 ) : (
                   <>
                     <Upload size={16} aria-hidden="true" />
-                    Upload
+                    {t('patientDetail.upload')}
                   </>
                 )}
               </button>

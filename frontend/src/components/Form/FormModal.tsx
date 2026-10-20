@@ -1,6 +1,7 @@
 // components/Form/FormModal.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { FormBanner } from './FormBanner';
 import { FieldRenderer } from './FieldRenderer';
 import { getResponseData } from '../../types/api';
@@ -14,10 +15,13 @@ export const FormModal = <T extends object>({
   fields,
   initialValues,
   onSubmit,
-  submitLabel = 'Save',
-  submittingLabel = 'Saving...',
+  submitLabel,
+  submittingLabel,
   mode = 'create',
 }: FormModalProps<T>) => {
+  const { t } = useTranslation();
+  // Config text may be an i18n key or a plain literal (the literal is the fallback)
+  const tr = useCallback((text?: string) => (text ? t(text, { defaultValue: text }) : text), [t]);
   const [values, setValues] = useState<Partial<T>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -94,7 +98,7 @@ export const FormModal = <T extends object>({
           (field.type === 'checkbox' && value === false);
 
         if (isEmpty) {
-          newErrors[field.name] = `${field.label} is required`;
+          newErrors[field.name] = t('forms.required', { field: tr(field.label) });
           isValid = false;
         }
       }
@@ -103,7 +107,7 @@ export const FormModal = <T extends object>({
       if (field.type === 'number' && value !== undefined && value !== '' && value !== null) {
         const num = Number(value);
         if (isNaN(num)) {
-          newErrors[field.name] = 'Must be a valid number';
+          newErrors[field.name] = t('forms.validNumber');
           isValid = false;
         }
       }
@@ -112,7 +116,7 @@ export const FormModal = <T extends object>({
       if (field.type === 'email' && value) {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(String(value))) {
-          newErrors[field.name] = 'Invalid email address';
+          newErrors[field.name] = t('forms.invalidEmail');
           isValid = false;
         }
       }
@@ -120,7 +124,7 @@ export const FormModal = <T extends object>({
 
     setErrors(newErrors);
     return isValid;
-  }, [fields, values]);
+  }, [fields, values, t, tr]);
 
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
@@ -146,21 +150,21 @@ export const FormModal = <T extends object>({
         });
 
         await onSubmit(cleanValues as T);
-        setSuccess(mode === 'create' ? 'Created successfully!' : 'Updated successfully!');
+        setSuccess(mode === 'create' ? t('forms.created') : t('forms.updated'));
         setTimeout(() => {
           onClose();
         }, 800);
       } catch (err: unknown) {
         const backendError = getResponseData(err);
         setFormError(
-          backendError?.message || backendError?.error || 'Failed to save. Please try again.'
+          backendError?.message || backendError?.error || t('forms.saveFailed')
         );
         setFormErrorDetail(backendError?.fullError || '');
       } finally {
         setSubmitting(false);
       }
     },
-    [validate, onSubmit, values, onClose, mode, fields]
+    [validate, onSubmit, values, onClose, mode, fields, t]
   );
 
   if (!isOpen) return null;
@@ -183,15 +187,15 @@ export const FormModal = <T extends object>({
         <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <div>
             <h2 id="form-modal-title" className="text-xl font-bold text-hospital-navy">
-              {mode === 'edit' ? 'Edit' : 'Add'} {title}
+              {t(mode === 'edit' ? 'forms.editTitle' : 'forms.addTitle', { title: tr(title) })}
             </h2>
-            {subtitle && <p className="text-sm text-clinic-text/50 mt-0.5">{subtitle}</p>}
+            {subtitle && <p className="text-sm text-clinic-text/50 mt-0.5">{tr(subtitle)}</p>}
           </div>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
             disabled={submitting}
-            aria-label="Close modal"
+            aria-label={t('common.closeModal')}
             type="button"
           >
             <X size={20} className="text-clinic-text/50" />
@@ -224,7 +228,7 @@ export const FormModal = <T extends object>({
               className="flex-1 bg-slate-100 text-clinic-text px-4 py-2.5 rounded-xl hover:bg-slate-200 transition font-medium focus:outline-none focus:ring-2 focus:ring-slate-400"
               disabled={submitting}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -235,10 +239,10 @@ export const FormModal = <T extends object>({
               {submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                  {submittingLabel}
+                  {tr(submittingLabel) ?? t('common.saving')}
                 </>
               ) : (
-                submitLabel
+                (tr(submitLabel) ?? t('common.save'))
               )}
             </button>
           </div>

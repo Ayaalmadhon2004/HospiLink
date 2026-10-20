@@ -1,6 +1,7 @@
 // pages/Beds.tsx
 import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
 import { apiGet, apiDelete } from '../services/api';
@@ -16,6 +17,7 @@ interface Ward {
 }
 
 const Beds = () => {
+  const { t } = useTranslation();
   const [beds, setBeds] = useState<BedWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'ALL' | BedStatus>('ALL');
@@ -28,7 +30,7 @@ const Beds = () => {
     queryKey: ['beds'],
     deleteFn: (id: string) => apiDelete(`/beds/${id}`),
     getItemId: (bed) => bed.id,
-    itemName: 'Bed',
+    itemName: t('beds.itemName'),
   });
 
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<BedWithDetails>();
@@ -90,20 +92,20 @@ const Beds = () => {
   const getStatusConfig = (status: BedStatus) => {
     switch (status) {
       case 'AVAILABLE':
-        return { badge: 'bg-emerald-100 text-emerald-800', label: 'Available', dot: 'bg-emerald-500' };
+        return { badge: 'bg-emerald-100 text-emerald-800', label: t('beds.status.AVAILABLE'), dot: 'bg-emerald-500' };
       case 'OCCUPIED':
-        return { badge: 'bg-rose-100 text-rose-800', label: 'Occupied', dot: 'bg-rose-500' };
+        return { badge: 'bg-rose-100 text-rose-800', label: t('beds.status.OCCUPIED'), dot: 'bg-rose-500' };
       case 'MAINTENANCE':
-        return { badge: 'bg-amber-100 text-amber-800', label: 'Maintenance', dot: 'bg-amber-500' };
+        return { badge: 'bg-amber-100 text-amber-800', label: t('beds.status.MAINTENANCE'), dot: 'bg-amber-500' };
       case 'CLEANING':
-        return { badge: 'bg-blue-100 text-blue-800', label: 'Cleaning', dot: 'bg-blue-500' };
+        return { badge: 'bg-blue-100 text-blue-800', label: t('beds.status.CLEANING'), dot: 'bg-blue-500' };
     }
   };
 
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status" aria-label="Loading beds"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status" aria-label={t('beds.loading')}></div>
       </div>
     );
   }
@@ -114,7 +116,7 @@ const Beds = () => {
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
         name={confirmDelete?.name || ''}
-        itemType="bed"
+        itemType={t('beds.itemType')}
         onCancel={() => {}}
         onConfirm={handleConfirmDelete}
         isLoading={isDeleting}
@@ -122,15 +124,15 @@ const Beds = () => {
 
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Beds & Wards</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage hospital beds and patient assignments</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('beds.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('beds.subtitle')}</p>
         </div>
         <button
           onClick={handleAdd}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg transition flex items-center gap-2 text-sm font-medium"
         >
           <Plus className="w-4 h-4" />
-          Add Bed
+          {t('beds.add')}
         </button>
       </div>
 
@@ -139,7 +141,7 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Total</p>
+              <p className="text-sm text-gray-500">{t('beds.stats.total')}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{stats.total}</p>
             </div>
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -150,7 +152,7 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Available</p>
+              <p className="text-sm text-gray-500">{t('beds.status.AVAILABLE')}</p>
               <p className="text-2xl font-bold text-emerald-600 mt-1">{stats.available}</p>
             </div>
             <div className="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center">
@@ -161,7 +163,7 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Occupied</p>
+              <p className="text-sm text-gray-500">{t('beds.status.OCCUPIED')}</p>
               <p className="text-2xl font-bold text-rose-600 mt-1">{stats.occupied}</p>
             </div>
             <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center">
@@ -172,7 +174,7 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Cleaning</p>
+              <p className="text-sm text-gray-500">{t('beds.status.CLEANING')}</p>
               <p className="text-2xl font-bold text-blue-600 mt-1">{stats.cleaning}</p>
             </div>
             <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
@@ -183,7 +185,7 @@ const Beds = () => {
         <div className="bg-white rounded-xl shadow-sm border p-5">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-gray-500">Maintenance</p>
+              <p className="text-sm text-gray-500">{t('beds.status.MAINTENANCE')}</p>
               <p className="text-2xl font-bold text-amber-600 mt-1">{stats.maintenance}</p>
             </div>
             <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
@@ -204,18 +206,19 @@ const Beds = () => {
                 filter === f ? 'bg-slate-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border'
               }`}
             >
-              {f === 'ALL' ? 'All' : getStatusConfig(f as BedStatus).label}
+              {f === 'ALL' ? t('beds.filterAll') : getStatusConfig(f as BedStatus).label}
             </button>
           ))}
         </div>
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by bed number or ward..."
+            placeholder={t('beds.searchPlaceholder')}
+            aria-label={t('beds.searchPlaceholder')}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+            className="w-full ps-10 pe-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
           />
         </div>
       </section>
@@ -225,11 +228,11 @@ const Beds = () => {
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
-              <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-4">Bed</th>
-              <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-4">Ward</th>
-              <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-4">Status</th>
-              <th className="text-left text-xs font-semibold text-gray-500 uppercase px-6 py-4">Patient</th>
-              <th className="text-right text-xs font-semibold text-gray-500 uppercase px-6 py-4">Actions</th>
+              <th className="text-start text-xs font-semibold text-gray-500 uppercase px-6 py-4">{t('beds.columns.bed')}</th>
+              <th className="text-start text-xs font-semibold text-gray-500 uppercase px-6 py-4">{t('beds.columns.ward')}</th>
+              <th className="text-start text-xs font-semibold text-gray-500 uppercase px-6 py-4">{t('beds.columns.status')}</th>
+              <th className="text-start text-xs font-semibold text-gray-500 uppercase px-6 py-4">{t('beds.columns.patient')}</th>
+              <th className="text-end text-xs font-semibold text-gray-500 uppercase px-6 py-4">{t('beds.columns.actions')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -243,8 +246,8 @@ const Beds = () => {
                         <BedDouble className="w-5 h-5 text-blue-600" />
                       </div>
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Bed {bed.bedNumber}</p>
-                        <p className="text-xs text-gray-500">ID: {bed.id.slice(0, 8)}</p>
+                        <p className="text-sm font-medium text-gray-900">{t('beds.bedLabel', { number: bed.bedNumber })}</p>
+                        <p className="text-xs text-gray-500">{t('beds.idLabel', { id: bed.id.slice(0, 8) })}</p>
                       </div>
                     </div>
                   </td>
@@ -267,16 +270,18 @@ const Beds = () => {
                       <span className="text-sm text-gray-400">—</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-6 py-4 text-end">
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleEdit(bed)}
+                        aria-label={t('beds.editLabel', { number: bed.bedNumber })}
                         className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => handleDeleteClick(bed.id, `Bed ${bed.bedNumber}`)}
+                        onClick={() => handleDeleteClick(bed.id, t('beds.bedLabel', { number: bed.bedNumber }))}
+                        aria-label={t('beds.deleteLabel', { number: bed.bedNumber })}
                         className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -291,7 +296,7 @@ const Beds = () => {
         {filteredBeds.length === 0 && (
           <div className="text-center py-12 text-gray-400">
             <BedDouble className="w-12 h-12 mx-auto mb-3 opacity-50" />
-            <p>No beds found</p>
+            <p>{t('beds.empty')}</p>
           </div>
         )}
       </div>

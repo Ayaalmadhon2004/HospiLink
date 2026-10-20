@@ -1,5 +1,6 @@
 // frontend/src/components/Staff/StaffCard.tsx
 import { Mail, Phone, Stethoscope, Clock } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Shift } from '../../types/staff';
 
 interface StaffMember {
@@ -19,13 +20,16 @@ interface StaffCardProps {
 }
 
 export const StaffCard = ({ member }: StaffCardProps) => {
+  const { t, i18n } = useTranslation();
+  const roleLabel = t(`staff.roles.${member.role}`, { defaultValue: member.role });
+  const statusLabel = member.isActive ? t('staff.status.ACTIVE') : t('staff.status.INACTIVE');
   const currentShift = member.shifts?.[0];
   const initials = member.name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
 
   return (
     <article
       className={`bg-white rounded-2xl shadow-sm border p-5 transition-all hover:shadow-md ${member.isActive ? 'border-slate-200' : 'border-slate-100 opacity-60'}`}
-      aria-label={`Staff card for ${member.name}, ${member.role}`}
+      aria-label={t('staff.card.label', { name: member.name, role: roleLabel })}
     >
       <div className="flex items-start gap-4">
         {/* Avatar */}
@@ -33,7 +37,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           {member.avatar ? (
             <img
               src={member.avatar}
-              alt={`${member.name} profile photo`}
+              alt={t('staff.card.photo', { name: member.name })}
               className="w-full h-full rounded-full object-cover"
               loading="lazy"
               decoding="async"
@@ -50,18 +54,18 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           <h3 className="font-semibold text-hospital-navy truncate">{member.name}</h3>
           <p className="text-sm text-clinic-text/60 flex items-center gap-1">
             <Stethoscope size={12} aria-hidden="true" />
-            {member.role}
+            {roleLabel}
           </p>
-          <p className="text-xs text-clinic-text/40 mt-0.5">{member.department}</p>
+          <p className="text-xs text-clinic-text/40 mt-0.5">{t(`departments.${member.department}`, { defaultValue: member.department })}</p>
         </div>
 
         {/* Status */}
         <span
           className={`px-2 py-1 rounded-full text-xs font-medium ${member.isActive ? 'bg-green-100 text-green-600' : 'bg-slate-100 text-slate-500'}`}
           role="status"
-          aria-label={`Status: ${member.isActive ? 'Active' : 'Inactive'}`}
+          aria-label={t('staff.card.status', { status: statusLabel })}
         >
-          {member.isActive ? 'Active' : 'Inactive'}
+          {statusLabel}
         </span>
       </div>
 
@@ -72,7 +76,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           <a
             href={`mailto:${member.email}`}
             className="truncate hover:text-medical-teal transition"
-            aria-label={`Email ${member.name} at ${member.email}`}
+            aria-label={t('staff.card.email', { name: member.name, email: member.email })}
           >
             {member.email}
           </a>
@@ -83,7 +87,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
             <a
               href={`tel:${member.phone}`}
               className="hover:text-medical-teal transition"
-              aria-label={`Call ${member.name} at ${member.phone}`}
+              aria-label={t('staff.card.call', { name: member.name, phone: member.phone })}
             >
               {member.phone}
             </a>
@@ -97,11 +101,11 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           <div className="flex items-center gap-2 text-sm">
             <Clock size={14} className="text-medical-teal" aria-hidden="true" />
             <span className="text-teal-700 font-medium">
-              {currentShift.type}
+              {t(`staff.shifts.${currentShift.type}`, { defaultValue: currentShift.type })}
             </span>
             <span className="text-clinic-text/40 text-xs">
-              {new Date(currentShift.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - 
-              {new Date(currentShift.endTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              {new Date(currentShift.startTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })} - 
+              {new Date(currentShift.endTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
         </div>

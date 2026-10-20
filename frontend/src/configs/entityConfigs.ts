@@ -18,19 +18,19 @@ export interface PatientFormValues {
 }
 
 export const patientFields: FieldConfig<PatientFormValues>[] = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, colSpan: 2, placeholder: 'Enter patient name' },
-  { name: 'age', label: 'Age', type: 'number', required: true, colSpan: 1, placeholder: 'Years' },
-  { name: 'gender', label: 'Gender', type: 'select', required: true, colSpan: 1, options: GENDER_OPTIONS },
-  { name: 'department', label: 'Department', type: 'select', required: true, colSpan: 2, options: DEPARTMENT_OPTIONS },
-  { name: 'diagnosis', label: 'Diagnosis', type: 'text', required: true, colSpan: 2, placeholder: 'Primary diagnosis' },
+  { name: 'name', label: 'forms.patient.name', type: 'text', required: true, colSpan: 2, placeholder: 'forms.patient.namePlaceholder' },
+  { name: 'age', label: 'forms.patient.age', type: 'number', required: true, colSpan: 1, placeholder: 'forms.patient.agePlaceholder' },
+  { name: 'gender', label: 'forms.patient.gender', type: 'select', required: true, colSpan: 1, options: GENDER_OPTIONS },
+  { name: 'department', label: 'forms.patient.department', type: 'select', required: true, colSpan: 2, options: DEPARTMENT_OPTIONS },
+  { name: 'diagnosis', label: 'forms.patient.diagnosis', type: 'text', required: true, colSpan: 2, placeholder: 'forms.patient.diagnosisPlaceholder' },
   {
     name: 'bedId',
-    label: 'Assign Bed',
+    label: 'forms.patient.bedId',
     type: 'search-select',
     colSpan: 2,
     dependsOn: 'department',
     apiEndpoint: '/patients/beds/available?department={department}',
-    placeholder: 'Select an available bed',
+    placeholder: 'forms.patient.bedIdPlaceholder',
   },
 ];
 
@@ -55,25 +55,25 @@ export interface BedFormValues {
 }
 
 const BED_STATUS_OPTIONS = [
-  { label: 'Available', value: 'AVAILABLE' },
-  { label: 'Occupied', value: 'OCCUPIED' },
-  { label: 'Cleaning', value: 'CLEANING' },
-  { label: 'Maintenance', value: 'MAINTENANCE' },
+  { label: 'beds.status.AVAILABLE', value: 'AVAILABLE' },
+  { label: 'beds.status.OCCUPIED', value: 'OCCUPIED' },
+  { label: 'beds.status.CLEANING', value: 'CLEANING' },
+  { label: 'beds.status.MAINTENANCE', value: 'MAINTENANCE' },
 ];
 
 export const bedFields: FieldConfig<BedFormValues>[] = [
-  { name: 'bedNumber', label: 'Bed Number', type: 'text', required: true, placeholder: 'e.g. ICU-101' },
+  { name: 'bedNumber', label: 'forms.bed.bedNumber', type: 'text', required: true, placeholder: 'forms.bed.bedNumberPlaceholder' },
   {
     name: 'wardId',
-    label: 'Ward / Department',
+    label: 'forms.bed.wardId',
     type: 'search-select',
     required: true,
     apiEndpoint: '/wards',
-    placeholder: 'Select ward...',
+    placeholder: 'forms.bed.wardIdPlaceholder',
   },
   {
     name: 'status',
-    label: 'Status',
+    label: 'forms.bed.status',
     type: 'select',
     required: true,
     options: BED_STATUS_OPTIONS,
@@ -81,11 +81,11 @@ export const bedFields: FieldConfig<BedFormValues>[] = [
   },
   {
     name: 'patientId',
-    label: 'Assign Patient',
+    label: 'forms.bed.patientId',
     type: 'search-select',
     apiEndpoint: '/patients/unassigned',
-    placeholder: '— Unassigned —',
-    helperText: 'Auto-sets status to Occupied when assigned',
+    placeholder: 'forms.bed.patientIdPlaceholder',
+    helperText: 'forms.bed.patientIdHelper',
   },
 ];
 
@@ -111,30 +111,30 @@ export interface AppointmentFormValues {
 }
 
 const APPOINTMENT_TYPE_OPTIONS = [
-  { label: 'Consultation', value: 'CONSULTATION' },
-  { label: 'Surgery', value: 'SURGERY' },
-  { label: 'Imaging', value: 'IMAGING' },
-  { label: 'Follow-up', value: 'FOLLOW_UP' },
+  { label: 'appointments.types.CONSULTATION', value: 'CONSULTATION' },
+  { label: 'appointments.types.SURGERY', value: 'SURGERY' },
+  { label: 'appointments.types.IMAGING', value: 'IMAGING' },
+  { label: 'appointments.types.FOLLOW_UP', value: 'FOLLOW_UP' },
 ];
 
 export const appointmentFields: FieldConfig<AppointmentFormValues>[] = [
-  { name: 'patientName', label: 'Patient Name', type: 'text', required: true, colSpan: 1, placeholder: 'John Doe' },
-  { name: 'patientCode', label: 'Patient Code', type: 'text', required: true, colSpan: 1, placeholder: 'PT-2052' },
+  { name: 'patientName', label: 'forms.appointment.patientName', type: 'text', required: true, colSpan: 1, placeholder: 'forms.appointment.patientNamePlaceholder' },
+  { name: 'patientCode', label: 'forms.appointment.patientCode', type: 'text', required: true, colSpan: 1, placeholder: 'forms.appointment.patientCodePlaceholder' },
   {
     name: 'doctorId',
-    label: 'Doctor',
+    label: 'forms.appointment.doctorId',
     type: 'search-select',
     required: true,
     apiEndpoint: '/staff?role=doctor',
-    placeholder: 'Select doctor...',
+    placeholder: 'forms.appointment.doctorIdPlaceholder',
   },
-  { name: 'type', label: 'Type', type: 'select', required: true, options: APPOINTMENT_TYPE_OPTIONS },
-  { name: 'scheduledDate', label: 'Date', type: 'date', required: true, colSpan: 1 },
-  { name: 'scheduledTime', label: 'Time', type: 'time', required: true, colSpan: 1 },
-  { name: 'duration', label: 'Duration (min)', type: 'number', colSpan: 1, placeholder: '30' },
-  { name: 'department', label: 'Department', type: 'text', colSpan: 1, placeholder: 'Cardiology' },
-  { name: 'room', label: 'Room', type: 'text', placeholder: 'C-214' },
-  { name: 'notes', label: 'Notes', type: 'textarea', rows: 3, placeholder: 'Additional notes...' },
+  { name: 'type', label: 'forms.appointment.type', type: 'select', required: true, options: APPOINTMENT_TYPE_OPTIONS },
+  { name: 'scheduledDate', label: 'forms.appointment.scheduledDate', type: 'date', required: true, colSpan: 1 },
+  { name: 'scheduledTime', label: 'forms.appointment.scheduledTime', type: 'time', required: true, colSpan: 1 },
+  { name: 'duration', label: 'forms.appointment.duration', type: 'number', colSpan: 1, placeholder: 'forms.appointment.durationPlaceholder' },
+  { name: 'department', label: 'forms.appointment.department', type: 'text', colSpan: 1, placeholder: 'forms.appointment.departmentPlaceholder' },
+  { name: 'room', label: 'forms.appointment.room', type: 'text', placeholder: 'forms.appointment.roomPlaceholder' },
+  { name: 'notes', label: 'forms.appointment.notes', type: 'textarea', rows: 3, placeholder: 'forms.appointment.notesPlaceholder' },
 ];
 
 export const appointmentValidationSchema = z.object({
@@ -163,32 +163,32 @@ export interface StaffFormValues {
 }
 
 const STAFF_ROLE_OPTIONS = [
-  { label: 'Cardiologist', value: 'Cardiologist' },
-  { label: 'Intensivist', value: 'Intensivist' },
-  { label: 'Surgeon', value: 'Surgeon' },
-  { label: 'Pediatrician', value: 'Pediatrician' },
-  { label: 'Obstetrician', value: 'Obstetrician' },
-  { label: 'Neurologist', value: 'Neurologist' },
-  { label: 'Nurse', value: 'Nurse' },
-  { label: 'Admin', value: 'Admin' },
-  { label: 'Technician', value: 'Technician' },
+  { label: 'staff.roles.Cardiologist', value: 'Cardiologist' },
+  { label: 'staff.roles.Intensivist', value: 'Intensivist' },
+  { label: 'staff.roles.Surgeon', value: 'Surgeon' },
+  { label: 'staff.roles.Pediatrician', value: 'Pediatrician' },
+  { label: 'staff.roles.Obstetrician', value: 'Obstetrician' },
+  { label: 'staff.roles.Neurologist', value: 'Neurologist' },
+  { label: 'staff.roles.Nurse', value: 'Nurse' },
+  { label: 'staff.roles.Admin', value: 'Admin' },
+  { label: 'staff.roles.Technician', value: 'Technician' },
 ];
 
 const STAFF_STATUS_OPTIONS = [
-  { label: 'Active', value: 'ACTIVE' },
-  { label: 'On Leave', value: 'ON_LEAVE' },
-  { label: 'Inactive', value: 'INACTIVE' },
+  { label: 'staff.status.ACTIVE', value: 'ACTIVE' },
+  { label: 'staff.status.ON_LEAVE', value: 'ON_LEAVE' },
+  { label: 'staff.status.INACTIVE', value: 'INACTIVE' },
 ];
 
 export const staffFields: FieldConfig<StaffFormValues>[] = [
-  { name: 'name', label: 'Full Name', type: 'text', required: true, colSpan: 2, placeholder: 'Dr. John Doe' },
-  { name: 'email', label: 'Email', type: 'email', required: true, colSpan: 1, placeholder: 'john@hospilink.com' },
-  { name: 'phone', label: 'Phone', type: 'tel', colSpan: 1, placeholder: '+1 234 567 890' },
-  { name: 'role', label: 'Role', type: 'select', required: true, options: STAFF_ROLE_OPTIONS },
-  { name: 'department', label: 'Department', type: 'select', required: true, options: DEPARTMENT_OPTIONS },
-  { name: 'status', label: 'Status', type: 'select', required: true, options: STAFF_STATUS_OPTIONS },
-  { name: 'shiftStart', label: 'Shift Start', type: 'time', colSpan: 1 },
-  { name: 'shiftEnd', label: 'Shift End', type: 'time', colSpan: 1 },
+  { name: 'name', label: 'forms.staff.name', type: 'text', required: true, colSpan: 2, placeholder: 'forms.staff.namePlaceholder' },
+  { name: 'email', label: 'forms.staff.email', type: 'email', required: true, colSpan: 1, placeholder: 'forms.staff.emailPlaceholder' },
+  { name: 'phone', label: 'forms.staff.phone', type: 'tel', colSpan: 1, placeholder: 'forms.staff.phonePlaceholder' },
+  { name: 'role', label: 'forms.staff.role', type: 'select', required: true, options: STAFF_ROLE_OPTIONS },
+  { name: 'department', label: 'forms.staff.department', type: 'select', required: true, options: DEPARTMENT_OPTIONS },
+  { name: 'status', label: 'forms.staff.status', type: 'select', required: true, options: STAFF_STATUS_OPTIONS },
+  { name: 'shiftStart', label: 'forms.staff.shiftStart', type: 'time', colSpan: 1 },
+  { name: 'shiftEnd', label: 'forms.staff.shiftEnd', type: 'time', colSpan: 1 },
 ];
 
 export const staffValidationSchema = z.object({
@@ -213,27 +213,27 @@ export interface IncidentFormValues {
 }
 
 const INCIDENT_TYPE_OPTIONS = [
-  { label: 'Medical Error', value: 'MEDICAL_ERROR' },
-  { label: 'Equipment Failure', value: 'EQUIPMENT_FAILURE' },
-  { label: 'Patient Fall', value: 'PATIENT_FALL' },
-  { label: 'Security', value: 'SECURITY' },
-  { label: 'Other', value: 'OTHER' },
+  { label: 'incidents.types.MEDICAL_ERROR', value: 'MEDICAL_ERROR' },
+  { label: 'incidents.types.EQUIPMENT_FAILURE', value: 'EQUIPMENT_FAILURE' },
+  { label: 'incidents.types.PATIENT_FALL', value: 'PATIENT_FALL' },
+  { label: 'incidents.types.SECURITY', value: 'SECURITY' },
+  { label: 'incidents.types.OTHER', value: 'OTHER' },
 ];
 
 const SEVERITY_OPTIONS = [
-  { label: 'Critical', value: 'CRITICAL' },
-  { label: 'Elevated', value: 'ELEVATED' },
-  { label: 'Moderate', value: 'MODERATE' },
-  { label: 'Low', value: 'LOW' },
+  { label: 'incidents.severity.CRITICAL', value: 'CRITICAL' },
+  { label: 'incidents.severity.ELEVATED', value: 'ELEVATED' },
+  { label: 'incidents.severity.MODERATE', value: 'MODERATE' },
+  { label: 'incidents.severity.LOW', value: 'LOW' },
 ];
 
 export const incidentFields: FieldConfig<IncidentFormValues>[] = [
-  { name: 'title', label: 'Incident Title', type: 'text', required: true, colSpan: 2, placeholder: 'Short title for the incident' },
-  { name: 'type', label: 'Incident Type', type: 'select', required: true, options: INCIDENT_TYPE_OPTIONS, colSpan: 1 },
-  { name: 'severity', label: 'Severity', type: 'select', required: true, options: SEVERITY_OPTIONS, colSpan: 1 },
-  { name: 'location', label: 'Location', type: 'text', required: true, placeholder: 'Ward / Room / Street', colSpan: 1 },
-  { name: 'reportedBy', label: 'Reported By', type: 'text', required: true, placeholder: 'Staff name', colSpan: 1 },
-  { name: 'description', label: 'Description', type: 'textarea', required: true, rows: 4, placeholder: 'Describe the incident in detail...', colSpan: 2 },
+  { name: 'title', label: 'forms.incident.title', type: 'text', required: true, colSpan: 2, placeholder: 'forms.incident.titlePlaceholder' },
+  { name: 'type', label: 'forms.incident.type', type: 'select', required: true, options: INCIDENT_TYPE_OPTIONS, colSpan: 1 },
+  { name: 'severity', label: 'forms.incident.severity', type: 'select', required: true, options: SEVERITY_OPTIONS, colSpan: 1 },
+  { name: 'location', label: 'forms.incident.location', type: 'text', required: true, placeholder: 'forms.incident.locationPlaceholder', colSpan: 1 },
+  { name: 'reportedBy', label: 'forms.incident.reportedBy', type: 'text', required: true, placeholder: 'forms.incident.reportedByPlaceholder', colSpan: 1 },
+  { name: 'description', label: 'forms.incident.description', type: 'textarea', required: true, rows: 4, placeholder: 'forms.incident.descriptionPlaceholder', colSpan: 2 },
 ];
 
 // ✅ FIXED: added title to validation

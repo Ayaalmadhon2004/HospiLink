@@ -1,5 +1,6 @@
 // frontend/src/components/Staff/ShiftTimeline.tsx
 import { Users } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { Shift } from '../../types/staff';
 
 interface ShiftTimelineProps {
@@ -14,11 +15,12 @@ const SHIFT_COLORS: Record<string, string> = {
 };
 
 export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
+  const { t } = useTranslation();
   if (!timeline || Object.keys(timeline).length === 0) {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <h3 className="text-lg font-bold text-hospital-navy mb-2">Shift Timeline</h3>
-        <p className="text-clinic-text/40 text-sm">No shifts scheduled for today</p>
+        <h3 className="text-lg font-bold text-hospital-navy mb-2">{t('staff.timeline.title')}</h3>
+        <p className="text-clinic-text/40 text-sm">{t('staff.timeline.empty')}</p>
       </div>
     );
   }
@@ -28,8 +30,8 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-hospital-navy">Shift Timeline</h3>
-        <span className="text-xs text-clinic-text/40">24-hour coverage</span>
+        <h3 className="text-lg font-bold text-hospital-navy">{t('staff.timeline.title')}</h3>
+        <span className="text-xs text-clinic-text/40">{t('staff.timeline.coverage')}</span>
       </div>
 
       <div className="space-y-4">
@@ -37,8 +39,9 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
           const shifts = timeline[dept];
           return (
             <div key={dept} className="relative">
-              <h4 className="text-sm font-medium text-clinic-text/70 mb-2">{dept}</h4>
-              <div className="relative h-10 bg-slate-50 rounded-lg overflow-hidden">
+              <h4 className="text-sm font-medium text-clinic-text/70 mb-2">{t(`departments.${dept}`, { defaultValue: dept })}</h4>
+              {/* The 24h axis is a fixed left-to-right time scale in every language */}
+              <div dir="ltr" className="relative h-10 bg-slate-50 rounded-lg overflow-hidden">
                 {/* Time markers */}
                 <div className="absolute inset-0 flex">
                   {[0, 4, 8, 12, 16, 20].map((hour) => (
@@ -62,9 +65,9 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
                       key={shift.id}
                       className={`absolute top-4 h-6 rounded-md border text-xs flex items-center px-2 truncate ${SHIFT_COLORS[shift.type] || 'bg-slate-100 text-slate-600'}`}
                       style={{ left: `${left}%`, width: `${Math.max(width, 8)}%` }}
-                      title={`${shift.staffName} - ${shift.type}`}
+                      title={`${shift.staffName} - ${t(`staff.shifts.${shift.type}`, { defaultValue: shift.type })}`}
                     >
-                      <Users size={10} className="mr-1 shrink-0" />
+                      <Users size={10} className="me-1 shrink-0" />
                       <span className="truncate">{shift.staffName}</span>
                     </div>
                   );

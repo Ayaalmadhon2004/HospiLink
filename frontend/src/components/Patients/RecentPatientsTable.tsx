@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useRecentPatients } from '../../hooks/useRecentPatients';
 import { User, AlertCircle } from 'lucide-react';
 
@@ -38,16 +39,18 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; label: string; d
 };
 
 const StatusBadge = memo(({ status }: { status: string }) => {
+  const { t } = useTranslation();
   const config = STATUS_CONFIG[status] || STATUS_CONFIG.STABLE;
+  const label = t(`patients.recent.statuses.${status}`, { defaultValue: config.label });
 
   return (
     <span 
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text}`}
       role="status"
-      aria-label={`Patient status: ${config.label}`}
+      aria-label={t('patients.statusAria', { status: label })}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} aria-hidden="true" />
-      {config.label}
+      {label}
     </span>
   );
 });
@@ -72,22 +75,23 @@ const SkeletonRow = memo(() => (
 SkeletonRow.displayName = 'SkeletonRow';
 
 const RecentPatientsTable = memo(() => {
+  const { t } = useTranslation();
   const { patients, loading, error } = useRecentPatients();
 
   // ─── Loading State with Skeleton ────────────────────────────────
   if (loading) {
     return (
       <section className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm" aria-busy="true">
-        <h3 className="text-lg font-bold text-slate-900 mb-6">Recently Admitted</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-6">{t('patients.recent.title')}</h3>
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-start">
             <thead>
               <tr className="text-xs uppercase text-slate-500 tracking-wider">
-                <th scope="col" className="pb-4 font-semibold px-4">Patient</th>
-                <th scope="col" className="pb-4 font-semibold px-4">Dept</th>
-                <th scope="col" className="pb-4 font-semibold px-4">Room</th>
-                <th scope="col" className="pb-4 font-semibold px-4">Physician</th>
-                <th scope="col" className="pb-4 font-semibold px-4">Status</th>
+                <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.patient')}</th>
+                <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.dept')}</th>
+                <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.room')}</th>
+                <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.physician')}</th>
+                <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.status')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -103,14 +107,14 @@ const RecentPatientsTable = memo(() => {
   if (error) {
     return (
       <section className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-        <h3 className="text-lg font-bold text-slate-900 mb-6">Recently Admitted</h3>
+        <h3 className="text-lg font-bold text-slate-900 mb-6">{t('patients.recent.title')}</h3>
         <div 
           className="p-8 text-center"
           role="alert"
           aria-live="assertive"
         >
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" aria-hidden="true" />
-          <p className="text-red-500 font-medium">Failed to load patients</p>
+          <p className="text-red-500 font-medium">{t('patients.recent.loadError')}</p>
           <p className="text-red-400 text-sm mt-1">{String(error)}</p>
         </div>
       </section>
@@ -119,16 +123,16 @@ const RecentPatientsTable = memo(() => {
 
   return (
     <section className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm">
-      <h3 className="text-lg font-bold text-slate-900 mb-6">Recently Admitted</h3>
+      <h3 className="text-lg font-bold text-slate-900 mb-6">{t('patients.recent.title')}</h3>
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-start">
           <thead>
             <tr className="text-xs uppercase text-slate-500 tracking-wider">
-              <th scope="col" className="pb-4 font-semibold px-4">Patient</th>
-              <th scope="col" className="pb-4 font-semibold px-4">Dept</th>
-              <th scope="col" className="pb-4 font-semibold px-4">Room</th>
-              <th scope="col" className="pb-4 font-semibold px-4">Physician</th>
-              <th scope="col" className="pb-4 font-semibold px-4">Status</th>
+              <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.patient')}</th>
+              <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.dept')}</th>
+              <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.room')}</th>
+              <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.physician')}</th>
+              <th scope="col" className="pb-4 font-semibold px-4 text-start">{t('patients.recent.status')}</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -146,7 +150,7 @@ const RecentPatientsTable = memo(() => {
                       <span className="font-semibold text-slate-900">{p.name}</span>
                     </div>
                   </td>
-                  <td className="py-4 px-4 text-slate-600">{p.bed?.wardName || 'N/A'}</td>
+                  <td className="py-4 px-4 text-slate-600">{p.bed?.wardName || t('common.na')}</td>
                   <td className="py-4 px-4 text-slate-600 font-mono text-xs">{p.bed?.bedNumber || '---'}</td>
                   <td className="py-4 px-4 text-slate-600">{p.physicianName}</td>
                   <td className="py-4 px-4"><StatusBadge status={p.status} /></td>
@@ -156,7 +160,7 @@ const RecentPatientsTable = memo(() => {
               <tr>
                 <td colSpan={5} className="py-12 text-center text-slate-500">
                   <User className="w-12 h-12 mx-auto mb-3 opacity-30" aria-hidden="true" />
-                  <p className="text-sm">No patients currently admitted</p>
+                  <p className="text-sm">{t('patients.recent.empty')}</p>
                 </td>
               </tr>
             )}

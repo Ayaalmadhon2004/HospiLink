@@ -1,6 +1,7 @@
 // components/Form/FieldRenderer.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { apiGet } from '../../services/api';
 import { extractList } from '../../types/api';
 import type { FieldConfig } from './types';
@@ -22,6 +23,9 @@ export const FieldRenderer = <T extends object>({
   error,
   disabled: formDisabled,
 }: FieldRendererProps<T>) => {
+  const { t } = useTranslation();
+  // Config text may be an i18n key or a plain literal (literal is the fallback)
+  const tr = (text?: string) => (text ? t(text, { defaultValue: text }) : text);
   const [searchOptions, setSearchOptions] = useState<{ label: string; value: string }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -94,8 +98,8 @@ export const FieldRenderer = <T extends object>({
 
   const renderLabel = () => (
     <label className={labelClass}>
-      {field.label}
-      {field.required && <span className="text-red-500 ml-0.5">*</span>}
+      {tr(field.label)}
+      {field.required && <span className="text-red-500 ms-0.5">*</span>}
     </label>
   );
 
@@ -104,7 +108,7 @@ export const FieldRenderer = <T extends object>({
       <div className={colSpan}>
         {field.label && renderLabel()}
         {field.render({ value, setValue, formValues })}
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -121,13 +125,14 @@ export const FieldRenderer = <T extends object>({
           <button
             type="button"
             onClick={() => !isDisabled && setShowDropdown(!showDropdown)}
-            className={`${baseInputClass} text-left flex items-center justify-between`}
+            className={`${baseInputClass} text-start flex items-center justify-between`}
             disabled={isDisabled}
           >
             <span className={value ? 'text-clinic-text' : 'text-slate-400'}>
-              {selectedOption?.label || field.placeholder || 'Select...'}
+              {tr(selectedOption?.label) || tr(field.placeholder) || t('forms.select')}
             </span>
             <ChevronDown
+              aria-hidden="true"
               size={16}
               className={`text-slate-400 transition ${showDropdown ? 'rotate-180' : ''}`}
             />
@@ -140,12 +145,12 @@ export const FieldRenderer = <T extends object>({
               >
                 {field.dependsOn && !formValues[field.dependsOn as keyof T] ? (
                   <div className="px-4 py-3 text-sm text-slate-400">
-                    Please select {field.dependsOn} first
+                    {t('forms.selectFirst', { field: t(`forms.fields.${field.dependsOn}`, { defaultValue: field.dependsOn }) })}
                   </div>
                 ) : searchLoading ? (
-                  <div className="px-4 py-3 text-sm text-slate-400">Loading...</div>
+                  <div className="px-4 py-3 text-sm text-slate-400">{t('common.loading')}</div>
                 ) : allOptions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-slate-400">No options available</div>
+                  <div className="px-4 py-3 text-sm text-slate-400">{t('forms.noOptions')}</div>
                 ) : (
                   allOptions.map((option) => (
                     <button
@@ -155,13 +160,13 @@ export const FieldRenderer = <T extends object>({
                         setValue(field.name, option.value);
                         setShowDropdown(false);
                       }}
-                      className={`w-full text-left px-4 py-2.5 text-sm hover:bg-slate-50 transition ${
+                      className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 transition ${
                         value === option.value
                           ? 'bg-medical-teal/5 text-medical-teal'
                           : 'text-clinic-text'
                       }`}
                     >
-                      {option.label}
+                      {tr(option.label)}
                     </button>
                   ))
                 )}
@@ -170,7 +175,7 @@ export const FieldRenderer = <T extends object>({
             </>
           )}
         </div>
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -186,14 +191,14 @@ export const FieldRenderer = <T extends object>({
           disabled={isDisabled}
           className={`${baseInputClass} appearance-none bg-white`}
         >
-          <option value="">{field.placeholder || `Select ${field.label}`}</option>
+          <option value="">{tr(field.placeholder) || t('forms.selectField', { label: tr(field.label) })}</option>
           {field.options?.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {tr(opt.label)}
             </option>
           ))}
         </select>
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -206,12 +211,12 @@ export const FieldRenderer = <T extends object>({
         <textarea
           value={(value as string) || ''}
           onChange={(e) => setValue(field.name, e.target.value)}
-          placeholder={field.placeholder}
+          placeholder={tr(field.placeholder)}
           rows={field.rows || 3}
           disabled={isDisabled}
           className={`${baseInputClass} resize-none`}
         />
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -240,11 +245,11 @@ export const FieldRenderer = <T extends object>({
                 disabled={isDisabled}
                 className="w-4 h-4 text-medical-teal"
               />
-              <span className="text-sm">{opt.label}</span>
+              <span className="text-sm">{tr(opt.label)}</span>
             </label>
           ))}
         </div>
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -262,11 +267,11 @@ export const FieldRenderer = <T extends object>({
             className="w-4 h-4 rounded border-slate-300 text-medical-teal focus:ring-medical-teal"
           />
           <span className="text-sm text-clinic-text">
-            {field.label}
-            {field.required && <span className="text-red-500 ml-0.5">*</span>}
+            {tr(field.label)}
+            {field.required && <span className="text-red-500 ms-0.5">*</span>}
           </span>
         </label>
-        {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+        {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>
     );
@@ -298,13 +303,13 @@ export const FieldRenderer = <T extends object>({
             setValue(field.name, raw);
           }
         }}
-        placeholder={field.placeholder}
+        placeholder={tr(field.placeholder)}
         disabled={isDisabled}
         className={baseInputClass}
         min={field.type === 'number' ? 0 : undefined}
         max={field.type === 'number' ? 99999 : undefined}
       />
-      {field.helperText && <p className={helperClass}>{field.helperText}</p>}
+      {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
       {error && <p className={errorClass}>{error}</p>}
     </div>
   );

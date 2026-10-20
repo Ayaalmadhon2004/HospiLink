@@ -3,9 +3,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import type { Notification } from '../types/notification';
 
 export const NotificationBell = () => {
+  const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
@@ -39,27 +41,27 @@ export const NotificationBell = () => {
       <button
         onClick={() => setOpen(!open)}
         className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
-        aria-label="Notifications"
+        aria-label={t('common.notifications')}
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+          <span className="absolute top-1 end-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute end-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
           <div className="flex items-center justify-between p-3 border-b border-gray-100">
-            <h3 className="font-semibold text-sm text-gray-800">Notifications</h3>
+            <h3 className="font-semibold text-sm text-gray-800">{t('common.notifications')}</h3>
             <div className="flex gap-1">
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
                   className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition"
-                  title="Mark all as read"
-                  aria-label="Mark all as read"
+                  title={t('notifications.markAllRead')}
+                  aria-label={t('notifications.markAllRead')}
                 >
                   <Check className="w-4 h-4" />
                 </button>
@@ -67,7 +69,7 @@ export const NotificationBell = () => {
               <button
                 onClick={() => setOpen(false)}
                 className="p-1 text-gray-400 hover:text-gray-600 rounded transition"
-                aria-label="Close notifications"
+                aria-label={t('notifications.close')}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -75,7 +77,7 @@ export const NotificationBell = () => {
           </div>
 
           {notifications.length === 0 ? (
-            <div className="p-6 text-center text-gray-500 text-sm">No notifications</div>
+            <div className="p-6 text-center text-gray-500 text-sm">{t('notifications.empty')}</div>
           ) : (
             notifications.map((n) => (
               <div
@@ -84,7 +86,7 @@ export const NotificationBell = () => {
                 tabIndex={0}
                 onClick={() => handleClick(n)}
                 onKeyDown={(e) => handleKeyDown(e, n)}
-                className={`w-full text-left p-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition ${
+                className={`w-full text-start p-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition ${
                   !n.read ? 'bg-teal-50/30' : ''
                 }`}
               >
@@ -95,7 +97,7 @@ export const NotificationBell = () => {
                     </p>
                     <p className="text-xs text-gray-500 truncate">{n.message}</p>
                     <p className="text-[10px] text-gray-500 mt-1">
-                      {new Date(n.createdAt).toLocaleTimeString()}
+                      {new Date(n.createdAt).toLocaleTimeString(i18n.language)}
                     </p>
                   </div>
                   <button
@@ -104,7 +106,7 @@ export const NotificationBell = () => {
                       deleteNotification(n.id);
                     }}
                     className="p-1 text-gray-500 hover:text-red-500 rounded transition shrink-0"
-                    aria-label={`Delete notification ${n.title}`}
+                    aria-label={t('notifications.delete', { title: n.title })}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

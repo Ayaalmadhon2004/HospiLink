@@ -1,5 +1,6 @@
 // frontend/src/hooks/useSettings.ts
 import { logger } from '../utils/logger';
+import i18n from '../i18n';
 import { useState, useEffect, useCallback } from 'react';
 import { apiGet, apiPut } from '../services/api';
 import { getErrorMessage, type ApiResponse } from '../types/api';
@@ -54,7 +55,7 @@ const useSettings = () => {
       setError(null);
     } catch (err: unknown) {
       logger.error('Settings fetch error:', err);
-      setError(getErrorMessage(err, 'Failed to fetch settings'));
+      setError(getErrorMessage(err, i18n.t('settings.fetchError')));
     } finally {
       setLoading(false);
     }
