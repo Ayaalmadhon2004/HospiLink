@@ -3,9 +3,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { FormBanner } from './FormBanner';
 import { FieldRenderer } from './FieldRenderer';
+import { getResponseData } from '../../types/api';
 import type { FormModalProps } from './types';
 
-export const FormModal = <T extends Record<string, any>>({
+export const FormModal = <T extends object>({
   isOpen,
   onClose,
   title,
@@ -34,13 +35,14 @@ export const FormModal = <T extends Record<string, any>>({
         if (initialValues && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
           defaults[field.name as keyof T] = initialValues[field.name];
         } else if (field.type === 'checkbox') {
-          defaults[field.name as keyof T] = false as any;
+          defaults[field.name as keyof T] = false as T[keyof T];
         } else if (field.type === 'number') {
-          defaults[field.name as keyof T] = undefined as any; // number empty = undefined
+          defaults[field.name as keyof T] = undefined as T[keyof T]; // number empty = undefined
         } else {
-          defaults[field.name as keyof T] = '' as any;
+          defaults[field.name as keyof T] = '' as T[keyof T];
         }
       });
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       setValues(defaults);
       setErrors({});
       setFormError('');
@@ -67,7 +69,7 @@ export const FormModal = <T extends Record<string, any>>({
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose, submitting]);
 
-  const setValue = useCallback((name: string, value: any) => {
+  const setValue = useCallback((name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
     setErrors((prev) => {
       const next = { ...prev };
@@ -148,8 +150,8 @@ export const FormModal = <T extends Record<string, any>>({
         setTimeout(() => {
           onClose();
         }, 800);
-      } catch (err: any) {
-        const backendError = err.response?.data;
+      } catch (err: unknown) {
+        const backendError = getResponseData(err);
         setFormError(
           backendError?.message || backendError?.error || 'Failed to save. Please try again.'
         );

@@ -24,7 +24,7 @@ export interface SelectOption {
   value: string;
 }
 
-export interface FieldConfig<T = any> {
+export interface FieldConfig<T = Record<string, unknown>> {
   name: keyof T & string;
   label: string;
   type: FieldType;
@@ -39,8 +39,8 @@ export interface FieldConfig<T = any> {
   helperText?: string;
   validation?: ZodTypeAny;          // per-field Zod override
   render?: (props: {
-    value: any;
-    setValue: (name: string, value: any) => void;
+    value: unknown;
+    setValue: (name: string, value: unknown) => void;
     formValues: T;
   }) => ReactNode;                   // for custom fields
 }
@@ -53,18 +53,18 @@ export interface EntityApiEndpoints {
   getById?: string;
 }
 
-export interface EntityConfig<T = any> {
+export interface EntityConfig<T = Record<string, unknown>> {
   entityType: string;
   title: string;
   subtitle: string;
   fields: FieldConfig<T>[];
   apiEndpoints: EntityApiEndpoints;
   validationSchema?: ZodTypeAny;     // optional: full form Zod schema
-  transformSubmit?: (values: T) => any; // transform values before API call
+  transformSubmit?: (values: T) => unknown; // transform values before API call
 }
 
 // ─── Form Modal Props ──────────────────────────────────────────────
-export interface FormModalProps<T = any> {
+export interface FormModalProps<T = Record<string, unknown>> {
   isOpen: boolean;
   onClose: () => void;
   title: string;

@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Bell, Check, Trash2, X } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
+import type { Notification } from '../types/notification';
 
 export const NotificationBell = () => {
   const [open, setOpen] = useState(false);
@@ -20,13 +21,13 @@ export const NotificationBell = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const handleClick = (n: any) => {
+  const handleClick = (n: Notification) => {
     if (!n.read) markAsRead(n.id);
     if (n.link) navigate(n.link);
     setOpen(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent, n: any) => {
+  const handleKeyDown = (e: React.KeyboardEvent, n: Notification) => {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       handleClick(n);

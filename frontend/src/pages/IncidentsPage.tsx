@@ -104,12 +104,13 @@ export const IncidentsPage = () => {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchIncidents();
-  }, []);
+  }, [fetchIncidents]);
 
   useEffect(() => {
     if (!latestUpdate) return;
-    const updateId = (latestUpdate as any)?.id || JSON.stringify(latestUpdate);
+    const updateId = (latestUpdate as { id?: string } | null)?.id || JSON.stringify(latestUpdate);
     if (updateId === lastSocketId.current) return;
     lastSocketId.current = updateId;
     fetchIncidents();
@@ -147,6 +148,7 @@ export const IncidentsPage = () => {
   });
 
   const timeAgo = (dateStr: string) => {
+    // eslint-disable-next-line react-hooks/purity -- relative-time label is intentionally computed from the current time at render
     const diff = Date.now() - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return `${mins} min ago`;

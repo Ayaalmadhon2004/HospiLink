@@ -1,4 +1,11 @@
-export const DepartmentBar = ({ title, current, max }: any) => (
+interface DepartmentBarProps {
+  title: string;
+  current: number;
+  max: number;
+  color?: string;
+}
+
+export const DepartmentBar = ({ title, current, max }: DepartmentBarProps) => (
   <div className="mb-4">
     <div className="flex justify-between text-sm mb-1 font-medium text-gray-700">
       <span>{title}</span>

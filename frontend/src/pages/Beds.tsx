@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
 import { apiGet, apiDelete } from '../services/api';
+import type { ApiResponse } from '../types/api';
+import type { Patient } from '../types/patient';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
@@ -18,7 +20,7 @@ const Beds = () => {
   const [filter, setFilter] = useState<'ALL' | BedStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
   const [patients, setPatients] = useState<PatientOption[]>([]);
-  const [_wards, setWards] = useState<Ward[]>([]);
+  const [, setWards] = useState<Ward[]>([]);
 
   // ✅ Shared CRUD hooks
   const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<BedWithDetails>({
@@ -32,9 +34,9 @@ const Beds = () => {
 
   const fetchBeds = useCallback(async () => {
     try {
-      const data = await apiGet('/beds');
+      const data = await apiGet<ApiResponse<BedWithDetails[]>>('/beds');
       if (data.success) setBeds(data.data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching beds:', err);
     } finally {
       setLoading(false);
@@ -43,26 +45,27 @@ const Beds = () => {
 
   const fetchPatients = useCallback(async () => {
     try {
-      const data = await apiGet('/patients?status=OBSERVATION');
+      const data = await apiGet<ApiResponse<Patient[]>>('/patients?status=OBSERVATION');
       if (data.success) {
-        const unassigned = data.data.filter((p: any) => !p.bedId);
-        setPatients(unassigned.map((p: any) => ({ id: p.id, name: p.name })));
+        const unassigned = data.data.filter((p) => !p.bedId);
+        setPatients(unassigned.map((p) => ({ id: p.id, name: p.name })));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching patients:', err);
     }
   }, []);
 
   const fetchWards = useCallback(async () => {
     try {
-      const data = await apiGet('/wards');
+      const data = await apiGet<ApiResponse<Ward[]>>('/wards');
       if (data.success) setWards(data.data);
-    } catch (err: any) {
+    } catch (err) {
       console.error('Error fetching wards:', err);
     }
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
     fetchBeds();
     fetchPatients();
     fetchWards();

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getPatientById, updatePatient } from '../services/patientService';
+import { getResponseData } from '../types/api';
 import { ArrowLeft, Save, User } from 'lucide-react';
 
 const DEPARTMENTS = ['Emergency', 'ICU', 'Surgery', 'Pediatrics', 'Cardiology', 'General'];
@@ -36,8 +37,8 @@ export const EditPatientPage = () => {
           diagnosis: p.diagnosis || '',
           status: p.status || 'STABLE',
         });
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load patient');
+      } catch (err: unknown) {
+        setError(getResponseData(err)?.message || 'Failed to load patient');
       } finally {
         setLoading(false);
       }
@@ -60,8 +61,8 @@ export const EditPatientPage = () => {
         age: parseInt(formData.age),
       });
       navigate(`/patients/${id}`);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to update patient');
+    } catch (err: unknown) {
+      setError(getResponseData(err)?.message || 'Failed to update patient');
     } finally {
       setSaving(false);
     }

@@ -27,8 +27,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     // الجلسة بتعتمد على كوكي httpOnly — بنسأل السيرفر مين المستخدم
-    apiGet('/auth/me')
-      .then((res: any) => {
+    apiGet<{ user?: User; data?: { user?: User } }>('/auth/me')
+      .then((res) => {
         setUser(res.user || res.data?.user || null);
       })
       .catch(() => {
@@ -44,4 +44,5 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components -- hook must stay next to its provider; moving it would change every importer
 export const useAuth = () => useContext(AuthContext);

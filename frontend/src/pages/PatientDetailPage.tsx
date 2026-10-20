@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
+import { getResponseData } from '../types/api';
+import type { PatientDetail, PatientReport } from '../types/patient';
 import { getPatientById, dischargePatient, uploadReport, getPatientReports } from '../services/patientService';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, X, CheckCircle, Download } from 'lucide-react';
 
@@ -25,7 +27,7 @@ export const PatientDetailPage = () => {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [patient, setPatient] = useState<any>(null);
+  const [patient, setPatient] = useState<PatientDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showDischargeModal, setShowDischargeModal] = useState(false);
@@ -39,7 +41,7 @@ export const PatientDetailPage = () => {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Reports state
-  const [reports, setReports] = useState<any[]>([]);
+  const [reports, setReports] = useState<PatientReport[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
 
   useEffect(() => {
@@ -49,8 +51,8 @@ export const PatientDetailPage = () => {
         setLoading(true);
         const res = await getPatientById(id);
         setPatient(res.data);
-      } catch (err: any) {
-        setError(err.response?.data?.message || 'Failed to load patient');
+      } catch (err: unknown) {
+        setError(getResponseData(err)?.message || 'Failed to load patient');
       } finally {
         setLoading(false);
       }
@@ -66,7 +68,7 @@ export const PatientDetailPage = () => {
         setReportsLoading(true);
         const res = await getPatientReports(id);
         setReports(res.data || []);
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch reports:', err);
       } finally {
         setReportsLoading(false);
@@ -83,8 +85,8 @@ export const PatientDetailPage = () => {
       setShowDischargeModal(false);
       const res = await getPatientById(id);
       setPatient(res.data);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to discharge patient');
+    } catch (err: unknown) {
+      setError(getResponseData(err)?.message || 'Failed to discharge patient');
     } finally {
       setDischarging(false);
     }
@@ -126,8 +128,8 @@ export const PatientDetailPage = () => {
         setUploadSuccess(false);
         setShowUploadModal(false);
       }, 3000);
-    } catch (err: any) {
-      setUploadError(err.response?.data?.message || 'Failed to upload report');
+    } catch (err: unknown) {
+      setUploadError(getResponseData(err)?.message || 'Failed to upload report');
     } finally {
       setUploading(false);
     }
