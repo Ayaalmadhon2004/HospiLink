@@ -1,6 +1,7 @@
 // backend/src/controllers/bed.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
+import logger from '../config/logger';
 
 // جلب كل السراير
 export const getAllBeds = async (req: Request, res: Response) => {
@@ -61,7 +62,7 @@ export const createBed = async (req: Request, res: Response) => {
     });
     res.status(201).json({ success: true, data: bed });
   } catch (error: any) {
-    console.error('Create bed error:', error);
+    logger.error({ err: error }, 'Create bed error:');
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -95,7 +96,7 @@ export const updateBedStatus = async (req: Request, res: Response) => {
     });
     res.status(200).json({ success: true, data: bed });
   } catch (error: any) {
-    console.error('Update bed error:', error);
+    logger.error({ err: error }, 'Update bed error:');
     res.status(500).json({ success: false, message: error.message });
   }
 };

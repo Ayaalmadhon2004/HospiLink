@@ -27,11 +27,13 @@ import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
 import { socketAuth, hasRole } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
+import logger from './config/logger';
+import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = parsePort(process.env.PORT);
 const server = http.createServer(app);
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -39,13 +41,11 @@ const isDev = process.env.NODE_ENV !== 'production';
 // ✅ Security: Helmet — sets security headers (X-Content-Type-Options, X-Frame-Options, etc.)
 app.use(helmet({
   contentSecurityPolicy: {
+    // JSON API: serves no HTML, so lock everything down.
+    useDefaults: false,
     directives: {
-      defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "wss:", "ws:", "https://hospi-link-two.vercel.app"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "blob:"],
+      defaultSrc: ["'none'"],
+      frameAncestors: ["'none'"],
     },
   },
   crossOriginEmbedderPolicy: false, // needed for socket.io
@@ -61,12 +61,7 @@ app.use(compression({
 }));
 
 // ✅ CORS origins — production + development
-const allowedOrigins = [
-  "http://localhost:5173",
-  "https://hospi-link-liart.vercel.app",
-  "https://hospi-link-two.vercel.app",
-  " http://localhost:4173"
-];
+const allowedOrigins = buildAllowedOrigins();
 
 // ✅ Rate limiting for auth routes — prevents brute force
 const authLimiter = rateLimit({
@@ -100,7 +95,7 @@ io.use(socketAuth);
 // ← connection handler
 io.on('connection', (socket: Socket) => {
   if (isDev) {
-    console.log('User connected to HospiLink stream:', socket.id);
+    logger.debug({ socketId: socket.id }, 'User connected to HospiLink stream');
   }
 
   socket.on('join-room', (patientId: unknown) => {
@@ -112,14 +107,14 @@ io.on('connection', (socket: Socket) => {
   socket.on('join-department', (department: string) => {
     socket.join(`department-${department}`);
     if (isDev) {
-      console.log(`Socket joined department: ${department}`);
+      logger.debug({ department }, 'Socket joined department');
     }
   });
 
   socket.on('leave-department', (department: string) => {
     socket.leave(`department-${department}`);
     if (isDev) {
-      console.log(`Socket left department: ${department}`);
+      logger.debug({ department }, 'Socket left department');
     }
   });
 
@@ -127,7 +122,7 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('disconnect', () => {
     if (isDev) {
-      console.log('User disconnected:', socket.id);
+      logger.debug({ socketId: socket.id }, 'User disconnected');
     }
   });
 });
@@ -148,6 +143,14 @@ app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
 
 // ✅ Cache headers for static uploads (1 hour)
+// Uploaded files (PDFs/images) are viewed directly, so allow their own content under a tight CSP.
+app.use('/uploads', (req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; img-src 'self'; object-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'"
+  );
+  next();
+});
 app.use('/uploads', protect, express.static(path.join(__dirname, '../uploads'), {
   maxAge: '1h',
   setHeaders: (res, filePath) => {
@@ -189,7 +192,17 @@ app.get('/api/health', async (req, res) => {
 app.use(errorHandler);
 
 server.listen(PORT, () => {
-  console.log(`🚀 HospiLink Server running on http://localhost:${PORT}`);
+  logger.info({ port: PORT }, 'HospiLink Server running');
 });
+
+// Graceful shutdown (Render sends SIGTERM on deploy/restart)
+const shutdown = createShutdown({
+  server,
+  disconnect: () => prisma.$disconnect(),
+  log: logger,
+  exit: (code) => process.exit(code),
+});
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));
 
 export { io };

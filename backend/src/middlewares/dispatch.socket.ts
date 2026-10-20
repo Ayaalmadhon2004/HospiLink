@@ -1,10 +1,11 @@
 import { Socket } from 'socket.io';
 import prisma from '../config/db';
 import { hasRole } from './socket.auth';
+import logger from '../config/logger';
 
 const isDev = process.env.NODE_ENV !== 'production';
 const log = (...args: unknown[]) => {
-  if (isDev) console.log(...args);
+  if (isDev) logger.debug(args.join(' '));
 };
 
 const DISPATCH_ROLES = ['ADMIN', 'DISPATCHER'];
@@ -51,7 +52,7 @@ export const attachDispatchEvents = (socket: Socket) => {
         },
       });
     } catch (error) {
-      if (isDev) console.error('Failed to update unit location:', error);
+      if (isDev) logger.error({ err: error }, 'Failed to update unit location');
     }
   });
 

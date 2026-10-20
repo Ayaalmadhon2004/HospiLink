@@ -2,13 +2,14 @@
 import { Request, Response } from 'express';
 import { io } from '../server';
 import prisma from '../config/db';
+import logger from '../config/logger';
 
 // ❌ شيلي هاد — errorHandler هو middleware مش function
 // import { errorHandler } from '../middlewares/error.middleware';
 
 // ✅ استبدليه بـ helper function بسيط
 const handleError = (res: Response, error: any, message: string, statusCode: number = 500) => {
-  console.error(`[Dispatch Error] ${message}:`, error);
+  logger.error({ err: error }, `[Dispatch Error] ${message}:`);
   res.status(statusCode).json({
     success: false,
     message,
