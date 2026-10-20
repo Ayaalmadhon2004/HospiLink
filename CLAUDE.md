@@ -51,6 +51,8 @@ Frontend (`cd frontend`):
 - `npm run lint`           eslint (currently clean)
 - `npm test`               vitest (36 tests)
 - `npm run preview`        serves build on :4173
+- `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
+                           First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
 
 ## Environment variables
 
@@ -115,7 +117,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 - Backend tests live in `backend/tests/**` mirroring `src/`. Prisma and socket.io are mocked via
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
-- Frontend uses Vitest (few tests so far). Add Testing Library for components and Playwright for E2E.
+- Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. These do NOT exercise the real backend.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 
 ## Known issues / priorities (keep this list current)
@@ -123,7 +125,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 Open:
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Some `console.*` calls remain in the frontend (33 calls in 13 files under `frontend/src`; none in `backend/src`); use a logger.
-- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
+- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; no real-backend E2E).
 - i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 

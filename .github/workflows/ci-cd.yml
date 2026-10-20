@@ -87,6 +87,20 @@ jobs:
       - name: Run tests
         run: npm test
 
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests (mocked API)
+        run: npm run test:e2e
+
+      - name: Upload Playwright traces on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces
+          path: frontend/test-results
+          if-no-files-found: ignore
+
   # ---------------------------------------------------------
   # 3) Deploy الـ backend على Render
   #    بيشتغل بس لما الـ push يكون على main وكل الفحوصات فوق نجحت
