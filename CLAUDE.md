@@ -143,3 +143,16 @@ Engineering:
 - Do not weaken auth, CORS, rate limits or helmet settings to make something work.
 - Run the relevant tests/build before committing; report failures honestly.
 - Commit on the assigned feature branch only; do not open PRs unless asked.
+
+## Git, PR and authorship rules
+
+- Every feature/fix goes in its own branch and its own PR, branched from `main`. Keep PRs small and independent;
+  split overlapping files so each PR carries only its own hunks.
+- Branch names: `fix/<topic>`, `feat/<topic>`, `chore/<topic>`, `docs/<topic>`.
+- Authorship: the repo owner (Aya almadhon, `Ayaalmadhon2004 <aya.alaasel123@gmail.com>`) must be the author
+  of every commit and of every PR/merge. Before committing run
+  `git config user.name "Ayaalmadhon2004"` and `git config user.email "aya.alaasel123@gmail.com"`.
+  Do NOT add `Co-Authored-By: Claude`, `Claude-Session`, "Generated with Claude Code" or any other
+  Claude/AI attribution to commit messages, PR titles or PR descriptions.
+- Merge PRs with a regular merge commit (`merge`), never squash and never rebase-merge, so each commit stays visible in history.
+- Never force-push `main`. Rewrite history only on your own unmerged feature branches (`--force-with-lease`).
