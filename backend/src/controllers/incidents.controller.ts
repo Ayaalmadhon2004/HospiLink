@@ -8,7 +8,7 @@ import logger from '../config/logger';
 
 const handleError = (res: Response, error: any, message: string) => {
   logger.error({ err: error }, message);
-  res.status(500).json({ success: false, message, error: error.message });
+  res.status(500).json({ success: false, message });
 };
 
 const generateIncidentCode = async () => {

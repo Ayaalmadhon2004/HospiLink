@@ -14,7 +14,8 @@ export const getAllBeds = async (req: Request, res: Response) => {
     });
     res.status(200).json({ success: true, data: beds });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    logger.error({ err: error }, 'Get beds error:');
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -32,7 +33,8 @@ export const getBedById = async (req: Request, res: Response) => {
     if (!bed) return res.status(404).json({ success: false, message: 'السرير غير موجود' });
     res.status(200).json({ success: true, data: bed });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    logger.error({ err: error }, 'Get bed error:');
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -63,7 +65,7 @@ export const createBed = async (req: Request, res: Response) => {
     res.status(201).json({ success: true, data: bed });
   } catch (error: any) {
     logger.error({ err: error }, 'Create bed error:');
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -97,7 +99,7 @@ export const updateBedStatus = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: bed });
   } catch (error: any) {
     logger.error({ err: error }, 'Update bed error:');
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };
 
@@ -108,6 +110,7 @@ export const deleteBed = async (req: Request, res: Response) => {
     await prisma.bed.delete({ where: { id } });
     res.status(200).json({ success: true, message: 'تم حذف السرير' });
   } catch (error: any) {
-    res.status(500).json({ success: false, message: error.message });
+    logger.error({ err: error }, 'Delete bed error:');
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 };

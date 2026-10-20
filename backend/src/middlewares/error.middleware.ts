@@ -7,8 +7,12 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
 
   if (!err.status || err.status >= 500) captureServerError(err);
 
-  res.status(err.status || 500).json({
+  const status: number = err.status || 500;
+  const fallback = 'حدث خطأ غير متوقع في السيرفر';
+
+  // لا نكشف رسائل الأخطاء الداخلية للعميل (5xx)؛ رسائل 4xx آمنة
+  res.status(status).json({
     success: false,
-    message: err.message || 'حدث خطأ غير متوقع في السيرفر',
+    message: status >= 500 ? fallback : err.message || fallback,
   });
 };
