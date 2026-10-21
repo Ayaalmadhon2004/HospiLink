@@ -14,6 +14,13 @@ npx prisma migrate resolve --applied 00000000000000_baseline
 
 After that, `npx prisma migrate deploy` is a no-op until a new migration is added.
 
+## Known gap in production: `Notification`
+
+The production database was created with `db push` before the `Notification` model existed, so marking the baseline as applied
+left that table missing (`P2021` on `GET /api/notifications`). Migration `20261021000000_ensure_notification_table` creates it
+with `IF NOT EXISTS`, so it is a no-op on databases that already have it. Tested against a fresh database and against one built
+from the baseline without `Notification`. If you repaired production by hand first, deploying it is still safe.
+
 ## Day to day
 
 - Change `schema.prisma`, then `npx prisma migrate dev --name <topic>` against a local/dev database.
