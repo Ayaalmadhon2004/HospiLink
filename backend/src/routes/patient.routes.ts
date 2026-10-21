@@ -4,6 +4,7 @@ import {
   uploadReport, 
   getRecentPatients,
   getCriticalPatientCount,
+  getPatientFlow,
   getPatients,       
   getPatientById,     
   updatePatient,      
@@ -22,6 +23,7 @@ import {
   updatePatientSchema,
   listPatientsQuerySchema,
   availableBedsQuerySchema,
+  patientFlowQuerySchema,
 } from '../validators/patient.validator';
 
 const router = Router();
@@ -73,6 +75,19 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   getCriticalPatientCount
+);
+
+// ============================================
+// GET /api/patients/flow
+// Daily admissions/discharges - DOCTOR, NURSE, ADMIN
+// ⚠️ MUST be BEFORE /:id route!
+// ============================================
+router.get(
+  '/flow',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ query: patientFlowQuerySchema }),
+  getPatientFlow
 );
 
 // ============================================

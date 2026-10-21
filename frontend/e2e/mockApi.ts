@@ -137,6 +137,7 @@ export const mockApi = async (page: Page, options: MockOptions = {}) => {
       });
     }
 
+    if (path === '/patients/flow') return json(route, 200, { success: true, data: [{ date: '2026-10-21', admissions: 1, discharges: 0 }] });
     if (path === '/patients/recent') return json(route, 200, { success: true, data: [] });
 
     return json(route, 200, { success: true, data: [] });

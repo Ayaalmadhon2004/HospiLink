@@ -1,18 +1,18 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { getPatients } from '../../services/patientService';
+import { getPatientFlow } from '../../services/patientService';
 import { extractList } from '../../types/api';
-import type { Patient } from '../../types/patient';
+import type { PatientFlowDay } from '../../utils/patientFlow';
 import { PatientFlowChart } from '../Patients/PatientFlowChart';
 import { buildPatientFlow } from '../../utils/patientFlow';
 
-/** Last 7 days of admissions/discharges, from the patients list (max page size). */
+/** Last 7 days of admissions/discharges, aggregated by GET /patients/flow. */
 export const PatientFlowSection = () => {
   const { t, i18n } = useTranslation();
   const { data, isError, refetch } = useQuery({
     queryKey: ['patients', 'flow'],
-    queryFn: async () => extractList<Patient>(await getPatients({ limit: 50 })),
+    queryFn: async () => extractList<PatientFlowDay>(await getPatientFlow()),
     staleTime: 60_000,
   });
 

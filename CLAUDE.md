@@ -41,7 +41,7 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (271 tests, no DB needed: Prisma is mocked)
+- `npm test`               jest (283 tests, no DB needed: Prisma is mocked)
 - `npm run test:coverage`  current coverage ~88% statements
 
 Frontend (`cd frontend`):
@@ -49,7 +49,7 @@ Frontend (`cd frontend`):
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
 - `npm run lint`           eslint (currently clean)
-- `npm test`               vitest (190 tests)
+- `npm test`               vitest (191 tests)
 - `npm run preview`        serves build on :4173
 - `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
                            First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
@@ -107,7 +107,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## How the two sides connect
 
-- Base URL: `VITE_API_URL` + `/api/<resource>`. Resources: auth, patients, beds, wards, vitals, staff,
+- Base URL: `VITE_API_URL` + `/api/<resource>`. Resources: auth, patients (incl. `GET /patients/flow?days=1..30`, daily admissions/discharges in UTC days), beds, wards, vitals, staff,
   appointments, dispatch, incidents, notifications, settings.
 - CORS allowlist lives in `backend/src/server.ts` (`allowedOrigins`) and must include every frontend origin
   (localhost:5173, localhost:4173, Vercel domains). Credentials are enabled.

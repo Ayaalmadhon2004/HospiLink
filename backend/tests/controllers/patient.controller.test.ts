@@ -3,6 +3,7 @@ import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getRecentPatients,
   getCriticalPatientCount,
+  getPatientFlow,
   admitPatient,
   getPatientById,
   getPatients,
@@ -62,6 +63,52 @@ describe('patient.controller', () => {
       const res = mockResponse();
 
       await getCriticalPatientCount(mockRequest(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
+    });
+  });
+
+  describe('getPatientFlow', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('buckets admissions and discharges per UTC day, oldest first', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-21T10:00:00Z'));
+      prismaMock.patient.findMany.mockResolvedValue([
+        { admissionDate: new Date('2026-10-21T01:00:00Z'), dischargeDate: null },
+        { admissionDate: new Date('2026-10-20T23:00:00Z'), dischargeDate: new Date('2026-10-21T09:00:00Z') },
+        { admissionDate: new Date('2026-09-01T00:00:00Z'), dischargeDate: new Date('2026-10-19T12:00:00Z') },
+      ]);
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest({ query: { days: '3' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: [
+          { date: '2026-10-19', admissions: 0, discharges: 1 },
+          { date: '2026-10-20', admissions: 1, discharges: 0 },
+          { date: '2026-10-21', admissions: 1, discharges: 1 },
+        ],
+      });
+    });
+
+    it('defaults to 7 days', async () => {
+      prismaMock.patient.findMany.mockResolvedValue([]);
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest(), res);
+
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.data).toHaveLength(7);
+    });
+
+    it('returns 500 without leaking the error message', async () => {
+      prismaMock.patient.findMany.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest(), res);
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
