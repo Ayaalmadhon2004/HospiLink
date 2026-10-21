@@ -50,7 +50,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-gradient-to-b from-hospital-navy to-teal-700 text-white flex flex-col">
+    <aside className="w-64 h-full lg:h-screen bg-gradient-to-b from-hospital-navy to-teal-700 text-white flex flex-col">
       {/* Logo */}
       <div className="p-6">
         <div className="flex items-center gap-3">

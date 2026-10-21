@@ -48,7 +48,7 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, child
   return (
     <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden bg-gray-50">
       {/* Top bar, phones only */}
-      <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-hospital-navy to-teal-700 text-white shrink-0">
+      <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-hospital-navy to-teal-700 text-white shrink-0">
         <button
           ref={toggleRef}
           type="button"
@@ -56,7 +56,7 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, child
           aria-label={menuOpen ? t('sidebar.closeMenu') : t('sidebar.openMenu')}
           aria-expanded={menuOpen}
           aria-controls={menuId}
-          className="p-2 -ms-2 rounded-lg hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-teal-400"
+          className="p-2 -ms-2 rounded-lg hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-teal-400"
         >
           {menuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
         </button>
@@ -66,7 +66,7 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, child
       {menuOpen && (
         <div
           data-testid="sidebar-backdrop"
-          className="md:hidden fixed inset-0 z-30 bg-hospital-navy/50"
+          className="lg:hidden fixed inset-0 z-30 bg-hospital-navy/50"
           onClick={closeMenu}
           aria-hidden="true"
         />
