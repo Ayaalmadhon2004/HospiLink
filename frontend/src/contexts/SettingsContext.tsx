@@ -91,7 +91,12 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
     enabled: !!user,
     queryFn: async () => {
       const res = await apiGet<UserSettings & { data?: UserSettings }>('/settings');
-      return res.data || res;
+      const body = res.data || res;
+      // A malformed payload must not crash the app shell: treat it as a failed load and use defaults.
+      if (!body?.display || !body.security || !body.notifications || !body.profile) {
+        throw new Error('Malformed settings response');
+      }
+      return body;
     },
   });
   const settings = user ? query.data ?? null : null;

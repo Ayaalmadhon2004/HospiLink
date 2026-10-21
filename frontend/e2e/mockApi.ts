@@ -107,6 +107,18 @@ export const mockApi = async (page: Page, options: MockOptions = {}) => {
         : json(route, 404, { success: false, message: 'Patient not found' });
     }
 
+    if (path === '/settings' && method === 'GET') {
+      return json(route, 200, {
+        success: true,
+        data: {
+          profile: { id: doctor.id, name: doctor.name, email: doctor.email, role: doctor.role, department: 'Cardiology', shift: 'MORNING', status: 'ON_DUTY' },
+          notifications: { criticalVitalsAlerts: true, incidentEscalations: true, shiftReminders: false, dispatchAlerts: true, appointmentReminders: true },
+          security: { twoFactorAuth: false, autoLockIdleSessions: false, compactDensity: false },
+          display: { theme: 'light', language: 'en', timezone: 'UTC' },
+        },
+      });
+    }
+
     if (path === '/notifications') {
       return json(route, 200, {
         success: true,
