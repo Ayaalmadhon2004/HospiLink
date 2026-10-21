@@ -55,7 +55,6 @@ Done since the first roadmap: Arabic / English (RTL) on every page (`docs/I18N.m
 - Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
 - Automated patient queue management.
 - Logistics and resource-utilisation reporting.
-- Frontend component and E2E tests, and a logger instead of the remaining `console.*` calls in the frontend.
 - Move legacy file-based report uploads (`/uploads/...`, on Render's ephemeral disk) off disk. New reports are stored in the database (`Report.fileData`).
 
 ## Tech stack
@@ -122,7 +121,9 @@ HospiLink/
 │   └── vite.config.ts
 ├── docs/
 │   ├── images/                  # README screenshots
-│   └── vitals/DATA_FLOW.md
+│   ├── vitals/DATA_FLOW.md
+│   ├── DOCKER.md  E2E_REAL.md  I18N.md
+│   └── MIGRATIONS.md  PWA.md  WEB_VITALS.md
 ├── .github/workflows/ci-cd.yml  # CI/CD pipeline
 └── CLAUDE.md                    # Contributor guidelines
 ```
@@ -156,6 +157,7 @@ Environment variables (`backend/.env`, never commit it):
 | `PORT` | no | Defaults to `5000` |
 | `HOSPITAL_ID` | no | Hospital that public signups join. Defaults to the first hospital in the database. |
 | `NODE_ENV` | no | `production` disables dev logging |
+| `SENTRY_DSN` | no | Enables error reporting to Sentry (no PII is sent) |
 
 Backend scripts: `npm run dev` (tsx watch), `npm run build` (tsc to `dist/`), `npm start` (run `dist/server.js`), `npm test`, `npm run test:watch`, `npm run test:coverage`.
 
