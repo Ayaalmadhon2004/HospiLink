@@ -9,7 +9,7 @@ export const DepartmentBar = ({ title, current, max }: DepartmentBarProps) => (
   <div className="mb-4">
     <div className="flex justify-between text-sm mb-1 font-medium text-gray-700">
       <span>{title}</span>
-      <span>{current} / {max}</span>
+      <span dir="ltr">{current} / {max}</span>
     </div>
     <div className="w-full bg-gray-100 rounded-full h-2">
       <div 

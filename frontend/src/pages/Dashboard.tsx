@@ -400,7 +400,7 @@ const Dashboard = () => {
           {dateLabel}
         </p>
         <h1 className="text-2xl font-semibold text-gray-900 mt-1">
-          {greeting}{firstName ? `, ${firstName}` : ''}
+          {firstName ? t('dashboard.greetingWithName', { greeting, name: firstName }) : greeting}
         </h1>
       </header>
 
