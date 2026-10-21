@@ -55,4 +55,14 @@ describe('DashboardShell', () => {
     await user.click(screen.getByRole('button', { name: 'Go to Beds' }));
     expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
   });
+
+  it('renders the actions slot outside the main content', () => {
+    render(
+      <DashboardShell title="Patients" mainLabel="Patients panel" renderSidebar={() => <nav />} actions={<button>Bell</button>}>
+        <p>content</p>
+      </DashboardShell>,
+    );
+    expect(screen.getByRole('button', { name: 'Bell' })).toBeInTheDocument();
+    expect(screen.getByRole('main')).not.toContainElement(screen.getByRole('button', { name: 'Bell' }));
+  });
 });

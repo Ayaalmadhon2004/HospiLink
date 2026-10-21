@@ -107,6 +107,16 @@ export const mockApi = async (page: Page, options: MockOptions = {}) => {
         : json(route, 404, { success: false, message: 'Patient not found' });
     }
 
+    if (path === '/notifications') {
+      return json(route, 200, {
+        success: true,
+        data: [
+          { id: 'n1', type: 'INFO', title: 'Bed 4 freed', message: 'Ward A', read: false, link: null, createdAt: '2026-10-21T08:00:00.000Z' },
+        ],
+        unreadCount: 1,
+      });
+    }
+
     if (path === '/patients/recent') return json(route, 200, { success: true, data: [] });
 
     return json(route, 200, { success: true, data: [] });

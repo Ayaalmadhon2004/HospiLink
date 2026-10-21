@@ -8,6 +8,8 @@ interface DashboardShellProps {
   /** Receives a function that closes the phone menu; call it after navigating. */
   renderSidebar: (closeMenu: () => void) => ReactNode;
   mainLabel: string;
+  /** Floats at the top end of the page (e.g. the notification bell); on phones it sits on the top bar. */
+  actions?: ReactNode;
   children: ReactNode;
 }
 
@@ -15,7 +17,7 @@ interface DashboardShellProps {
  * Page frame for the dashboard. From the `md` breakpoint up the sidebar is a fixed column next to the content;
  * below it the sidebar becomes a drawer opened from a top bar, so the content keeps the full phone width.
  */
-export const DashboardShell = ({ title, renderSidebar, mainLabel, children }: DashboardShellProps) => {
+export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, children }: DashboardShellProps) => {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuId = useId();
@@ -65,7 +67,9 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, children }: Da
         {renderSidebar(closeMenu)}
       </div>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-8" role="main" aria-label={mainLabel}>
+      {actions && <div className="fixed top-1.5 end-3 z-20 md:top-3 md:end-6 text-white md:text-gray-600">{actions}</div>}
+
+      <main className="flex-1 overflow-y-auto p-4 md:p-8 md:pt-16" role="main" aria-label={mainLabel}>
         {children}
       </main>
     </div>
