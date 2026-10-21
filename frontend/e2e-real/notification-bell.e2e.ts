@@ -48,25 +48,26 @@ test.describe('notification bell (real backend + database + socket.io)', () => {
   });
 
   test('a notification created through the API reaches the bell over socket.io without a reload', async ({ page }) => {
-    const title = `E2E incident ${Date.now()}`;
+    const title = `E2E broadcast ${Date.now()}`;
 
     await login(page);
     const bell = page.getByRole('button', BELL);
     await bell.click();
     await page.waitForTimeout(SOCKET_SETTLE_MS);
 
-    // POST /incidents notifies the creator through the user-<id> room ('new-notification').
-    const res = await page.request.post(`${API_URL}/incidents`, {
-      data: { title, type: 'Fire', severity: 'High', location: 'E2E Ward', reportedBy: 'E2E Admin' },
+    // An admin broadcast is a SYSTEM notification delivered to every user of the hospital (the admin included)
+    // through the user-<id> room ('new-notification'). Incident events exclude the acting user on purpose.
+    const res = await page.request.post(`${API_URL}/notifications/broadcast`, {
+      data: { title, message: 'Broadcast sent from the real-backend E2E' },
     });
     expect(res.status()).toBe(HTTP_CREATED);
 
-    await expect(page.getByText(`: ${title}`)).toBeVisible();
+    await expect(page.getByRole('button', { name: title }).first()).toBeVisible();
     await expect(bell).toContainText('1');
 
     // Persisted too, still unread.
     const stored = await fetchNotifications(page);
     expect(stored.unreadCount).toBe(1);
-    expect(stored.data[0].title).toBe('New Incident Reported');
+    expect(stored.data[0].title).toBe(title);
   });
 });
