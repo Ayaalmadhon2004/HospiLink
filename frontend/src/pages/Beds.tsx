@@ -203,7 +203,7 @@ const Beds = () => {
               key={f}
               onClick={() => setFilter(f)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-                filter === f ? 'bg-slate-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border'
+                filter === f ? 'bg-hospital-navy text-white' : 'bg-white text-gray-600 hover:bg-gray-50 border'
               }`}
             >
               {f === 'ALL' ? t('beds.filterAll') : getStatusConfig(f as BedStatus).label}

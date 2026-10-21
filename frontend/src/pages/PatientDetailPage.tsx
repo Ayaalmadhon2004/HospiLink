@@ -373,7 +373,7 @@ export const PatientDetailPage = () => {
       {/* Discharge Confirmation Modal */}
       {showDischargeModal && (
         <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50"
           role="dialog"
           aria-modal="true"
           aria-labelledby="discharge-title"
@@ -414,7 +414,7 @@ export const PatientDetailPage = () => {
       {/* Upload Report Modal */}
       {showUploadModal && (
         <div 
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50"
           role="dialog"
           aria-modal="true"
           aria-labelledby="upload-title"
