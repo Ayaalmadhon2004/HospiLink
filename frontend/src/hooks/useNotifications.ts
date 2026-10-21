@@ -1,6 +1,6 @@
 // frontend/src/hooks/useNotifications.ts
 import { logger } from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { apiGet, apiPut, apiDelete } from '../services/api';
 import type { Notification } from '../types/notification';
@@ -17,7 +17,12 @@ interface NotificationsResponse {
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
   .replace('/api', '');
 
-export const useNotifications = () => {
+export const useNotifications = (onIncoming?: (n: Notification) => void) => {
+  // Ref so a new callback identity never reconnects the socket.
+  const onIncomingRef = useRef(onIncoming);
+  useEffect(() => {
+    onIncomingRef.current = onIncoming;
+  }, [onIncoming]);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -82,6 +87,7 @@ export const useNotifications = () => {
     socket.on('new-notification', (n: Notification) => {
       setNotifications(prev => (prev.some(x => x.id === n.id) ? prev : [n, ...prev]));
       if (!n.read) setUnreadCount(prev => prev + 1);
+      onIncomingRef.current?.(n);
     });
 
     return () => {

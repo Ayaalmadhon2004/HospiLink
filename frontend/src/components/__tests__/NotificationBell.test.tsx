@@ -4,6 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { NotificationBell } from '../NotificationBell';
 import { apiGet, apiPut, apiDelete } from '../../services/api';
+import { toast } from 'sonner';
+
+vi.mock('sonner', () => ({
+  toast: { error: vi.fn(), warning: vi.fn(), info: vi.fn() },
+}));
 
 type Handler = (n: unknown) => void;
 const socketHandlers: Record<string, Handler> = {};
@@ -96,5 +101,39 @@ describe('NotificationBell', () => {
 
     await user.click(screen.getByRole('button', { name: 'Notifications' }));
     expect(screen.getByText('Title 3')).toBeInTheDocument();
+  });
+
+  it('shows a toast (by severity) when a notification arrives over the socket', async () => {
+    renderBell();
+    await screen.findByText('1');
+
+    socketHandlers['new-notification']({ ...notification('9', false), type: 'VITALS', link: '/patients/p1' });
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Title 9', expect.objectContaining({ description: 'Message 9' })),
+    );
+  });
+
+  it('filters to unread notifications', async () => {
+    const user = userEvent.setup();
+    renderBell();
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: 'Notifications' }));
+    await user.click(screen.getByRole('button', { name: 'Unread' }));
+
+    expect(screen.getByText('Title 1')).toBeInTheDocument();
+    expect(screen.queryByText('Title 2')).not.toBeInTheDocument();
+  });
+
+  it('marks everything as read', async () => {
+    const user = userEvent.setup();
+    renderBell();
+    await screen.findByText('1');
+
+    await user.click(screen.getByRole('button', { name: 'Notifications' }));
+    await user.click(screen.getByRole('button', { name: 'Mark all as read' }));
+
+    expect(apiPut).toHaveBeenCalledWith('/notifications/read-all', {});
   });
 });

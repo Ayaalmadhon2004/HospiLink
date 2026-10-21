@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { lazy ,Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Toaster } from 'sonner';
 
 // Named exports → wrap with default via .then()
 const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m.LoginPage })));
@@ -23,6 +24,7 @@ function App() {
   const { t } = useTranslation();
   return (
     <ErrorBoundary>
+    <Toaster position="top-right" richColors closeButton />
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
