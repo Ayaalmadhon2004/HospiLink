@@ -17,12 +17,20 @@ const SEED_PATIENTS = [
   { patientCode: 'E2E-0002', name: 'Seeded Patient Two', age: AGE_SECOND_PATIENT, gender: 'FEMALE' as const, department: 'Emergency', diagnosis: 'Seeded chest pain' },
 ];
 
+// Fixed id so the seed stays idempotent (frontend/e2e-real/notification-bell.e2e.ts looks for this title).
+export const SEED_NOTIFICATION = {
+  id: '00000000-0000-4000-8000-0000000000e2',
+  type: 'SYSTEM',
+  title: 'Seeded unread notification',
+  message: 'Seeded message for the bell',
+};
+
 async function main(): Promise<void> {
   const hospital =
     (await prisma.hospital.findFirst()) ??
     (await prisma.hospital.create({ data: { name: 'E2E Test Hospital', location: 'Test District' } }));
 
-  await prisma.user.upsert({
+  const admin = await prisma.user.upsert({
     where: { email: E2E_ADMIN.email },
     update: {},
     create: {
@@ -35,6 +43,13 @@ async function main(): Promise<void> {
       status: 'On Duty',
       hospitalId: hospital.id,
     },
+  });
+
+  // One unread notification for the admin (the bell badge shows 1 on a fresh database).
+  await prisma.notification.upsert({
+    where: { id: SEED_NOTIFICATION.id },
+    update: {},
+    create: { ...SEED_NOTIFICATION, userId: admin.id },
   });
 
   await Promise.all(

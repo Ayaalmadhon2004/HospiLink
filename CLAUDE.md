@@ -123,7 +123,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
 - Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. The mocked suite does NOT exercise the real backend.
   The separate real-backend suite (`frontend/e2e-real`, `npm run test:e2e:real`, CI job `e2e-real` with a `services: postgres` container)
-  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, with no mocks.
+  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, and the NotificationBell (badge, mark read, delete, realtime `new-notification`), with no mocks.
   It uses its own seed (`backend/prisma/seed.e2e.ts`), never `seed.ts`, and refuses a database whose name lacks `e2e`/`test`.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 

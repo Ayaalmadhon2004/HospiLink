@@ -8,6 +8,10 @@ seeded patients listed, admitting a patient through the UI and finding it in the
 Report upload (`reports.e2e.ts`): uploading a PDF through the UI, finding it listed after a reload, and fetching it back with the
 same bytes; the 5 MB limit is enforced by the UI and by the API, and a non PDF/JPEG/PNG file is refused by the API.
 
+Notification bell (`notification-bell.e2e.ts`): the seeded unread notification shows a badge of 1, opening the dropdown lists it,
+clicking it marks it read (badge gone, stored in the DB) and deleting it removes it for good; creating an incident through the real API
+makes a new notification appear in the bell over socket.io (`new-notification` to the `user-<id>` room) without a reload.
+
 The auth endpoints are rate limited (20 requests per 15 minutes), so `login()` in `e2e-real/helpers.ts` signs in through the form
 once and reuses that session cookie for the rest of the run; use `loginViaUi()` only where the sign-in itself is under test.
 
@@ -22,8 +26,8 @@ Origins and cookies: the browser uses `http://localhost:4173`, which is already 
 (`DEFAULT_ORIGINS`), so CORS is not changed or relaxed. `localhost:4173` and `localhost:5000` are the same site, and Chromium
 accepts the `Secure; SameSite=None; HttpOnly` auth cookie on `localhost`, so the real login cookie flow is exercised.
 
-Data: `backend/prisma/seed.e2e.ts` (not `seed.ts`) creates one hospital, the admin `e2e.admin@hospilink.test` and two patients
-(`E2E-0001`, `E2E-0002`). It is idempotent but the suite adds a patient per run, so recreate the database between local runs.
+Data: `backend/prisma/seed.e2e.ts` (not `seed.ts`) creates one hospital, the admin `e2e.admin@hospilink.test` , two patients
+(`E2E-0001`, `E2E-0002`) and one unread notification for the admin (fixed id, "Seeded unread notification"). It is idempotent but the suite adds a patient per run, so recreate the database between local runs.
 
 ## Run locally
 
