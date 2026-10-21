@@ -170,7 +170,7 @@ export const AppointmentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
         name={confirmDelete?.name || ''}
@@ -223,7 +223,7 @@ export const AppointmentsPage = () => {
             todayAppointments.map((apt) => (
               <div
                 key={apt.id}
-                className={`flex items-start gap-4 p-4 rounded-lg border-s-4 ${
+                className={`group flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border-s-4 ${
                   typeColors[apt.type] || 'bg-gray-50 border-gray-300'
                 }`}
               >
@@ -259,7 +259,7 @@ export const AppointmentsPage = () => {
                     )}
                   </div>
                 </div>
-                <div className="flex gap-1 opacity-0 hover:opacity-100 transition">
+                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                   <button
                     onClick={() => handleEdit(apt)}
                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
@@ -331,7 +331,7 @@ export const AppointmentsPage = () => {
             filteredUpcoming.map((apt) => (
               <div
                 key={apt.id}
-                className="flex items-center gap-4 p-4 rounded-lg border hover:bg-gray-50 transition group"
+                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border hover:bg-gray-50 transition group"
               >
                 <div className="flex flex-col items-center min-w-[60px] bg-gray-100 rounded-lg p-2">
                   <span className="text-xs text-gray-500">{formatDate(apt.scheduledAt)}</span>
@@ -351,10 +351,10 @@ export const AppointmentsPage = () => {
                     {t(`appointments.types.${apt.type}`, { defaultValue: apt.type })} &middot; {apt.doctor?.name ? apt.doctor.name.replace(/^Dr\.\s*/i, '') : t('appointments.noDoctor')} &middot; {t(`departments.${apt.department}`, { defaultValue: apt.department })}
                   </div>
                 </div>
-                <span className={`px-2 py-1 rounded-full text-xs font-medium ${typeColors[apt.type] || ''}`}>
+                <span className={`hidden sm:inline-block px-2 py-1 rounded-full text-xs font-medium ${typeColors[apt.type] || ''}`}>
                   {t(`appointments.types.${apt.type}`, { defaultValue: apt.type })}
                 </span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition">
+                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                   <button
                     onClick={() => handleEdit(apt)}
                     className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"

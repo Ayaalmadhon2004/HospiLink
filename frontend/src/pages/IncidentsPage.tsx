@@ -169,7 +169,7 @@ export const IncidentsPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8">
       {/* Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
@@ -272,7 +272,7 @@ export const IncidentsPage = () => {
               className="bg-white rounded-xl shadow-sm border p-6 group relative"
             >
               {/* Actions - hover */}
-              <div className="absolute top-4 end-4 flex gap-2 opacity-0 group-hover:opacity-100 transition">
+              <div className="absolute top-4 end-4 flex gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                 {/* ✅ NEW: Mark Resolved button */}
                 {incident.status === 'ACTIVE' && (
                   <button

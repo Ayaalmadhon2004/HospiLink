@@ -111,7 +111,7 @@ const Beds = () => {
   }
 
   return (
-    <div className="space-y-6 relative">
+    <div className="space-y-6 relative p-4 md:p-8">
       {/* ✅ Shared Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
@@ -122,7 +122,7 @@ const Beds = () => {
         isLoading={isDeleting}
       />
 
-      <div className="flex justify-between items-start">
+      <div className="flex flex-wrap justify-between items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{t('beds.title')}</h1>
           <p className="text-gray-500 text-sm mt-1">{t('beds.subtitle')}</p>

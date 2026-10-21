@@ -89,7 +89,7 @@ export const StaffDirectoryPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8 relative">
+    <div className="min-h-screen bg-gray-50 p-4 md:p-8 relative">
       {/* ✅ Shared Confirm Delete Dialog */}
       <ConfirmDeleteDialog
         isOpen={!!confirmDelete}
@@ -220,7 +220,7 @@ export const StaffDirectoryPage = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 text-end">
-                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition">
+                  <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                     <button
                       onClick={() => handleEdit(member)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
