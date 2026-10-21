@@ -50,11 +50,11 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col">
+    <aside className="w-64 h-screen bg-gradient-to-b from-hospital-navy to-teal-700 text-white flex flex-col">
       {/* Logo */}
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
             <Heart className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -75,8 +75,8 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             onClick={() => onItemClick(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
               activeItem === item.id
-                ? 'bg-teal-500/15 text-teal-400 border-s-2 border-teal-500 shadow-sm shadow-teal-500/10'
-                : 'text-slate-200 hover:bg-slate-800 hover:text-white border-s-2 border-transparent'
+                ? 'bg-white/20 text-white font-semibold border-s-2 border-white shadow-sm'
+                : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
             }`}
           >
             <item.icon className={`w-5 h-5 transition-colors ${
@@ -86,8 +86,8 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             {item.badge && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
-                  ? 'bg-teal-700 text-white' 
-                  : 'bg-slate-700 text-slate-200'
+                  ? 'bg-white text-hospital-navy'
+                  : 'bg-white/20 text-white'
               }`}>
                 {item.badge}
               </span>
@@ -101,13 +101,13 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
 
       {/* Settings */}
       <div className="px-4 pb-2 space-y-1">
-        <LanguageSwitcher className="w-full px-4 py-3 text-slate-200 hover:bg-slate-800 hover:text-white" />
+        <LanguageSwitcher className="w-full px-4 py-3 text-white/90 hover:bg-white/15 hover:text-white" />
         <button
           onClick={() => onItemClick('Settings')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
             activeItem === 'Settings'
-              ? 'bg-teal-500/15 text-teal-400 border-s-2 border-teal-500'
-              : 'text-slate-200 hover:bg-slate-800 hover:text-white border-s-2 border-transparent'
+              ? 'bg-white/20 text-white font-semibold border-s-2 border-white'
+              : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
           }`}
         >
           <Settings className={`w-5 h-5 ${
@@ -118,7 +118,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
       </div>
 
       {/* Bottom - Dynamic Profile */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-white/15">
         {loading ? (
           <div className="flex items-center gap-3 px-4 py-3">
             <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
@@ -126,7 +126,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           </div>
         ) : user ? (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {getInitials(user.name)}
             </div>
             <div className="flex-1 min-w-0">

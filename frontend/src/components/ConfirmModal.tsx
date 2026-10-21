@@ -23,7 +23,7 @@ export const ConfirmModal = ({
   const toneColors = {
     danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
     primary: 'bg-hospital-navy hover:bg-hospital-navy/90 focus:ring-hospital-navy',
-    neutral: 'bg-slate-700 hover:bg-slate-800 focus:ring-slate-500',
+    neutral: 'bg-teal-700 hover:bg-teal-800 focus:ring-teal-500',
   };
 
   const handleConfirm = async () => {
@@ -40,7 +40,7 @@ export const ConfirmModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
