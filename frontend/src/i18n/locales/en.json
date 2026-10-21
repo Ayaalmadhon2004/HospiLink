@@ -78,6 +78,7 @@
       "afternoon": "Good afternoon",
       "evening": "Good evening"
     },
+    "greetingWithName": "{{greeting}}, {{name}}",
     "loadError": "Failed to load dashboard data. Please try again.",
     "loadingData": "Loading dashboard data...",
     "loadingPage": "Loading page content...",
