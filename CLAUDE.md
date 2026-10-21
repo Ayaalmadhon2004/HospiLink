@@ -131,7 +131,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 Open:
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
-- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend test coverage is minimal (unit tests plus a small mocked-API E2E suite; the real-backend suite is `npm run test:e2e:real`).
+- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend has unit tests, a mocked-API Playwright suite and a real-backend suite (`npm run test:e2e:real`); broader page coverage is still welcome.
 - i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): the icons are generated placeholders and need real branding. Web Vitals (`docs/WEB_VITALS.md`) report only when `VITE_VITALS_ENDPOINT` is set.
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
