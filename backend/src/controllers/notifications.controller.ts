@@ -1,9 +1,9 @@
 // backend/src/controllers/notifications.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
 import logger from '../config/logger';
 import type { Prisma } from '@prisma/client';
+import { notify } from '../services/notification.service';
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, `[Notifications] ${message}:`);
@@ -88,20 +88,37 @@ export const deleteNotification = async (req: Request, res: Response) => {
   }
 };
 
-// Internal: create notification (called from other controllers)
-export const createNotification = async (data: {
-  userId: string;
-  type: string;
-  title: string;
-  message: string;
-  link?: string;
-}) => {
+// Internal: kept for backwards compatibility; implemented in the notification service.
+export { createNotification } from '../services/notification.service';
+
+// POST /api/notifications/broadcast (ADMIN) - SYSTEM message to the whole hospital or to one role
+export const broadcastNotification = async (req: Request, res: Response) => {
   try {
-    const notification = await prisma.notification.create({ data });
-    io.to(`user-${data.userId}`).emit('new-notification', notification);
-    return notification;
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to create notification:');
-    return null;
+    const { title, message, role, link } = req.body as {
+      title: string;
+      message: string;
+      role?: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER';
+      link?: string;
+    };
+    const adminId = req.user?.id;
+    if (!adminId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const admin = await prisma.user.findUnique({ where: { id: adminId }, select: { hospitalId: true } });
+    if (!admin) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const created = await notify({
+      type: 'SYSTEM',
+      title,
+      message,
+      link,
+      recipients: {
+        hospitalId: admin.hospitalId,
+        roles: role ? [role] : ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER'],
+      },
+    });
+
+    res.status(201).json({ success: true, message: 'Broadcast sent', data: { recipients: created.length } });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to send broadcast');
   }
 };

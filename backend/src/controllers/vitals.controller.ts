@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
+import { notify } from '../services/notification.service';
 import type { Prisma } from '@prisma/client';
 
 const METRIC_KEYS = [
@@ -126,6 +127,25 @@ const checkCriticalVitals = async (
   }
 };
 
+// Critical vitals go to the assigned doctor plus doctors/nurses of the patient's department.
+const notifyCriticalVitals = (
+  patient: { id: string; name?: string | null; department: string; doctorId?: string | null },
+  alertType: string | null,
+  actorId?: string
+) =>
+  notify({
+    type: 'VITALS',
+    title: 'Critical vitals alert',
+    message: `${patient.name ?? 'Patient'} (${patient.department}): ${alertType ?? 'critical reading'}`,
+    link: `/patients/${patient.id}`,
+    recipients: {
+      roles: ['DOCTOR', 'NURSE'],
+      department: patient.department,
+      userIds: patient.doctorId ? [patient.doctorId] : [],
+      scopeUserId: actorId,
+    },
+  });
+
 // POST /api/vitals - Record new vitals
 export const recordVitals = async (req: Request, res: Response) => {
   try {
@@ -135,7 +155,7 @@ export const recordVitals = async (req: Request, res: Response) => {
 
     const patient = await prisma.patient.findUnique({
       where: { id: patientId as string },
-      select: { department: true },
+      select: { id: true, name: true, department: true, doctorId: true },
     });
 
     if (!patient) {
@@ -162,6 +182,8 @@ export const recordVitals = async (req: Request, res: Response) => {
 
     // ✅ Emit للـ room تبع المريض
     io.to(`patient-${patientId}`).emit('new-vital', vitals);
+
+    if (isCritical) await notifyCriticalVitals(patient, alertType, req.user?.id);
 
     res.status(201).json({
       success: true,
@@ -290,6 +312,11 @@ export const updateVitals = async (req: Request, res: Response) => {
         alertType,
       },
     });
+
+    // Only alert when the reading BECOMES critical (not on every edit of an already critical one).
+    if (isCritical && !currentVitals.isCritical) {
+      await notifyCriticalVitals(currentVitals.patient, alertType, req.user?.id);
+    }
 
     res.status(200).json({ success: true, data: updated });
   } catch (error: unknown) {

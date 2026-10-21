@@ -178,6 +178,10 @@
     "reload": "Reload page"
   },
   "notifications": {
+    "filter": "Filter notifications",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "view": "View",
     "markAllRead": "Mark all as read",
     "close": "Close notifications",
     "empty": "No notifications",

@@ -1,17 +1,49 @@
 // frontend/src/components/NotificationBell.tsx
-import { useState, useRef, useEffect } from 'react';
-import { Bell, Check, Trash2, X } from 'lucide-react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { Bell, Check, Trash2, X, HeartPulse, AlertTriangle, Ambulance, CalendarClock, Clock, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Notification } from '../types/notification';
 
+const TYPE_ICONS: Record<string, typeof Info> = {
+  VITALS: HeartPulse,
+  INCIDENT: AlertTriangle,
+  DISPATCH: Ambulance,
+  APPOINTMENT: CalendarClock,
+  SHIFT: Clock,
+};
+const TYPE_COLORS: Record<string, string> = {
+  VITALS: 'text-red-600 bg-red-50',
+  INCIDENT: 'text-amber-600 bg-amber-50',
+  DISPATCH: 'text-orange-600 bg-orange-50',
+  APPOINTMENT: 'text-teal-600 bg-teal-50',
+  SHIFT: 'text-indigo-600 bg-indigo-50',
+};
+
+type Filter = 'all' | 'unread';
+
 export const NotificationBell = () => {
   const { t, i18n } = useTranslation();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications();
+  const [filter, setFilter] = useState<Filter>('all');
   const navigate = useNavigate();
+
+  // Live toast for every notification pushed over the socket.
+  const handleIncoming = useCallback(
+    (n: Notification) => {
+      const show = n.type === 'VITALS' ? toast.error : n.type === 'INCIDENT' || n.type === 'DISPATCH' ? toast.warning : toast.info;
+      show(n.title, {
+        description: n.message,
+        action: n.link ? { label: t('notifications.view'), onClick: () => navigate(n.link as string) } : undefined,
+      });
+    },
+    [navigate, t],
+  );
+  const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification } = useNotifications(handleIncoming);
+  const visible = filter === 'unread' ? notifications.filter((n) => !n.read) : notifications;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -76,10 +108,27 @@ export const NotificationBell = () => {
             </div>
           </div>
 
-          {notifications.length === 0 ? (
+          <div className="flex gap-1 px-3 py-2 border-b border-gray-100" role="group" aria-label={t('notifications.filter')}>
+            {(['all', 'unread'] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                aria-pressed={filter === f}
+                className={`px-2 py-0.5 rounded-full text-xs transition ${
+                  filter === f ? 'bg-teal-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {t(f === 'all' ? 'notifications.filterAll' : 'notifications.filterUnread')}
+              </button>
+            ))}
+          </div>
+
+          {visible.length === 0 ? (
             <div className="p-6 text-center text-gray-500 text-sm">{t('notifications.empty')}</div>
           ) : (
-            notifications.map((n) => (
+            visible.map((n) => {
+              const Icon = TYPE_ICONS[n.type] ?? Info;
+              return (
               <div
                 key={n.id}
                 role="button"
@@ -91,6 +140,12 @@ export const NotificationBell = () => {
                 }`}
               >
                 <div className="flex items-start justify-between gap-2">
+                  <span
+                    className={`mt-0.5 p-1.5 rounded-full shrink-0 ${TYPE_COLORS[n.type] ?? 'text-gray-600 bg-gray-100'}`}
+                    aria-hidden="true"
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </span>
                   <div className="flex-1 min-w-0">
                     <p className={`text-sm font-medium truncate ${!n.read ? 'text-gray-900' : 'text-gray-600'}`}>
                       {n.title}
@@ -112,7 +167,8 @@ export const NotificationBell = () => {
                   </button>
                 </div>
               </div>
-            ))
+              );
+            })
           )}
         </div>
       )}

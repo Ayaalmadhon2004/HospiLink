@@ -3,6 +3,13 @@ import { Request, Response } from 'express';
 import { io } from '../server';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import { notify } from '../services/notification.service';
+
+// Dispatch events go to dispatchers and admins, never the actor.
+const dispatchRecipients = (actorId?: string) => ({
+  roles: ['DISPATCHER', 'ADMIN'] as Array<'DISPATCHER' | 'ADMIN'>,
+  excludeUserId: actorId,
+});
 
 // ❌ شيلي هاد — errorHandler هو middleware مش function
 // import { errorHandler } from '../middlewares/error.middleware';
@@ -116,6 +123,14 @@ export const createCall = async (req: Request, res: Response) => {
       });
     }
 
+    await notify({
+      type: 'DISPATCH',
+      title: priority === 'CRITICAL' ? 'Critical dispatch call' : 'New dispatch call',
+      message: `${type} at ${location} (${call.priority})`,
+      link: '/dispatch',
+      recipients: dispatchRecipients(req.user?.id),
+    });
+
     res.status(201).json({ success: true, data: call });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to create call');
@@ -150,6 +165,14 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
       callId: id,
       callType: updatedCall.type,
       location: updatedCall.location
+    });
+
+    await notify({
+      type: 'DISPATCH',
+      title: 'Unit assigned to call',
+      message: `${updatedUnit.unitCode} assigned to ${updatedCall.type} at ${updatedCall.location}`,
+      link: '/dispatch',
+      recipients: dispatchRecipients(req.user?.id),
     });
 
     res.status(200).json({ success: true, data: { call: updatedCall, unit: updatedUnit } });

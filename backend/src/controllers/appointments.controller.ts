@@ -4,11 +4,40 @@ import prisma from '../config/db';
 import { io } from '../server';
 import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import logger from '../config/logger';
+import { notify } from '../services/notification.service';
 import type { Prisma } from '@prisma/client';
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
   res.status(500).json({ success: false, message });
+};
+
+const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }) =>
+  `${a.patient?.name ?? 'Patient'} on ${new Date(a.scheduledAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
+// Appointment.doctorId points at Staff; the matching login (User) shares the same email.
+const notifyAppointmentDoctor = async (
+  appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
+  title: string,
+  actorId?: string
+) => {
+  try {
+    const message = describeAppointment(appointment);
+    const doctorStaffId = appointment.doctorId;
+    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { email: true } });
+    if (!staff) return;
+    const user = await prisma.user.findUnique({ where: { email: staff.email }, select: { id: true } });
+    if (!user) return;
+    await notify({
+      type: 'APPOINTMENT',
+      title,
+      message,
+      link: '/appointments',
+      recipients: { userIds: [user.id], excludeUserId: actorId, scopeUserId: actorId },
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Appointment notification failed');
+  }
 };
 
 // ─── GET /api/appointments ─────────────────────────────────────────────
@@ -239,6 +268,8 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     io.to(CLINICAL_ROOM).emit('appointment-created', appointment);
 
+    await notifyAppointmentDoctor(appointment, 'New appointment', req.user?.id);
+
     res.status(201).json({ success: true, data: appointment });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to create appointment');
@@ -266,6 +297,11 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     io.to(CLINICAL_ROOM).emit('appointment-updated', appointment);
 
+    // Only schedule-relevant changes are worth a notification.
+    if (['scheduledAt', 'status', 'doctorId', 'room'].some((k) => k in updateData)) {
+      await notifyAppointmentDoctor(appointment, 'Appointment changed', req.user?.id);
+    }
+
     res.status(200).json({ success: true, data: appointment });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to update appointment');
@@ -283,6 +319,8 @@ export const deleteAppointment = async (req: Request, res: Response) => {
     });
 
     io.to(CLINICAL_ROOM).emit('appointment-cancelled', { id });
+
+    await notifyAppointmentDoctor(appointment, 'Appointment cancelled', req.user?.id);
 
     res.status(200).json({ success: true, message: 'Appointment cancelled', data: appointment });
   } catch (error: unknown) {

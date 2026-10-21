@@ -23,6 +23,7 @@ jest.mock('../../src/controllers/settings.controller', () => ({
   updateDisplay: jest.fn((req: any, res: any) => res.status(200).json({ success: true, body: req.body })),
 }));
 jest.mock('../../src/controllers/notifications.controller', () => ({
+  broadcastNotification: jest.fn((req: any, res: any) => res.status(201).json({ success: true, body: req.body })),
   getNotifications: jest.fn(), markAllAsRead: jest.fn(), deleteNotification: jest.fn(),
   markAsRead: jest.fn((req: any, res: any) => res.status(200).json({ success: true, id: req.params.id })),
 }));
@@ -79,6 +80,14 @@ describe('validation on routes', () => {
   it('PUT /settings/display validates theme', async () => {
     expect((await request(app).put('/settings/display').send({ theme: 'neon' })).status).toBe(400);
     expect((await request(app).put('/settings/display').send({ theme: 'dark' })).status).toBe(200);
+  });
+
+  it('POST /notifications/broadcast validates the body', async () => {
+    const post = (body: object) => request(app).post('/notifications/broadcast').send(body);
+    expect((await post({ title: '', message: 'x' })).status).toBe(400);
+    expect((await post({ title: 'T', message: 'M', role: 'JANITOR' })).status).toBe(400);
+    expect((await post({ title: 'T', message: 'M', link: '//evil.com' })).status).toBe(400);
+    expect((await post({ title: 'T', message: 'M', role: 'NURSE', link: '/incidents' })).status).toBe(201);
   });
 
   it('PUT /notifications/:id/read rejects non-uuid ids', async () => {

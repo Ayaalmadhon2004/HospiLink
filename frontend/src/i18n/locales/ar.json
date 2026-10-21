@@ -178,6 +178,10 @@
     "reload": "إعادة تحميل الصفحة"
   },
   "notifications": {
+    "filter": "تصفية الإشعارات",
+    "filterAll": "الكل",
+    "filterUnread": "غير المقروءة",
+    "view": "عرض",
     "markAllRead": "تحديد الكل كمقروء",
     "close": "إغلاق الإشعارات",
     "empty": "لا توجد إشعارات",
