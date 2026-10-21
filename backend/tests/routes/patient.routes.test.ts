@@ -21,6 +21,7 @@ jest.mock('../../src/controllers/patient.controller', () => {
     uploadReport: echo(201),
     getRecentPatients: echo(),
     getCriticalPatientCount: echo(),
+    getPatientFlow: echo(),
     getPatients: echo(),
     getPatientById: echo(),
     updatePatient: echo(),

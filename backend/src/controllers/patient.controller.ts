@@ -71,6 +71,43 @@ export const getCriticalPatientCount = async (_req: Request, res: Response) => {
 };
 
 // ============================================
+// GET /api/patients/flow?days=7
+// Daily admissions and discharges (UTC days, today included), oldest first
+// ============================================
+const DAY_MS = 24 * 60 * 60 * 1000;
+const utcDay = (d: Date): string => d.toISOString().slice(0, 10);
+
+export const getPatientFlow = async (req: Request, res: Response) => {
+  try {
+    const days = Number((req.query as { days?: number }).days ?? 7);
+    const now = new Date();
+    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (days - 1) * DAY_MS);
+
+    const rows = await prisma.patient.findMany({
+      where: { OR: [{ admissionDate: { gte: start } }, { dischargeDate: { gte: start } }] },
+      select: { admissionDate: true, dischargeDate: true },
+    });
+
+    const buckets = new Map<string, { date: string; admissions: number; discharges: number }>();
+    for (let i = 0; i < days; i++) {
+      const date = utcDay(new Date(start.getTime() + i * DAY_MS));
+      buckets.set(date, { date, admissions: 0, discharges: 0 });
+    }
+    for (const r of rows) {
+      const a = buckets.get(utcDay(r.admissionDate));
+      if (a) a.admissions += 1;
+      const d = r.dischargeDate ? buckets.get(utcDay(r.dischargeDate)) : undefined;
+      if (d) d.discharges += 1;
+    }
+
+    res.status(200).json({ success: true, data: Array.from(buckets.values()) });
+  } catch (error) {
+    logger.error({ err: error }, 'getPatientFlow error:');
+    res.status(500).json({ success: false, message: 'Failed to fetch patient flow' });
+  }
+};
+
+// ============================================
 // POST /api/patients/admit
 // ============================================
 // Business-rule failure inside the admit transaction: safe to show to the client.

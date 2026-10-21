@@ -1,6 +1,7 @@
 // services/patientService.ts
 import { apiFetch, apiGet, apiPost, apiPut } from './api';
 import { toQueryString, type ApiResponse, type Pagination, type QueryParams } from '../types/api';
+import type { PatientFlowDay } from '../utils/patientFlow';
 import type { Patient, PatientDetail, PatientReport, RecentPatient } from '../types/patient';
 
 export const getPatients = async (params?: QueryParams) => {
@@ -9,6 +10,10 @@ export const getPatients = async (params?: QueryParams) => {
 
 export const getRecentPatients = async () => {
   return await apiGet<ApiResponse<RecentPatient[]>>('/patients/recent');
+};
+
+export const getPatientFlow = async (days = 7) => {
+  return await apiGet<ApiResponse<PatientFlowDay[]>>(`/patients/flow${toQueryString({ days })}`);
 };
 
 export const getPatientById = async (id: string) => {
