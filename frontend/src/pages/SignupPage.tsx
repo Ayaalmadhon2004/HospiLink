@@ -129,7 +129,7 @@ export const SignupPage = () => {
           <button 
             type="submit" 
             disabled={loading}
-            className="col-span-2 bg-hospital-navy hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition duration-200 disabled:opacity-50"
+            className="col-span-2 bg-hospital-navy hover:bg-teal-700 text-white py-3 rounded-xl font-bold transition duration-200 disabled:opacity-50"
             aria-label={loading ? t('auth.creatingAccountWait') : t('auth.createAccountLabel')}
             aria-busy={loading}
           >

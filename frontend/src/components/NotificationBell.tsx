@@ -40,7 +40,7 @@ export const NotificationBell = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 text-current hover:bg-black/10 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-teal-400"
+        className="relative p-2 text-current hover:bg-white/10 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-teal-400"
         aria-label={t('common.notifications')}
       >
         <Bell className="w-5 h-5" />
