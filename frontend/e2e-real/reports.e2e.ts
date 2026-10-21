@@ -54,6 +54,11 @@ test.describe.serial('report upload (real backend + database)', () => {
     const reports = page.getByRole('list', { name: 'Patient reports' });
     await expect(reports.getByText(fileName)).toBeVisible();
 
+    // The upload is attributed to the signed-in user (the audit trail of who added the report).
+    const list = await page.context().request.get(`${API_URL}/patients/${patientId}/reports`);
+    const { data } = (await list.json()) as { data: { fileName: string; uploadedBy: string | null }[] };
+    expect(data.find((r) => r.fileName === fileName)?.uploadedBy).toBeTruthy();
+
     // The file is served back, authenticated, with the bytes that were uploaded.
     const fileResponse = page.waitForResponse((r) => /\/patients\/reports\/[\w-]+\/file$/.test(r.url()));
     await page.getByRole('button', { name: `View report: ${fileName}` }).click();

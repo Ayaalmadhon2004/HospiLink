@@ -17,6 +17,9 @@ type MetricKey = (typeof METRIC_KEYS)[number];
 type MetricValues = Partial<Record<MetricKey, number | null>>;
 
 // undefined/null/'' => null (missing); numeric value/string => finite number; anything else => undefined (invalid).
+// `protect` always sets req.user on routed requests; the fallback only covers a call without an authenticated user.
+const SYSTEM_RECORDER = 'system';
+
 const parseMetric = (v: unknown): number | null | undefined => {
   if (v === undefined || v === null) return null;
   if (typeof v === 'string') {
@@ -65,8 +68,8 @@ export const createVital = async (req: Request, res: Response) => {
         spO2: values.spO2,
         temperature: values.temperature,
         respiratoryRate: values.respiratoryRate,
-        // TODO: `recordedBy` is required by the schema but not set here (pre-existing); not changed in this typing-only PR.
-      } as unknown as Prisma.PatientVitalsUncheckedCreateInput,
+        recordedBy: req.user?.id ?? SYSTEM_RECORDER,
+      },
     });
 
     io.to(`patient-${newVital.patientId}`).emit('new-vital', newVital);
@@ -150,7 +153,7 @@ export const recordVitals = async (req: Request, res: Response) => {
         spO2: values.spO2,
         temperature: values.temperature,
         respiratoryRate: values.respiratoryRate,
-        recordedBy: (req.user as { userId?: string } | undefined)?.userId || 'system',
+        recordedBy: req.user?.id ?? SYSTEM_RECORDER,
         notes,
         isCritical,
         alertType,
