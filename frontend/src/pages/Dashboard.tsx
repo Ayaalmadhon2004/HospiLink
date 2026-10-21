@@ -14,6 +14,7 @@ import { getTodaySchedule } from '../services/appointmentsService';
 import { getStaff } from '../services/staffService';
 import { getBeds } from '../services/bedService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
+import { PatientFlowSection } from '../components/Dashboard/PatientFlowSection';
 import { useAuth } from '../contexts/AuthContext';
 import { NotificationBell } from '../components/NotificationBell';
 
@@ -430,6 +431,8 @@ const Dashboard = () => {
         <StatCard title={t('dashboard.appointments')} value={loading ? '...' : todaySchedule.length.toString()} hint={t('dashboard.appointmentsHint')} />
         <StatCard title={t('dashboard.staff')} value={loading ? '...' : staffCount.toString()} hint={t('dashboard.staffHint')} />
       </section>
+
+      <PatientFlowSection />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Department Load */}

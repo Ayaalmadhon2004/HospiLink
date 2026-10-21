@@ -5,13 +5,16 @@ import { useTranslation } from 'react-i18next';
 import { 
   Users, RefreshCw, Search, Plus, Pencil, Trash2
 } from 'lucide-react';
-import { getStaff, deleteStaff } from '../services/staffService';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { getStaff, deleteStaff, getShiftTimeline } from '../services/staffService';
 import { extractList } from '../types/api';
 import type { Shift } from '../types/staff';
 import { useStaffSocket } from '../hooks/useStaffSocket';
 import { StaffModal } from '../components/Staff/StaffModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { StaffCard } from '../components/Staff/StaffCard';
+import { ShiftTimeline } from '../components/Staff/ShiftTimeline';
 
 interface StaffMember {
   id: string;
@@ -64,10 +67,23 @@ export const StaffDirectoryPage = () => {
     fetchStaff();
   }, [fetchStaff]);
 
+  const queryClient = useQueryClient();
+  const { data: timeline, isError: timelineError } = useQuery({
+    queryKey: ['staff', 'shift-timeline'],
+    queryFn: async () => {
+      const res = (await getShiftTimeline()) as { data?: Record<string, Shift[]> };
+      return res.data ?? {};
+    },
+    staleTime: 60_000,
+  });
+
   useEffect(() => {
+    if (latestShift) {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    if (latestShift) fetchStaff();
-  }, [latestShift, fetchStaff]);
+      fetchStaff();
+      void queryClient.invalidateQueries({ queryKey: ['staff', 'shift-timeline'] });
+    }
+  }, [latestShift, fetchStaff, queryClient]);
 
   const departments = [...new Set(staff.map((s) => s.department))];
 
@@ -176,8 +192,28 @@ export const StaffDirectoryPage = () => {
         </div>
       </div>
 
+      {/* Today's shift coverage by department */}
+      <section aria-label={t('staff.timelineSection')} className="mb-6">
+        {timelineError ? (
+          <div role="alert" className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm font-medium">
+            {t('staff.timelineError')}
+          </div>
+        ) : (
+          <ShiftTimeline timeline={timeline ?? null} />
+        )}
+      </section>
+
+      {/* Mobile: staff cards (the table below is md and up) */}
+      {filteredStaff.length > 0 && (
+        <section aria-label={t('staff.cardsLabel')} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6 md:hidden">
+          {filteredStaff.map((member) => (
+            <StaffCard key={member.id} member={member} />
+          ))}
+        </section>
+      )}
+
       {/* Staff Table */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border overflow-hidden hidden md:block" data-testid="staff-table">
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
@@ -243,13 +279,13 @@ export const StaffDirectoryPage = () => {
             ))}
           </tbody>
         </table>
-        {filteredStaff.length === 0 && (
-          <div className="text-center py-20 text-gray-400">
-            <Users size={48} className="mx-auto mb-4 opacity-50" aria-hidden="true" />
-            <p>{t('staff.empty')}</p>
-          </div>
-        )}
       </div>
+      {filteredStaff.length === 0 && (
+        <div className="bg-white rounded-xl shadow-sm border text-center py-20 text-gray-400">
+          <Users size={48} className="mx-auto mb-4 opacity-50" aria-hidden="true" />
+          <p>{t('staff.empty')}</p>
+        </div>
+      )}
     </div>
   );
 };

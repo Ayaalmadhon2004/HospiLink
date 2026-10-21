@@ -117,6 +117,26 @@ export const mockApi = async (page: Page, options: MockOptions = {}) => {
       });
     }
 
+    if (path === '/staff/shifts/timeline') {
+      return json(route, 200, {
+        success: true,
+        data: {
+          Cardiology: [
+            { id: 'sh1', staffName: 'Sara Ali', type: 'DAY', startTime: '2026-10-21T08:00:00', endTime: '2026-10-21T16:00:00', department: 'Cardiology', staffId: 's1' },
+          ],
+        },
+      });
+    }
+
+    if (path === '/staff' && method === 'GET') {
+      return json(route, 200, {
+        success: true,
+        data: [
+          { id: 's1', name: 'Sara Ali', email: 'sara@hospilink.test', role: 'NURSE', department: 'Cardiology', isActive: true, shifts: [] },
+        ],
+      });
+    }
+
     if (path === '/patients/recent') return json(route, 200, { success: true, data: [] });
 
     return json(route, 200, { success: true, data: [] });
