@@ -86,6 +86,11 @@ vi.mock('../../services/staffService', () => ({
       { id: 's1', name: 'Sara Ali', email: 's@h.com', role: 'Nurse', department: 'Cardiology', isActive: true, shifts: [{ id: 'sh1', type: 'NIGHT', staffId: 's1', startTime: '', endTime: '', department: 'Cardiology' }] },
     ],
   }),
+  getShiftTimeline: vi.fn().mockResolvedValue({
+    data: {
+      Cardiology: [{ id: 'sh1', staffId: 's1', staffName: 'Sara Ali', type: 'NIGHT', startTime: '2026-10-21T08:00:00', endTime: '2026-10-21T16:00:00', department: 'Cardiology' }],
+    },
+  }),
   deleteStaff: vi.fn(),
   createStaff: vi.fn(),
   updateStaff: vi.fn(),
@@ -180,9 +185,14 @@ describe('pages in Arabic', () => {
   it('renders the staff directory with translated roles and shifts', async () => {
     renderPage(<StaffDirectoryPage />);
     expect(await screen.findByRole('heading', { name: 'الطاقم والمناوبات' })).toBeInTheDocument();
-    expect(screen.getByText('ممرض/ممرضة')).toBeInTheDocument();
-    expect(screen.getByText('ليلية')).toBeInTheDocument();
-    expect(screen.getByText('Sara Ali')).toBeInTheDocument();
+    expect(screen.getAllByText('ممرض/ممرضة').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('ليلية').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Sara Ali').length).toBeGreaterThan(0);
+    // StaffCard (mobile list) and ShiftTimeline are mounted on the page
+    expect(screen.getByRole('region', { name: 'بطاقات الطاقم' })).toBeInTheDocument();
+    expect(screen.getByRole('article', { name: /Sara Ali/ })).toBeInTheDocument();
+    expect(await screen.findByText('الجدول الزمني للورديات')).toBeInTheDocument();
+    expect(await screen.findByTitle(/Sara Ali - /)).toBeInTheDocument();
   });
 
   it('renders incidents with translated severity and relative time', async () => {

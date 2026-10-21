@@ -119,7 +119,10 @@
       "Maternity": "الولادة",
       "Cardiology": "القلب",
       "General": "عام"
-    }
+    },
+    "patientFlowSection": "حركة المرضى خلال آخر 7 أيام",
+    "patientFlowError": "تعذّر تحميل حركة المرضى.",
+    "patientFlowRetryLabel": "إعادة تحميل حركة المرضى"
   },
   "status": {
     "STABLE": "مستقرة",
@@ -316,7 +319,9 @@
     "flow": {
       "title": "حركة المرضى",
       "chartLabel": "مخطط {{title}} يعرض بيانات حركة المرضى عبر الزمن",
-      "loadingChart": "جارٍ تحميل المخطط..."
+      "loadingChart": "جارٍ تحميل المخطط...",
+      "admissions": "حالات القبول",
+      "discharges": "حالات الخروج"
     },
     "admitModal": {
       "title": "تسجيل دخول مريض جديد",
@@ -668,7 +673,10 @@
       "save": "حفظ التغييرات",
       "add": "إضافة موظف",
       "adding": "جارٍ الإضافة..."
-    }
+    },
+    "timelineSection": "الجدول الزمني لورديات اليوم",
+    "timelineError": "تعذّر تحميل الجدول الزمني للورديات.",
+    "cardsLabel": "بطاقات الطاقم"
   },
   "dispatch": {
     "dismiss": "إغلاق الإشعار",
