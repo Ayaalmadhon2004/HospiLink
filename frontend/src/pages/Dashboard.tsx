@@ -15,6 +15,7 @@ import { getStaff } from '../services/staffService';
 import { getBeds } from '../services/bedService';
 import { DepartmentBar } from '../components/Dashboard/DepartmentBar';
 import { useAuth } from '../contexts/AuthContext';
+import { NotificationBell } from '../components/NotificationBell';
 
 // ✅ Lazy-loaded tabs — code-split per page
 import { lazy, Suspense } from 'react';
@@ -538,6 +539,7 @@ const Dashboard = () => {
   return (
     <DashboardShell
       title={t(`sidebar.tabs.${activeItem}`)}
+      actions={<NotificationBell />}
       mainLabel={t('dashboard.mainLabel', { tab: t(`sidebar.tabs.${activeItem}`) })}
       renderSidebar={(closeMenu) => (
         <Sidebar

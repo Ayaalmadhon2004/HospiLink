@@ -40,7 +40,7 @@ export const NotificationBell = () => {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition"
+        className="relative p-2 text-current hover:bg-black/10 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-teal-400"
         aria-label={t('common.notifications')}
       >
         <Bell className="w-5 h-5" />
@@ -52,7 +52,7 @@ export const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute end-0 mt-2 w-80 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="absolute end-0 mt-2 w-80 max-w-[calc(100vw-1.5rem)] text-gray-800 bg-white border border-gray-200 rounded-xl shadow-lg z-50 max-h-96 overflow-y-auto">
           <div className="flex items-center justify-between p-3 border-b border-gray-100">
             <h3 className="font-semibold text-sm text-gray-800">{t('common.notifications')}</h3>
             <div className="flex gap-1">

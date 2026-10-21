@@ -3,16 +3,15 @@ import { logger } from '../utils/logger';
 import { useState, useEffect, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import { apiGet, apiPut, apiDelete } from '../services/api';
-import type { ApiResponse } from '../types/api';
+import type { Notification } from '../types/notification';
 
-export interface Notification {
-  id: string;
-  type: string;
-  title: string;
-  message: string;
-  read: boolean;
-  link?: string;
-  createdAt: string;
+export type { Notification };
+
+/** GET /notifications answers `{ success, data: Notification[], unreadCount }`. */
+interface NotificationsResponse {
+  success: boolean;
+  data: Notification[];
+  unreadCount: number;
 }
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
@@ -26,9 +25,9 @@ export const useNotifications = () => {
   const fetchNotifications = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await apiGet<ApiResponse<{ data?: Notification[]; unreadCount?: number }>>('/notifications');
-      setNotifications(res.data?.data || []);
-      setUnreadCount(res.data?.unreadCount || 0);
+      const res = await apiGet<NotificationsResponse>('/notifications');
+      setNotifications(res.data ?? []);
+      setUnreadCount(res.unreadCount ?? 0);
     } catch (err) {
       logger.error('Failed to fetch notifications:', err);
     } finally {
@@ -59,6 +58,7 @@ export const useNotifications = () => {
   const deleteNotification = async (id: string) => {
     try {
       await apiDelete(`/notifications/${id}`);
+      if (notifications.some(n => n.id === id && !n.read)) setUnreadCount(prev => Math.max(0, prev - 1));
       setNotifications(prev => prev.filter(n => n.id !== id));
     } catch (err) {
       logger.error('Failed to delete notification:', err);
