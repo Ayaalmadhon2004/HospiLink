@@ -56,6 +56,17 @@ describe('DashboardShell', () => {
     expect(screen.queryByTestId('sidebar-backdrop')).not.toBeInTheDocument();
   });
 
+  it('moves focus into the drawer on open and back to the toggle on close', async () => {
+    const user = userEvent.setup();
+    renderShell();
+
+    await user.click(screen.getByRole('button', { name: 'Open menu' }));
+    expect(screen.getByRole('button', { name: 'Go to Beds' })).toHaveFocus();
+
+    await user.keyboard('{Escape}');
+    expect(screen.getByRole('button', { name: 'Open menu' })).toHaveFocus();
+  });
+
   it('renders the actions slot outside the main content', () => {
     render(
       <DashboardShell title="Patients" mainLabel="Patients panel" renderSidebar={() => <nav />} actions={<button>Bell</button>}>
