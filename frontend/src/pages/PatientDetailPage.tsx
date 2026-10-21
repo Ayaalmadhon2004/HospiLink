@@ -171,7 +171,7 @@ export const PatientDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-clinic-bg p-8">
+    <div className="min-h-screen bg-clinic-bg p-4 md:p-8">
       {/* Back button */}
       <button 
         onClick={() => navigate(-1)} 

@@ -92,7 +92,7 @@ export const EditPatientPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-clinic-bg p-8">
+    <div className="min-h-screen bg-clinic-bg p-4 md:p-8">
       <button onClick={() => navigate(-1)} className="flex items-center gap-2 text-clinic-text/70 hover:text-clinic-text mb-6 transition">
         <ArrowLeft size={20} className="rtl:rotate-180" aria-hidden="true" />
         {t('common.back')}
