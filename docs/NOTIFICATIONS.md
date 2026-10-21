@@ -55,7 +55,15 @@ For a cron job (shift/appointment reminders) call `notify` directly with `hospit
 Notes:
 - `Appointment.doctorId` references `Staff`; the login `User` is found by the shared email. A doctor
   without a login is silently skipped.
-- Not implemented here: time-based reminders (`shiftReminders`, upcoming appointments); build them on `notify`.
+- Scheduled reminders (`services/reminders.service.ts`, ticked every minute by `services/scheduler.ts`, started from
+  `server.ts`, disabled when `NODE_ENV=test`): shifts (type `SHIFT`, link `/staff?shift=<id>`) and non-cancelled
+  appointments (type `APPOINTMENT`, link `/appointments?reminder=<id>-<scheduledAt ms>`) that start within the next
+  30 minutes. The recipient is the Staff member's login (matched by email; no login => skipped). Idempotent: skipped if
+  the user already has a Notification with the same type + link. A user with the toggle off gets nothing (re-checked
+  each tick until the item starts, no duplicates). Late runs (Render sleeping) still remind while the item has not started.
+- `POST /api/internal/run-reminders` runs one pass on demand (e.g. from an external cron that wakes Render). Send header
+  `x-reminders-secret: <REMINDERS_CRON_SECRET>` (compared in constant time). 404 when the env var is unset, 401 on a
+  wrong secret. Returns `{ success, data: { shifts, appointments } }` (counts sent).
 - Broadcast body: `{ title, message, role?: ADMIN|DOCTOR|NURSE|DISPATCHER, link?: "/internal-path" }`.
 
 ## Frontend
