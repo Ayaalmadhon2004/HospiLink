@@ -8,6 +8,7 @@ import type { PatientDetail, PatientReport } from '../types/patient';
 import { getPatientById, dischargePatient, uploadReport, getPatientReports } from '../services/patientService';
 import { isReportFileTooLarge } from '../utils/reportFile';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, X, CheckCircle, Download } from 'lucide-react';
+import { formatDate } from '../utils/datetime';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -26,7 +27,7 @@ const openReportFile = async (fileUrl: string): Promise<void> => {
 };
 
 export const PatientDetailPage = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -229,7 +230,7 @@ export const PatientDetailPage = () => {
                 <dt className="text-clinic-text/50">{t('patientDetail.admissionDate')}</dt>
                 <dd className="font-medium text-clinic-text">
                   <time dateTime={patient.admissionDate}>
-                    {new Date(patient.admissionDate).toLocaleDateString(i18n.language)}
+                    {formatDate(patient.admissionDate)}
                   </time>
                 </dd>
               </div>
@@ -238,7 +239,7 @@ export const PatientDetailPage = () => {
                   <dt className="text-clinic-text/50">{t('patientDetail.dischargeDate')}</dt>
                   <dd className="font-medium text-medical-teal">
                     <time dateTime={patient.dischargeDate}>
-                      {new Date(patient.dischargeDate).toLocaleDateString(i18n.language)}
+                      {formatDate(patient.dischargeDate)}
                     </time>
                   </dd>
                 </div>
@@ -320,7 +321,7 @@ export const PatientDetailPage = () => {
                     <p className="text-sm font-medium text-clinic-text truncate">{report.fileName}</p>
                     <p className="text-xs text-clinic-text/40">
                       <time dateTime={report.createdAt}>
-                        {new Date(report.createdAt).toLocaleDateString(i18n.language)}
+                        {formatDate(report.createdAt)}
                       </time>
                       {' • '}
                       {report.fileType.split('/')[1].toUpperCase()}

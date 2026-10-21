@@ -20,6 +20,7 @@ import { NotificationBell } from '../components/NotificationBell';
 
 // ✅ Lazy-loaded tabs — code-split per page
 import { lazy, Suspense } from 'react';
+import { formatDate as fmtDate, formatTime as fmtTime } from '../utils/datetime';
 const PatientsPage = lazy(() => import('../pages/PatientsPage').then(m => ({ default: m.PatientsPage })));
 const Beds = lazy(() => import('../pages/Beds'));
 const VitalsMonitorPage = lazy(() => import('../pages/VitalsMonitorPage').then(m => ({ default: m.VitalsMonitorPage })));
@@ -298,8 +299,7 @@ const TabFallback = memo(() => {
 
 // ─── Main Component ─────────────────────────────────────────────────
 const Dashboard = () => {
-  const { t, i18n } = useTranslation();
-  const locale = i18n.language;
+  const { t } = useTranslation();
   const [activeItem, setActiveItem] = useState<TabName>(() => {
     const saved = getCookie('dashboard_active_tab');
     return VALID_TABS.includes(saved as TabName) ? (saved as TabName) : 'Overview';
@@ -326,12 +326,8 @@ const Dashboard = () => {
 
   // ─── Memoized Helpers ─────────────────────────────────────────────
   const formatTime = useCallback((dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString(locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  }, [locale]);
+    return fmtTime(dateStr, { hour: '2-digit', minute: '2-digit', hour12: true });
+  }, []);
 
   const getTypeDot = useCallback((type: string) => {
     return APPOINTMENT_TYPE_DOTS[type] || 'bg-gray-400';
@@ -392,7 +388,7 @@ const Dashboard = () => {
   const firstName = user?.name?.replace(/^dr\.?\s+/i, '').split(' ')[0] ?? '';
   const now = new Date();
   const greeting = t(getGreetingKey(now));
-  const dateLabel = now.toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long' });
+  const dateLabel = fmtDate(now, { weekday: 'long', day: 'numeric', month: 'long' });
 
   const OverviewPanel = useMemo(() => (
     <div className="space-y-6">

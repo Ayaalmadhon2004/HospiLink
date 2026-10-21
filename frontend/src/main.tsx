@@ -10,9 +10,15 @@ import '@fontsource/poppins/latin-600.css';
 import '@fontsource/poppins/latin-700.css';
 import './index.css';
 import './i18n';
+import { Toaster } from 'sonner';
 import { AuthProvider } from './contexts/AuthContext';
+import { SettingsProvider } from './contexts/SettingsContext';
+import { applyCachedDisplay } from './utils/settingsDom';
 import { initWebVitals } from './utils/webVitals';
 import { registerPwa } from './pwa';
+
+// Apply the cached theme/density before the first render to avoid a flash.
+applyCachedDisplay();
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -28,7 +34,10 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
       <AuthProvider>
-        <App />
+        <SettingsProvider>
+          <App />
+          <Toaster richColors position="top-right" />
+        </SettingsProvider>
       </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

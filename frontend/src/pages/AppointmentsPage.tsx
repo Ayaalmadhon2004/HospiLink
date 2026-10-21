@@ -10,6 +10,7 @@ import { NewAppointmentModal } from '../components/Appointments/NewAppointmentMo
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { toast } from 'sonner';
+import { formatDate as fmtDate, formatTime as fmtTime } from '../utils/datetime';
 
 interface Appointment {
   id: string;
@@ -48,7 +49,7 @@ const typeDotColors: Record<string, string> = {
 };
 
 export const AppointmentsPage = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
   const [upcoming, setUpcoming] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
@@ -126,26 +127,11 @@ export const AppointmentsPage = () => {
   }, [latestUpdate, fetchData]);
 
   const formatTime = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleTimeString(i18n.language, {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false,
-      });
-    } catch {
-      return dateStr;
-    }
+    return fmtTime(dateStr, { hour: '2-digit', minute: '2-digit', hour12: false }, dateStr);
   };
 
   const formatDate = (dateStr: string) => {
-    try {
-      return new Date(dateStr).toLocaleDateString(i18n.language, {
-        month: 'short',
-        day: 'numeric',
-      });
-    } catch {
-      return '';
-    }
+    return fmtDate(dateStr, { month: 'short', day: 'numeric' });
   };
 
   const filteredUpcoming = upcoming.filter((apt) => {
@@ -210,7 +196,7 @@ export const AppointmentsPage = () => {
       <div className="bg-white rounded-xl shadow-sm border p-6 mb-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-1">{t('appointments.todaySchedule')}</h2>
         <p className="text-gray-500 text-sm mb-4">
-          {new Date().toLocaleDateString(i18n.language, {
+          {fmtDate(new Date(), {
             weekday: 'long',
             year: 'numeric',
             month: 'long',

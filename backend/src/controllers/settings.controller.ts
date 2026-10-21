@@ -70,14 +70,15 @@ export const updateProfile = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
 
-    const { name, department, shift } = req.body;
+    // Body is validated (zod): provided fields are non-empty, omitted ones stay unchanged.
+    const { name, department, shift } = req.body as { name?: string; department?: string; shift?: string };
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: {
-        name: name || undefined,
-        department: department || undefined,
-        shift: shift || undefined,
+        name,
+        department,
+        shift,
       },
       select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true }
     });
@@ -137,18 +138,20 @@ export const updateSecurity = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
 
-    const { twoFactorAuth, autoLockIdleSessions, compactDensity } = req.body;
+    // twoFactorAuth is intentionally not persisted: the feature is not implemented (validator only accepts false).
+    const { autoLockIdleSessions, compactDensity } = req.body as {
+      autoLockIdleSessions?: boolean;
+      compactDensity?: boolean;
+    };
 
     const settings = await prisma.userSettings.upsert({
       where: { userId },
       update: {
-        twoFactorAuth,
         autoLockIdleSessions,
         compactDensity,
       },
       create: {
         userId,
-        twoFactorAuth,
         autoLockIdleSessions,
         compactDensity,
       }

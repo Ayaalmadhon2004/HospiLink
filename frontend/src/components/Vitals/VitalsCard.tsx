@@ -1,5 +1,6 @@
 import { Heart, Wind, Thermometer, Droplets, Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatTime } from '../../utils/datetime';
 
 interface VitalReading {
   id: string;
@@ -32,7 +33,7 @@ export const VitalsCard = ({
   recordedAt,
   isCritical,
 }: VitalsCardProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const vitals: VitalReading[] = [
     {
       id: 'heartRate',
@@ -103,7 +104,7 @@ export const VitalsCard = ({
               className="text-clinic-text/40 text-sm"
               dateTime={recordedAt}
             >
-              {new Date(recordedAt).toLocaleTimeString(i18n.language)}
+              {formatTime(recordedAt, { timeStyle: 'medium' })}
             </time>
           )}
         </div>

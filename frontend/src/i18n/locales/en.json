@@ -699,6 +699,7 @@
     "loadError": "Failed to load settings. Please refresh the page.",
     "fetchError": "Failed to fetch settings",
     "saved": "Saved successfully",
+    "saveError": "Could not save your changes. Please try again.",
     "profileUpdated": "Profile updated",
     "title": "Settings",
     "profile": {
@@ -743,7 +744,8 @@
       "twoFactorAuth": {
         "title": "Two-factor authentication",
         "description": "Require a verification code on new device sign-ins.",
-        "toggle": "Toggle two-factor authentication"
+        "toggle": "Toggle two-factor authentication",
+        "comingSoon": "Coming soon"
       },
       "autoLockIdleSessions": {
         "title": "Auto-lock idle sessions",

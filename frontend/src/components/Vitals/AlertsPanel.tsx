@@ -1,6 +1,7 @@
 // frontend/src/components/Vitals/AlertsPanel.tsx
 import { AlertTriangle, Clock, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { formatTime } from '../../utils/datetime';
 
 interface Alert {
   id: string;
@@ -28,7 +29,7 @@ const ALERT_COLORS: Record<string, string> = {
 };
 
 export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const alertLabel = (type: string) => t(`vitals.alertTypes.${type}`, { defaultValue: type });
   if (alerts.length === 0) {
     return (
@@ -102,7 +103,7 @@ export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
             <div className="flex items-center gap-1 text-xs text-red-400 whitespace-nowrap">
               <Clock size={14} aria-hidden="true" />
               <time dateTime={alert.recordedAt}>
-                {new Date(alert.recordedAt).toLocaleTimeString(i18n.language)}
+                {formatTime(alert.recordedAt, { timeStyle: 'medium' })}
               </time>
             </div>
           </article>
