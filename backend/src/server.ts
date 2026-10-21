@@ -27,6 +27,8 @@ import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
 import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom } from './middlewares/socket.auth';
 import settingsRoutes from './routes/settings.routes';
+import internalRoutes from './routes/internal.routes';
+import { startScheduler } from './services/scheduler';
 import logger from './config/logger';
 import { initSentry } from './config/sentry';
 import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
@@ -192,6 +194,7 @@ app.use('/api/dispatch', dispatchRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/incidents', incidentRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/internal', internalRoutes);
 
 
 app.get('/api/health', async (req, res) => {
@@ -207,6 +210,7 @@ app.use(errorHandler);
 
 server.listen(PORT, () => {
   logger.info({ port: PORT }, 'HospiLink Server running');
+  startScheduler();
 });
 
 // Graceful shutdown (Render sends SIGTERM on deploy/restart)
