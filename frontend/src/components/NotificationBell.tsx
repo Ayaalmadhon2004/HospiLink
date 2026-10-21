@@ -6,6 +6,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { Notification } from '../types/notification';
+import { formatTime } from '../utils/datetime';
 
 const TYPE_ICONS: Record<string, typeof Info> = {
   VITALS: HeartPulse,
@@ -25,7 +26,7 @@ const TYPE_COLORS: Record<string, string> = {
 type Filter = 'all' | 'unread';
 
 export const NotificationBell = () => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [filter, setFilter] = useState<Filter>('all');
@@ -152,7 +153,7 @@ export const NotificationBell = () => {
                     </p>
                     <p className="text-xs text-gray-500 truncate">{n.message}</p>
                     <p className="text-[10px] text-gray-500 mt-1">
-                      {new Date(n.createdAt).toLocaleTimeString(i18n.language)}
+                      {formatTime(n.createdAt, { timeStyle: 'medium' })}
                     </p>
                   </div>
                   <button

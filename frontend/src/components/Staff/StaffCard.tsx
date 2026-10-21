@@ -2,6 +2,7 @@
 import { Mail, Phone, Stethoscope, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Shift } from '../../types/staff';
+import { formatTime } from '../../utils/datetime';
 
 interface StaffMember {
   id: string;
@@ -20,7 +21,7 @@ interface StaffCardProps {
 }
 
 export const StaffCard = ({ member }: StaffCardProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const roleLabel = t(`staff.roles.${member.role}`, { defaultValue: member.role });
   const statusLabel = member.isActive ? t('staff.status.ACTIVE') : t('staff.status.INACTIVE');
   const currentShift = member.shifts?.[0];
@@ -104,8 +105,8 @@ export const StaffCard = ({ member }: StaffCardProps) => {
               {t(`staff.shifts.${currentShift.type}`, { defaultValue: currentShift.type })}
             </span>
             <span className="text-clinic-text/40 text-xs">
-              {new Date(currentShift.startTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })} - 
-              {new Date(currentShift.endTime).toLocaleTimeString(i18n.language, { hour: '2-digit', minute: '2-digit' })}
+              {formatTime(currentShift.startTime)} - 
+              {formatTime(currentShift.endTime)}
             </span>
           </div>
         </div>

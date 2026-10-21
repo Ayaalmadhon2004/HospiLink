@@ -153,3 +153,8 @@
     @apply tracking-tight;
   }
 }
+
+/* Compact density (Settings > compact): Tailwind spacing/typography are rem-based, so scaling the root shrinks the UI. */
+:root[data-density='compact'] {
+  font-size: 14px;
+}

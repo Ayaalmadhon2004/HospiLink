@@ -100,6 +100,22 @@ describe('settings.controller', () => {
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
+
+    it('يمرّر القيم كما هي بدون تحويل الفارغ إلى undefined (التحقق في الـ validator)', async () => {
+      prismaMock.user.update.mockResolvedValue({ id: 'u1' } as any);
+
+      await updateProfile(authedReq({ body: { name: 'A', department: 'ICU', shift: 'Night' } }), mockResponse());
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({ data: { name: 'A', department: 'ICU', shift: 'Night' } })
+      );
+    });
+
+    it('401 بدون مستخدم', async () => {
+      const res = mockResponse();
+      await updateProfile(mockRequest({ user: undefined }), res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
   });
 
   describe('updateNotifications', () => {
@@ -124,13 +140,42 @@ describe('settings.controller', () => {
     it('يحدث إعدادات الأمان', async () => {
       prismaMock.userSettings.upsert.mockResolvedValue({} as any);
 
+      const req = authedReq({ body: { autoLockIdleSessions: true, compactDensity: true } });
+      const res = mockResponse();
+
+      await updateSecurity(req, res);
+
+      expect(prismaMock.userSettings.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({ update: { autoLockIdleSessions: true, compactDensity: true } })
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('لا يحفظ twoFactorAuth أبداً حتى لو وصل للـ controller (الميزة غير مفعّلة)', async () => {
+      prismaMock.userSettings.upsert.mockResolvedValue({} as any);
+
       const req = authedReq({ body: { twoFactorAuth: true } });
       const res = mockResponse();
 
       await updateSecurity(req, res);
 
-      expect(prismaMock.userSettings.upsert).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(200);
+      const arg = prismaMock.userSettings.upsert.mock.calls[0][0] as any;
+      expect(arg.update).not.toHaveProperty('twoFactorAuth');
+      expect(arg.create).not.toHaveProperty('twoFactorAuth');
+    });
+
+    it('401 بدون مستخدم', async () => {
+      const res = mockResponse();
+      await updateSecurity(mockRequest({ user: undefined }), res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
+    it('500 عند فشل قاعدة البيانات بدون تسريب الرسالة', async () => {
+      prismaMock.userSettings.upsert.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+      await updateSecurity(authedReq({ body: { compactDensity: true } }), res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
     });
   });
 

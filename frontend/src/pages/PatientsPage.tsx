@@ -8,6 +8,7 @@ import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, 
   Loader2, Search, UserPlus 
 } from 'lucide-react';
+import { formatDate } from '../utils/datetime';
 
 const STATUS_COLORS: Record<string, string> = {
   STABLE: 'bg-green-100 text-green-700',
@@ -303,7 +304,7 @@ export const PatientsPage = () => {
                       <td className="px-6 py-4 text-clinic-text/70">{t(`departments.${patient.department}`, { defaultValue: patient.department })}</td>
                       <td className="px-6 py-4 text-slate-500 text-sm">
                         <time dateTime={patient.admissionDate}>
-                          {new Date(patient.admissionDate).toLocaleDateString(i18n.language, {
+                          {formatDate(patient.admissionDate, {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric',

@@ -10,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { formatTime } from '../../utils/datetime';
 
 interface VitalRecord {
   id: string;
@@ -46,17 +47,6 @@ const getValue = (record: VitalRecord, key: string): number | null => {
 };
 
 // ─── Helper: Format time ────────────────────────────────────────────────
-const formatTime = (dateStr: string, locale: string): string => {
-  if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleTimeString(locale, {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
-};
 
 export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartProps) => {
   const { t, i18n } = useTranslation();
@@ -74,10 +64,11 @@ export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartPro
         return val !== null && v.recordedAt != null;
       })
       .map((v) => ({
-        time: formatTime(v.recordedAt, i18n.language),
+        time: formatTime(v.recordedAt),
         value: getValue(v, vitalType as string) ?? 0,
       }))
       .reverse(); // oldest first for the chart
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- language/timezone change the formatted labels
   }, [safeHistory, vitalType, i18n.language]);
 
   // ✅ Empty state
