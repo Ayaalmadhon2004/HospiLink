@@ -161,31 +161,72 @@ describe('dispatch.controller', () => {
   });
 
   describe('assignUnitToCall', () => {
-    it('يعين وحدة للنداء ضمن transaction ويبث الحدثين المطلوبين', async () => {
-      const updatedCall = { id: 'call-1', type: 'ACCIDENT', location: 'Main St' };
-      const updatedUnit = { id: 'unit-1', status: 'EN_ROUTE' };
+    const runTx = () =>
+      (prismaMock.$transaction as unknown as jest.Mock).mockImplementation((fn: (tx: unknown) => unknown) => fn(prismaMock));
+    const req = () => mockRequest({ params: { id: 'call-1' }, body: { unitId: 'unit-1' } });
 
-      (prismaMock.$transaction as unknown as jest.Mock).mockResolvedValue([
-        updatedCall,
-        updatedUnit,
-      ]);
-
-      const req = mockRequest({ params: { id: 'call-1' }, body: { unitId: 'unit-1' } });
+    it('assigns a pending call to an available unit and broadcasts', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.dispatchCall.findUniqueOrThrow.mockResolvedValue({ id: 'call-1', type: 'ACCIDENT', location: 'Main St' });
+      prismaMock.dispatchUnit.findUniqueOrThrow.mockResolvedValue({ id: 'unit-1', unitCode: 'AMB-1', status: 'EN_ROUTE' });
       const res = mockResponse();
 
-      await assignUnitToCall(req, res);
+      await assignUnitToCall(req(), res);
 
-      expect(mockRoomEmit).toHaveBeenCalledWith(
-        'dispatch-room',
-        'call-assigned',
-        expect.objectContaining({ callId: 'call-1', unitId: 'unit-1' })
+      expect(prismaMock.dispatchCall.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'call-1', status: 'PENDING', assignedUnitId: null } })
       );
-      expect(mockRoomEmit).toHaveBeenCalledWith(
-        'unit-unit-1',
-        'unit-assigned',
-        expect.objectContaining({ callId: 'call-1' })
+      expect(prismaMock.dispatchUnit.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'unit-1', status: 'AVAILABLE', currentCallId: null } })
       );
+      expect(mockRoomEmit).toHaveBeenCalledWith('dispatch-room', 'call-assigned', expect.objectContaining({ callId: 'call-1', unitId: 'unit-1' }));
+      expect(mockRoomEmit).toHaveBeenCalledWith('unit-unit-1', 'unit-assigned', expect.objectContaining({ callId: 'call-1' }));
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('returns 409 when the call was already assigned', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.dispatchCall.findUnique.mockResolvedValue({ id: 'call-1' });
+      const res = mockResponse();
+
+      await assignUnitToCall(req(), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(prismaMock.dispatchUnit.updateMany).not.toHaveBeenCalled();
+      expect(mockRoomEmit).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the call does not exist', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.dispatchCall.findUnique.mockResolvedValue(null);
+      const res = mockResponse();
+      await assignUnitToCall(req(), res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('returns 409 when the unit is not available', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.dispatchUnit.findUnique.mockResolvedValue({ id: 'unit-1' });
+      const res = mockResponse();
+      await assignUnitToCall(req(), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(mockRoomEmit).not.toHaveBeenCalled();
+    });
+
+    it('returns 404 when the unit does not exist', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.dispatchUnit.findUnique.mockResolvedValue(null);
+      const res = mockResponse();
+      await assignUnitToCall(req(), res);
+      expect(res.status).toHaveBeenCalledWith(404);
     });
   });
 });

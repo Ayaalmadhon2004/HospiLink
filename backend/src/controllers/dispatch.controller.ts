@@ -152,22 +152,44 @@ export const createCall = async (req: Request, res: Response) => {
   }
 };
 
+class AssignError extends Error {
+  constructor(readonly statusCode: 404 | 409, message: string) {
+    super(message);
+  }
+}
+
 // POST /api/dispatch/calls/:id/assign — تعيين وحدة للنداء
 export const assignUnitToCall = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { unitId } = req.body;
 
-    const [updatedCall, updatedUnit] = await prisma.$transaction([
-      prisma.dispatchCall.update({
-        where: { id },
-        data: { assignedUnitId: unitId, status: 'ASSIGNED' }
-      }),
-      prisma.dispatchUnit.update({
-        where: { id: unitId },
-        data: { status: 'EN_ROUTE', currentCallId: id }
-      })
-    ]);
+    // Conditional updates inside one transaction: only a PENDING call and a free AVAILABLE unit
+    // can be claimed, so concurrent dispatchers cannot double-assign (the loser gets 409).
+    const { updatedCall, updatedUnit } = await prisma.$transaction(async (tx) => {
+      const claimedCall = await tx.dispatchCall.updateMany({
+        where: { id, status: 'PENDING', assignedUnitId: null },
+        data: { assignedUnitId: unitId, status: 'ASSIGNED' },
+      });
+      if (claimedCall.count === 0) {
+        const exists = await tx.dispatchCall.findUnique({ where: { id }, select: { id: true } });
+        throw new AssignError(exists ? 409 : 404, exists ? 'Call is no longer pending' : 'Call not found');
+      }
+
+      const claimedUnit = await tx.dispatchUnit.updateMany({
+        where: { id: unitId, status: 'AVAILABLE', currentCallId: null },
+        data: { status: 'EN_ROUTE', currentCallId: id },
+      });
+      if (claimedUnit.count === 0) {
+        const exists = await tx.dispatchUnit.findUnique({ where: { id: unitId }, select: { id: true } });
+        throw new AssignError(exists ? 409 : 404, exists ? 'Unit is not available' : 'Unit not found');
+      }
+
+      return {
+        updatedCall: await tx.dispatchCall.findUniqueOrThrow({ where: { id } }),
+        updatedUnit: await tx.dispatchUnit.findUniqueOrThrow({ where: { id: unitId } }),
+      };
+    });
 
     // 🔥 بث التعيين
     io.to('dispatch-room').emit('call-assigned', {
@@ -192,6 +214,9 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: { call: updatedCall, unit: updatedUnit } });
   } catch (error: unknown) {
+    if (error instanceof AssignError) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
     handleError(res, error, 'Failed to assign unit');
   }
 };
