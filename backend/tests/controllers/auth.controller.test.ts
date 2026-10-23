@@ -56,6 +56,7 @@ describe('auth.controller', () => {
 
       const data = (prismaMock.user.create.mock.calls[0][0] as any).data;
       expect(data.role).toBe('NURSE');
+      expect(data.accountStatus).toBe('PENDING');
       expect(data.hospitalId).toBe('server-hosp');
       expect(res.status).toHaveBeenCalledWith(201);
     });
@@ -91,7 +92,7 @@ describe('auth.controller', () => {
       expect(prismaMock.user.create).not.toHaveBeenCalled();
     });
 
-    it('ينشئ مستخدم جديد، بيهاش الباسورد، وبيرجع توكن + كوكي', async () => {
+    it('ينشئ مستخدم PENDING، بيهاش الباسورد، وما بيرجع توكن ولا كوكي', async () => {
       const req = mockRequest({
         body: validBody,
       });
@@ -118,16 +119,15 @@ describe('auth.controller', () => {
       expect(createCallArg.data.password).not.toBe('secret123');
       expect(await bcrypt.compare('secret123', createCallArg.data.password)).toBe(true);
       expect(createCallArg.data.role).toBe('NURSE'); // أقل دور
+      expect(createCallArg.data.accountStatus).toBe('PENDING');
 
-      expect(res.cookie).toHaveBeenCalledWith(
-        'token',
-        expect.any(String),
-        expect.objectContaining({ httpOnly: true })
-      );
+      // pending accounts are not signed in
+      expect(res.cookie).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, token: expect.any(String) })
-      );
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.success).toBe(true);
+      expect(body.token).toBeUndefined();
+      expect(body.message).toMatch(/pending admin approval/i);
     });
 
   });
@@ -175,6 +175,37 @@ describe('auth.controller', () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
 
+    it.each([
+      ['PENDING', 'Account pending admin approval', 'ACCOUNT_PENDING'],
+      ['DISABLED', 'Account is disabled', 'ACCOUNT_DISABLED'],
+    ])('يرفض حساب %s بـ 403 بعد التحقق من الباسورد ولا يعطي توكن', async (accountStatus, message, code) => {
+      const hashed = await bcrypt.hash('correct-password', 4);
+      const req = mockRequest({ body: { email: 'a@a.com', password: 'correct-password' } });
+      const res = mockResponse();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'u1', email: 'a@a.com', password: hashed, role: 'NURSE', accountStatus, hospital: null,
+      } as any);
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message, code });
+      expect(res.cookie).not.toHaveBeenCalled();
+    });
+
+    it('PENDING مع باسورد غلط يرجع 401 (ما يكشف حالة الحساب)', async () => {
+      const hashed = await bcrypt.hash('correct-password', 4);
+      const req = mockRequest({ body: { email: 'a@a.com', password: 'wrong-password' } });
+      const res = mockResponse();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'u1', email: 'a@a.com', password: hashed, role: 'NURSE', accountStatus: 'PENDING', hospital: null,
+      } as any);
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+
     it('يسجل الدخول بنجاح ويرجع توكن + بيانات المستخدم بدون الباسورد', async () => {
       const hashed = await bcrypt.hash('correct-password', 4);
       const req = mockRequest({ body: { email: 'a@a.com', password: 'correct-password' } });
@@ -186,6 +217,7 @@ describe('auth.controller', () => {
         password: hashed,
         role: 'DOCTOR',
         name: 'Dr. A',
+        accountStatus: 'ACTIVE',
         hospital: { id: 'h1', name: 'HospiLink General', location: 'Nablus' },
       } as any);
 
@@ -227,7 +259,7 @@ describe('auth.controller', () => {
     });
 
     it('يرجع 404 لو المستخدم محذوف من الداتابيز', async () => {
-      const req = mockRequest({ user: { id: 'gone', email: 'a@a.com', role: 'DOCTOR' } });
+      const req = mockRequest({ user: { id: 'gone', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1' } });
       const res = mockResponse();
 
       prismaMock.user.findUnique.mockResolvedValue(null);
@@ -238,7 +270,7 @@ describe('auth.controller', () => {
     });
 
     it('يرجع بيانات المستخدم الحالي بنجاح', async () => {
-      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' } });
+      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1' } });
       const res = mockResponse();
 
       prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', name: 'Dr. A' } as any);
@@ -256,7 +288,7 @@ describe('auth.controller', () => {
     it('يرفض لو الباسورد الحالي غلط', async () => {
       const hashed = await bcrypt.hash('real-password', 4);
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' },
+        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1' },
         body: { currentPassword: 'wrong', newPassword: 'newpass123' },
       });
       const res = mockResponse();
@@ -272,7 +304,7 @@ describe('auth.controller', () => {
     it('يحدث الباسورد بنجاح لو الباسورد الحالي صحيح', async () => {
       const hashed = await bcrypt.hash('real-password', 4);
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' },
+        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1' },
         body: { currentPassword: 'real-password', newPassword: 'newpass123' },
       });
       const res = mockResponse();

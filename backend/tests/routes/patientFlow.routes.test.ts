@@ -15,7 +15,7 @@ app.use(express.json());
 app.use('/patients', patientRoutes);
 
 const asRole = (role: string) => {
-  prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', email: 'u@h.com', role } as any);
+  prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', email: 'u@h.com', role, hospitalId: 'hosp-1', accountStatus: 'ACTIVE' } as any);
   return `Bearer ${jwt.sign({ userId: 'u1' }, JWT_SECRET)}`;
 };
 

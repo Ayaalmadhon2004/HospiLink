@@ -36,6 +36,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    const code = error.response?.data?.code;
+    if (error.response?.status === 403 && (code === 'ACCOUNT_PENDING' || code === 'ACCOUNT_DISABLED')) {
+      // Keep the server message ("Account pending admin approval") so the login page can show it.
+      return Promise.reject(new Error(error.response.data.message || error.response.data.error));
+    }
+
     if (error.response?.status === 403) {
       return Promise.reject(new Error(i18n.t('errors.forbidden')));
     }

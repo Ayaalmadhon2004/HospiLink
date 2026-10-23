@@ -5,6 +5,8 @@
 
 import { Request, Response } from 'express';
 
+export const TEST_HOSPITAL_ID = 'hosp-1';
+
 export function mockRequest(overrides: Partial<Request> = {}): Request {
   return {
     body: {},
@@ -12,7 +14,8 @@ export function mockRequest(overrides: Partial<Request> = {}): Request {
     query: {},
     headers: {},
     cookies: {},
-    user: undefined,
+    // Authenticated by default; hospitalId is the tenant every controller scopes by.
+    user: { id: 'user-1', email: 'user@test.com', role: 'ADMIN', hospitalId: TEST_HOSPITAL_ID },
     ...overrides,
   } as unknown as Request;
 }

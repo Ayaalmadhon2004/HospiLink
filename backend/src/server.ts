@@ -12,6 +12,7 @@ import path from 'path';
 
 // Routes
 import authRoutes from './routes/auth';
+import usersRoutes from './routes/users.routes';
 import patientRoutes from './routes/patient.routes';
 import bedRoutes from './routes/bed.routes';
 import wardRoutes from './routes/ward.routes';
@@ -25,7 +26,8 @@ import notificationRoutes from './routes/notifications.routes';
 import { protect } from './middlewares/auth.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { attachDispatchEvents } from './middlewares/dispatch.socket';
-import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom } from './middlewares/socket.auth';
+import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom, socketHospitalId } from './middlewares/socket.auth';
+import { departmentRoom } from './utils/tenant';
 import settingsRoutes from './routes/settings.routes';
 import internalRoutes from './routes/internal.routes';
 import { startScheduler } from './services/scheduler';
@@ -109,10 +111,18 @@ io.on('connection', (socket: Socket) => {
   // Personal room: target of createNotification() -> 'new-notification'
   joinUserRoom(socket);
 
-  socket.on('join-room', (patientId: unknown) => {
+  socket.on('join-room', async (patientId: unknown) => {
     if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return;
-    if (typeof patientId !== 'string' || !patientId) return;
-    socket.join(`patient-${patientId}`);
+    if (typeof patientId !== 'string' || !patientId || patientId.length > 128) return;
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
+    try {
+      // Only patients of the user's own hospital can be followed.
+      const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId }, select: { id: true } });
+      if (patient) socket.join(`patient-${patientId}`);
+    } catch (error) {
+      logger.error({ err: error }, 'join-room failed');
+    }
   });
 
   joinClinicalRoom(socket);
@@ -120,7 +130,9 @@ io.on('connection', (socket: Socket) => {
   socket.on('join-department', (department: unknown) => {
     if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return;
     if (typeof department !== 'string' || !department || department.length > 64) return;
-    socket.join(`department-${department}`);
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
+    socket.join(departmentRoom(hospitalId, department));
     if (isDev) {
       logger.debug({ department }, 'Socket joined department');
     }
@@ -128,7 +140,9 @@ io.on('connection', (socket: Socket) => {
 
   socket.on('leave-department', (department: unknown) => {
     if (typeof department !== 'string' || !department || department.length > 64) return;
-    socket.leave(`department-${department}`);
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
+    socket.leave(departmentRoom(hospitalId, department));
     if (isDev) {
       logger.debug({ department }, 'Socket left department');
     }
@@ -184,6 +198,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', usersRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/beds', bedRoutes);
 app.use('/api/wards', wardRoutes);

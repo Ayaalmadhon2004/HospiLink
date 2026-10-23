@@ -20,10 +20,10 @@ type Handler = (req: any, res: any) => Promise<unknown>;
 // [name, handler, "model.method" that fails, request overrides]
 const cases: Array<[string, Handler, string, Record<string, unknown>]> = [
   ['getAllWards', getAllWards, 'ward.findMany', {}],
-  ['getWardById', getWardById, 'ward.findUnique', { params: { id: 'w1' } }],
+  ['getWardById', getWardById, 'ward.findFirst', { params: { id: 'w1' } }],
   ['getAllBeds', getAllBeds, 'bed.findMany', {}],
-  ['getBedById', getBedById, 'bed.findUnique', { params: { id: 'b1' } }],
-  ['deleteBed', deleteBed, 'bed.delete', { params: { id: 'b1' } }],
+  ['getBedById', getBedById, 'bed.findFirst', { params: { id: 'b1' } }],
+  ['deleteBed', deleteBed, 'bed.findFirst', { params: { id: 'b1' } }],
   ['getStaff', getStaff, 'staff.findMany', {}],
   ['getVitals', getVitals, 'vital.findMany', { query: {} }],
   ['getCriticalAlerts', getCriticalAlerts, 'vital.findMany', { query: {} }],
@@ -33,7 +33,7 @@ const cases: Array<[string, Handler, string, Record<string, unknown>]> = [
   ['getIncidents', getIncidents, 'incident.findMany', { query: {} }],
   ['getNotifications', getNotifications, 'notification.findMany', { user: { id: 'u1' }, query: {} }],
   ['getRecentPatients', getRecentPatients, 'patient.findMany', { query: {} }],
-  ['getPatientById', getPatientById, 'patient.findUnique', { params: { id: 'p1' } }],
+  ['getPatientById', getPatientById, 'patient.findFirst', { params: { id: 'p1' } }],
   ['login', login, 'user.findUnique', { body: { email: 'a@b.com', password: 'x' } }],
   ['getMe', getMe, 'user.findUnique', { user: { id: 'u1' } }],
 ];

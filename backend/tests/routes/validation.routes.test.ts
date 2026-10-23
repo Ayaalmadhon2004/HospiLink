@@ -48,7 +48,8 @@ describe('validation on routes', () => {
   it('POST /beds with valid body reaches controller (extra keys stripped)', async () => {
     const res = await request(app).post('/beds').send({ bedNumber: 'A1', wardId: U1, hospitalId: U2, status: 'AVAILABLE', junk: 1 });
     expect(res.status).toBe(201);
-    expect(res.body.body).toEqual({ bedNumber: 'A1', wardId: U1, hospitalId: U2, status: 'AVAILABLE' });
+    // hospitalId from the client never reaches the controller
+    expect(res.body.body).toEqual({ bedNumber: 'A1', wardId: U1, status: 'AVAILABLE' });
   });
 
   it('POST /beds with invalid body returns 400 and skips controller', async () => {

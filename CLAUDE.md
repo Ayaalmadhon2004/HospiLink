@@ -75,6 +75,15 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Every route except login/signup/health must use `protect`; restrict with
   `authorize('ADMIN', 'DOCTOR', ...)`. Roles come from the DB (`protect` reloads the user), never from the token body.
 - Roles: ADMIN, DOCTOR, NURSE, DISPATCHER (see `Role` enum in schema.prisma).
+- Account approval: public signup creates `accountStatus: PENDING` (no token/cookie issued). `protect`, `login` and `socketAuth` answer 403
+  ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
+  (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).
+- Multi-tenancy: every query is scoped by `hospitalIdOf(req)` (`src/utils/tenant.ts`, = `req.user.hospitalId` loaded from the DB by `protect`).
+  Never read `hospitalId` from body/query/params (zod schemas must not declare it). Single records: `findFirst({ where: { id, hospitalId } })` (404 when
+  missing) before update/delete; models without their own `hospitalId` (Appointment, Shift, PatientVitals, Report) are scoped through their relation
+  (`patient: { hospitalId }`, `staff: { hospitalId }`). Related ids from the client (bed, ward, doctor, patient) must be verified to belong to the same hospital.
+  Socket rooms are per hospital via the helpers in `utils/tenant.ts` (`clinicalRoom`, `departmentRoom`, `dispatchRoom`, `unitRoom`).
+  `notify()` refuses role/department broadcasts without a `hospitalId`.
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
 - Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.
@@ -135,7 +144,7 @@ Open:
 - i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): the icons are generated placeholders and need real branding. Web Vitals (`docs/WEB_VITALS.md`) report only when `VITE_VITALS_ENDPOINT` is set.
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
-Fixed on main (do not reintroduce): `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
+Fixed on main (do not reintroduce): self-signup no longer grants access (PENDING until an ADMIN approves); hospital isolation on every resource (`hospitalId` on Staff, Incident, DispatchUnit, DispatchCall; see migration `20261022000001_hospital_scoping`); `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
 public signup ignores `role`/`hospitalId`; staff, shifts, reports and `/uploads` require auth; Socket.io
 requires a JWT (`socketAuth`); the token is no longer kept in `localStorage` (httpOnly cookie);
 `backend/uploads/` contents are untracked; both `package-lock.json` files are committed; README was

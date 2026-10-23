@@ -7,9 +7,9 @@ import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
 import { registerSchema, loginSchema, formatZodError } from '../validators/auth.validator';
 import logger from '../config/logger';
 
-// Public signup always creates the lowest-privilege role. (The Prisma Role enum
-// has no STAFF value; NURSE is the least privileged.) Elevated roles can only be
-// granted by an authenticated ADMIN, never through this endpoint.
+// Public signup creates a PENDING account with the lowest-privilege role as a placeholder
+// (the Prisma Role enum has no STAFF value). The account cannot log in or call any protected
+// route until an ADMIN approves it and assigns the real role (users.controller).
 const PUBLIC_SIGNUP_ROLE = 'NURSE' as const;
 
 // Hospital for public signups comes from the server, never from the request body:
@@ -75,6 +75,7 @@ export const register = async (req: Request, res: Response) => {
         password: hashedPassword,
         name,
         role: PUBLIC_SIGNUP_ROLE,
+        accountStatus: 'PENDING',
         department,
         shift,
         hospitalId,
@@ -87,24 +88,16 @@ export const register = async (req: Request, res: Response) => {
         department: true,
         shift: true,
         status: true,
+        accountStatus: true,
         hospitalId: true,
         createdAt: true,
       },
     });
 
-    const token = generateToken(user);
-
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
-
+    // No token/cookie: the user is not signed in until an admin approves the account.
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
-      token,
+      message: 'Registration received. Your account is pending admin approval.',
       user,
     });
   } catch (error: unknown) {
@@ -157,6 +150,18 @@ export const login = async (req: Request, res: Response) => {
       res.status(401).json({
         success: false,
         message: 'Invalid credentials',
+      });
+      return;
+    }
+
+    // Checked after the password so the status of an account is not revealed without credentials.
+    if (user.accountStatus !== 'ACTIVE') {
+      const pending = user.accountStatus === 'PENDING';
+      const message = pending ? 'Account pending admin approval' : 'Account is disabled';
+      res.status(403).json({
+        success: false,
+        message,
+        code: pending ? 'ACCOUNT_PENDING' : 'ACCOUNT_DISABLED',
       });
       return;
     }

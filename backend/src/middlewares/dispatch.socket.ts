@@ -1,7 +1,8 @@
 import { Socket } from 'socket.io';
 import prisma from '../config/db';
 import type { UnitStatus } from '@prisma/client';
-import { hasRole } from './socket.auth';
+import { hasRole, socketHospitalId } from './socket.auth';
+import { dispatchRoom, unitRoom } from '../utils/tenant';
 import logger from '../config/logger';
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -24,15 +25,26 @@ export const attachDispatchEvents = (socket: Socket) => {
 
   socket.on('join-dispatch', () => {
     if (!hasRole(socket, ...DISPATCH_JOIN_ROLES)) return;
-    socket.join('dispatch-room');
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
+    socket.join(dispatchRoom(hospitalId));
     log(`Socket ${socket.id} joined dispatch-room`);
   });
 
-  socket.on('track-unit', (unitId: unknown) => {
+  socket.on('track-unit', async (unitId: unknown) => {
     if (!hasRole(socket, ...DISPATCH_JOIN_ROLES)) return;
     if (!isNonEmptyString(unitId)) return;
-    socket.join(`unit-${unitId}`);
-    log(`Socket ${socket.id} tracking unit-${unitId}`);
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
+    try {
+      // Only units of the user's own hospital can be tracked.
+      const unit = await prisma.dispatchUnit.findFirst({ where: { id: unitId, hospitalId }, select: { id: true } });
+      if (!unit) return;
+      socket.join(unitRoom(hospitalId, unitId));
+      log(`Socket ${socket.id} tracking unit-${unitId}`);
+    } catch (error) {
+      if (isDev) logger.error({ err: error }, 'Failed to join unit room');
+    }
   });
 
   socket.on('unit-location-update', async (data: unknown) => {
@@ -42,10 +54,12 @@ export const attachDispatchEvents = (socket: Socket) => {
     if (!isNonEmptyString(d.unitId) || !isFiniteNumber(d.lat) || !isFiniteNumber(d.lng)) return;
     if (d.lat < -90 || d.lat > 90 || d.lng < -180 || d.lng > 180) return;
     if (d.status !== undefined && typeof d.status !== 'string') return;
+    const hospitalId = socketHospitalId(socket);
+    if (!hospitalId) return;
 
     try {
-      await prisma.dispatchUnit.update({
-        where: { id: d.unitId },
+      await prisma.dispatchUnit.updateMany({
+        where: { id: d.unitId, hospitalId },
         data: {
           location: JSON.stringify({ lat: d.lat, lng: d.lng }),
           status: (d.status as UnitStatus) || undefined,
@@ -58,11 +72,13 @@ export const attachDispatchEvents = (socket: Socket) => {
   });
 
   socket.on('leave-dispatch', () => {
-    socket.leave('dispatch-room');
+    const hospitalId = socketHospitalId(socket);
+    if (hospitalId) socket.leave(dispatchRoom(hospitalId));
   });
 
   socket.on('untrack-unit', (unitId: unknown) => {
     if (!isNonEmptyString(unitId)) return;
-    socket.leave(`unit-${unitId}`);
+    const hospitalId = socketHospitalId(socket);
+    if (hospitalId) socket.leave(unitRoom(hospitalId, unitId));
   });
 };

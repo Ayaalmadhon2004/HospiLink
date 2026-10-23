@@ -1,11 +1,13 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import { hospitalIdOf } from '../utils/tenant';
 
 // GET /api/wards - كل الأقسام
 export const getAllWards = async (req: Request, res: Response) => {
   try {
     const wards = await prisma.ward.findMany({
+      where: { hospitalId: hospitalIdOf(req) },
       orderBy: { name: 'asc' }
     });
     res.status(200).json({ success: true, data: wards });
@@ -19,8 +21,8 @@ export const getAllWards = async (req: Request, res: Response) => {
 export const getWardById = async (req: Request, res: Response) => {
   try {
   const { id } = req.params as { id: string }
-  const ward = await prisma.ward.findUnique({
-      where: { id },
+  const ward = await prisma.ward.findFirst({
+      where: { id, hospitalId: hospitalIdOf(req) },
       include: {
         beds: {
           include: {

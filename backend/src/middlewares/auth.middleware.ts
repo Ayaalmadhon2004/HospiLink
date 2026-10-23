@@ -11,6 +11,7 @@ declare global {
         id: string;
         email: string;
         role: string;
+        hospitalId: string;
       };
     }
   }
@@ -41,17 +42,31 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true },
+      select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true },
     });
 
     if (!user) {
       return res.status(401).json({ error: 'User not found' });
     }
 
+    // Self-registered accounts stay locked out of every protected route until an ADMIN approves them.
+    if (user.accountStatus !== 'ACTIVE') {
+      const pending = user.accountStatus === 'PENDING';
+      const message = pending ? 'Account pending admin approval' : 'Account is disabled';
+      return res.status(403).json({
+        success: false,
+        error: message,
+        message,
+        code: pending ? 'ACCOUNT_PENDING' : 'ACCOUNT_DISABLED',
+      });
+    }
+
+    // hospitalId comes from the DB row, never from the token or the request: it is the tenant for every query.
     req.user = {
       id: user.id,
       email: user.email,
       role: user.role,
+      hospitalId: user.hospitalId,
     };
 
     next();

@@ -2,8 +2,8 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
-import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import logger from '../config/logger';
+import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
 import type { Prisma } from '@prisma/client';
 
@@ -45,7 +45,7 @@ export const getAppointments = async (req: Request, res: Response) => {
   try {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
-    const where: Prisma.AppointmentWhereInput = {};
+    const where: Prisma.AppointmentWhereInput = { patient: { hospitalId: hospitalIdOf(req) } };
 
     if (date) {
       const d = new Date(date as string);
@@ -83,6 +83,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
+        patient: { hospitalId: hospitalIdOf(req) },
         scheduledAt: { gte: startOfDay, lte: endOfDay },
         status: { not: 'CANCELLED' },
       },
@@ -116,6 +117,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
+        patient: { hospitalId: hospitalIdOf(req) },
         scheduledAt: { gte: now },
         status: { not: 'CANCELLED' },
       },
@@ -138,8 +140,8 @@ export const getAppointmentById = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
-    const appointment = await prisma.appointment.findUnique({
-      where: { id },
+    const appointment = await prisma.appointment.findFirst({
+      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
       include: {
         patient: true,
         doctor: { select: { id: true, name: true, role: true, department: true, phone: true } },
@@ -173,18 +175,21 @@ export const createAppointment = async (req: Request, res: Response) => {
       duration,
     } = req.body;
 
-    // ✅ Find hospital first
-    const hospital = await prisma.hospital.findFirst();
-    if (!hospital) {
-      return res.status(500).json({ success: false, message: 'No hospital found' });
+    // The hospital is the caller's, never picked arbitrarily or taken from the body.
+    const hospitalId = hospitalIdOf(req);
+
+    // The doctor (Staff) must belong to the same hospital.
+    const doctor = await prisma.staff.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
+    if (!doctor) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
 
     // ✅ PRIORITY 1: Use existing patient by ID (from dropdown)
     let patient = null;
     
     if (patientId) {
-      patient = await prisma.patient.findUnique({
-        where: { id: patientId },
+      patient = await prisma.patient.findFirst({
+        where: { id: patientId, hospitalId },
       });
       if (patient) {
         logger.debug({ patientId: patient.id }, "Found existing patient by ID");
@@ -193,8 +198,8 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     // ✅ PRIORITY 2: Find by patientCode
     if (!patient && patientCode) {
-      patient = await prisma.patient.findUnique({
-        where: { patientCode },
+      patient = await prisma.patient.findFirst({
+        where: { patientCode, hospitalId },
       });
       if (patient) {
         logger.debug({ patientId: patient.id }, "Found existing patient by code");
@@ -218,7 +223,7 @@ export const createAppointment = async (req: Request, res: Response) => {
           age: 0,
           gender: 'MALE',
           diagnosis: 'Pending',
-          hospitalId: hospital.id,
+          hospitalId,
         },
       });
       logger.debug({ patientId: patient.id }, "Created new patient");
@@ -266,7 +271,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.to(CLINICAL_ROOM).emit('appointment-created', appointment);
+    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-created', appointment);
 
     await notifyAppointmentDoctor(appointment, 'New appointment', req.user?.id);
 
@@ -281,6 +286,21 @@ export const updateAppointment = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const updateData = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.appointment.findFirst({
+      where: { id, patient: { hospitalId } },
+      select: { id: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+    if (updateData.patientId && !(await prisma.patient.findFirst({ where: { id: updateData.patientId, hospitalId }, select: { id: true } }))) {
+      return res.status(404).json({ success: false, message: 'Patient not found' });
+    }
+    if (updateData.doctorId && !(await prisma.staff.findFirst({ where: { id: updateData.doctorId, hospitalId }, select: { id: true } }))) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
+    }
 
     if (updateData.scheduledAt) {
       updateData.scheduledAt = new Date(updateData.scheduledAt);
@@ -295,7 +315,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.to(CLINICAL_ROOM).emit('appointment-updated', appointment);
+    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-updated', appointment);
 
     // Only schedule-relevant changes are worth a notification.
     if (['scheduledAt', 'status', 'doctorId', 'room'].some((k) => k in updateData)) {
@@ -313,12 +333,20 @@ export const deleteAppointment = async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
 
+    const existing = await prisma.appointment.findFirst({
+      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
+      select: { id: true },
+    });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'Appointment not found' });
+    }
+
     const appointment = await prisma.appointment.update({
       where: { id },
       data: { status: 'CANCELLED' },
     });
 
-    io.to(CLINICAL_ROOM).emit('appointment-cancelled', { id });
+    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-cancelled', { id });
 
     await notifyAppointmentDoctor(appointment, 'Appointment cancelled', req.user?.id);
 

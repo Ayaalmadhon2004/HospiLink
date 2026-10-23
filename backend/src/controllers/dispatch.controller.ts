@@ -4,10 +4,12 @@ import { io } from '../server';
 import prisma from '../config/db';
 import type { CallStatus } from '@prisma/client';
 import logger from '../config/logger';
+import { hospitalIdOf, dispatchRoom, departmentRoom, unitRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
 
 // Dispatch events go to dispatchers and admins, never the actor.
-const dispatchRecipients = (actorId?: string) => ({
+const dispatchRecipients = (hospitalId: string, actorId?: string) => ({
+  hospitalId,
   roles: ['DISPATCHER', 'ADMIN'] as Array<'DISPATCHER' | 'ADMIN'>,
   excludeUserId: actorId,
 });
@@ -28,6 +30,7 @@ const handleError = (res: Response, error: unknown, message: string, statusCode:
 export const getAllUnits = async (req: Request, res: Response) => {
   try {
     const units = await prisma.dispatchUnit.findMany({
+      where: { hospitalId: hospitalIdOf(req) },
       include: { currentCall: true },
       orderBy: { unitCode: 'asc' }
     });
@@ -42,6 +45,7 @@ export const getActiveUnits = async (req: Request, res: Response) => {
   try {
     const units = await prisma.dispatchUnit.findMany({
       where: {
+        hospitalId: hospitalIdOf(req),
         status: { not: 'OFF_DUTY' }
       },
       include: { currentCall: true }
@@ -57,7 +61,7 @@ export const getCalls = async (req: Request, res: Response) => {
   try {
     const { status } = req.query as { status?: CallStatus };
     const calls = await prisma.dispatchCall.findMany({
-      where: { status: status ?? 'PENDING' },
+      where: { status: status ?? 'PENDING', hospitalId: hospitalIdOf(req) },
       orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
     });
     res.status(200).json({ success: true, data: calls });
@@ -71,6 +75,13 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { status, location, eta, callId } = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Unit not found' });
+    if (callId && !(await prisma.dispatchCall.findFirst({ where: { id: callId, hospitalId }, select: { id: true } }))) {
+      return res.status(404).json({ success: false, message: 'Call not found' });
+    }
 
     const unit = await prisma.dispatchUnit.update({
       where: { id },
@@ -85,7 +96,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث التحديث لكل المشتركين
-    io.to('dispatch-room').emit('unit-status-update', {
+    io.to(dispatchRoom(hospitalId)).emit('unit-status-update', {
       unitId: id,
       status,
       location,
@@ -94,7 +105,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
     });
 
     // لو فيه قسم محدد، بث للقسم كمان
-    io.to(`department-${unit.department}`).emit('unit-status-update', {
+    io.to(departmentRoom(hospitalId, unit.department)).emit('unit-status-update', {
       unitId: id,
       status,
       unitCode: unit.unitCode
@@ -110,9 +121,11 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
 export const createCall = async (req: Request, res: Response) => {
   try {
     const { type, location, priority, notes } = req.body;
+    const hospitalId = hospitalIdOf(req);
 
     const call = await prisma.dispatchCall.create({
       data: {
+        hospitalId,
         type,
         location,
         priority,
@@ -122,7 +135,7 @@ export const createCall = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث النداء الجديد لكل الديسباتش
-    io.to('dispatch-room').emit('new-call', {
+    io.to(dispatchRoom(hospitalId)).emit('new-call', {
       callId: call.id,
       type,
       location,
@@ -132,7 +145,7 @@ export const createCall = async (req: Request, res: Response) => {
 
     // إذا CRITICAL، بث تنبيه خاص
     if (priority === 'CRITICAL') {
-      io.to('dispatch-room').emit('critical-alert', {
+      io.to(dispatchRoom(hospitalId)).emit('critical-alert', {
         message: `CRITICAL: ${type} at ${location}`,
         callId: call.id
       });
@@ -143,7 +156,7 @@ export const createCall = async (req: Request, res: Response) => {
       title: priority === 'CRITICAL' ? 'Critical dispatch call' : 'New dispatch call',
       message: `${type} at ${location} (${call.priority})`,
       link: '/dispatch',
-      recipients: dispatchRecipients(req.user?.id),
+      recipients: dispatchRecipients(hospitalId, req.user?.id),
     });
 
     res.status(201).json({ success: true, data: call });
@@ -163,25 +176,26 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { unitId } = req.body;
+    const hospitalId = hospitalIdOf(req);
 
     // Conditional updates inside one transaction: only a PENDING call and a free AVAILABLE unit
     // can be claimed, so concurrent dispatchers cannot double-assign (the loser gets 409).
     const { updatedCall, updatedUnit } = await prisma.$transaction(async (tx) => {
       const claimedCall = await tx.dispatchCall.updateMany({
-        where: { id, status: 'PENDING', assignedUnitId: null },
+        where: { id, hospitalId, status: 'PENDING', assignedUnitId: null },
         data: { assignedUnitId: unitId, status: 'ASSIGNED' },
       });
       if (claimedCall.count === 0) {
-        const exists = await tx.dispatchCall.findUnique({ where: { id }, select: { id: true } });
+        const exists = await tx.dispatchCall.findFirst({ where: { id, hospitalId }, select: { id: true } });
         throw new AssignError(exists ? 409 : 404, exists ? 'Call is no longer pending' : 'Call not found');
       }
 
       const claimedUnit = await tx.dispatchUnit.updateMany({
-        where: { id: unitId, status: 'AVAILABLE', currentCallId: null },
+        where: { id: unitId, hospitalId, status: 'AVAILABLE', currentCallId: null },
         data: { status: 'EN_ROUTE', currentCallId: id },
       });
       if (claimedUnit.count === 0) {
-        const exists = await tx.dispatchUnit.findUnique({ where: { id: unitId }, select: { id: true } });
+        const exists = await tx.dispatchUnit.findFirst({ where: { id: unitId, hospitalId }, select: { id: true } });
         throw new AssignError(exists ? 409 : 404, exists ? 'Unit is not available' : 'Unit not found');
       }
 
@@ -192,13 +206,13 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث التعيين
-    io.to('dispatch-room').emit('call-assigned', {
+    io.to(dispatchRoom(hospitalId)).emit('call-assigned', {
       callId: id,
       unitId,
       status: 'EN_ROUTE'
     });
 
-    io.to(`unit-${unitId}`).emit('unit-assigned', {
+    io.to(unitRoom(hospitalId, unitId)).emit('unit-assigned', {
       callId: id,
       callType: updatedCall.type,
       location: updatedCall.location
@@ -209,7 +223,7 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
       title: 'Unit assigned to call',
       message: `${updatedUnit.unitCode} assigned to ${updatedCall.type} at ${updatedCall.location}`,
       link: '/dispatch',
-      recipients: dispatchRecipients(req.user?.id),
+      recipients: dispatchRecipients(hospitalId, req.user?.id),
     });
 
     res.status(200).json({ success: true, data: { call: updatedCall, unit: updatedUnit } });
