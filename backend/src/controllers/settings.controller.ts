@@ -11,6 +11,11 @@ const handleError = (res: Response, error: unknown, message: string, statusCode:
   });
 };
 
+const withoutTwoFactorTimestamp = <T extends { twoFactorEnabledAt?: Date | null }>(user: T) => {
+  const { twoFactorEnabledAt: _enabledAt, ...rest } = user;
+  return rest;
+};
+
 // GET /api/settings
 export const getUserSettings = async (req: Request, res: Response) => {
   try {
@@ -31,7 +36,7 @@ export const getUserSettings = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true }
+      select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true, twoFactorEnabledAt: true }
     });
 
     // The signup code is only shown to admins, who share it with staff joining their hospital.
@@ -45,7 +50,7 @@ export const getUserSettings = async (req: Request, res: Response) => {
     res.status(200).json({
       success: true,
       data: {
-        profile: user,
+        profile: user ? withoutTwoFactorTimestamp(user) : user,
         hospital,
         notifications: {
           criticalVitalsAlerts: settings.criticalVitalsAlerts,
@@ -55,7 +60,8 @@ export const getUserSettings = async (req: Request, res: Response) => {
           appointmentReminders: settings.appointmentReminders,
         },
         security: {
-          twoFactorAuth: settings.twoFactorAuth,
+          // users.twoFactorEnabledAt is the source of truth (UserSettings.twoFactorAuth is no longer read).
+          twoFactorAuth: Boolean(user?.twoFactorEnabledAt),
           autoLockIdleSessions: settings.autoLockIdleSessions,
           compactDensity: settings.compactDensity,
         },
@@ -147,7 +153,7 @@ export const updateSecurity = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: 'User not authenticated' });
     }
 
-    // twoFactorAuth is intentionally not persisted: the feature is not implemented (validator only accepts false).
+    // twoFactorAuth is intentionally not persisted here: it is managed by /api/auth/2fa/* (the validator rejects it).
     const { autoLockIdleSessions, compactDensity } = req.body as {
       autoLockIdleSessions?: boolean;
       compactDensity?: boolean;
@@ -166,7 +172,7 @@ export const updateSecurity = async (req: Request, res: Response) => {
       }
     });
 
-    res.status(200).json({ success: true, data: settings });
+    res.status(200).json({ success: true, data: { ...settings, twoFactorAuth: undefined } });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to update security settings');
   }

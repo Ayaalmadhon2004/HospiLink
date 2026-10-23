@@ -44,7 +44,7 @@ const sendVerificationMail = (userId: string, email: string): void => {
 // ============================================
 // Generate JWT Token
 // ============================================
-const generateToken = (user: { id: string; email: string; role: string }, ttl: { jwt: string }): string => {
+export const generateToken = (user: { id: string; email: string; role: string }, ttl: { jwt: string }): string => {
   return jwt.sign(
     {
       userId: user.id,
@@ -54,6 +54,43 @@ const generateToken = (user: { id: string; email: string; role: string }, ttl: {
     JWT_SECRET,
     { expiresIn: ttl.jwt as jwt.SignOptions['expiresIn'] }
   );
+};
+
+// Fields that must never leave the server.
+interface SensitiveUserFields {
+  password?: unknown;
+  passwordChangedAt?: unknown;
+  twoFactorSecretEnc?: unknown;
+  twoFactorEnabledAt?: Date | null;
+  twoFactorLastStep?: unknown;
+  twoFactorFailures?: unknown;
+  twoFactorLockedUntil?: unknown;
+}
+
+export const toPublicUser = <T extends object>(user: T & SensitiveUserFields) => {
+  const {
+    password: _password,
+    passwordChangedAt: _passwordChangedAt,
+    twoFactorSecretEnc: _secret,
+    twoFactorEnabledAt,
+    twoFactorLastStep: _lastStep,
+    twoFactorFailures: _failures,
+    twoFactorLockedUntil: _lockedUntil,
+    ...safe
+  } = user;
+  return { ...safe, twoFactorEnabled: Boolean(twoFactorEnabledAt) };
+};
+
+// Sets the session cookie and answers 200. Shared by the password step and the 2FA step of login.
+export const completeLogin = (
+  res: Response,
+  user: { id: string; email: string; role: string } & SensitiveUserFields,
+  rememberMe: boolean,
+): void => {
+  const ttl = rememberMe ? SESSION_TTL.remember : SESSION_TTL.default;
+  const token = generateToken({ id: user.id, email: user.email, role: user.role }, ttl);
+  res.cookie('token', token, authCookieOptions(ttl.cookieMs));
+  res.status(200).json({ success: true, message: 'Login successful', token, user: toPublicUser(user) });
 };
 
 // ============================================
@@ -147,8 +184,6 @@ export const login = async (req: Request, res: Response) => {
       return;
     }
     const { email, password, rememberMe } = parsed.data;
-    const ttl = rememberMe ? SESSION_TTL.remember : SESSION_TTL.default;
-
     const user = await prisma.user.findUnique({
       where: { email },
       include: {
@@ -200,22 +235,15 @@ export const login = async (req: Request, res: Response) => {
       return;
     }
 
-    const token = generateToken({
-      id: user.id,
-      email: user.email,
-      role: user.role,
-    }, ttl);
+    if (user.twoFactorEnabledAt) {
+      // No cookie yet: the challenge only proves the password was right, lives 5 minutes and is
+      // rejected by protect/socketAuth (no userId claim). POST /auth/2fa/login finishes the login.
+      const challengeToken = jwt.sign({ uid: user.id, purpose: '2fa', rememberMe }, JWT_SECRET, { expiresIn: '5m' });
+      res.status(200).json({ success: true, twoFactorRequired: true, challengeToken });
+      return;
+    }
 
-    res.cookie('token', token, authCookieOptions(ttl.cookieMs));
-
-    const { password: _, ...userWithoutPassword } = user;
-
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: userWithoutPassword,
-    });
+    completeLogin(res, user, rememberMe);
   } catch (error: unknown) {
     logger.error({ err: error }, 'Login error:');
     res.status(500).json({

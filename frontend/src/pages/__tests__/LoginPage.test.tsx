@@ -3,11 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { LoginPage } from '../LoginPage';
-import { login, resendVerification } from '../../services/authService';
+import { login, resendVerification, verifyTwoFactor } from '../../services/authService';
 
-vi.mock('../../services/authService', () => ({ login: vi.fn(), resendVerification: vi.fn() }));
+vi.mock('../../services/authService', () => ({ login: vi.fn(), resendVerification: vi.fn(), verifyTwoFactor: vi.fn() }));
 const mockedLogin = vi.mocked(login);
 const mockedResend = vi.mocked(resendVerification);
+const mockedVerify = vi.mocked(verifyTwoFactor);
 
 const originalLocation = window.location;
 
@@ -93,5 +94,57 @@ describe('LoginPage', () => {
   it('links to the forgot-password page', () => {
     renderPage();
     expect(screen.getByRole('link', { name: /forgot password/i })).toHaveAttribute('href', '/forgot-password');
+  });
+
+  describe('two-factor step', () => {
+    const toSecondStep = async () => {
+      mockedLogin.mockResolvedValue({ twoFactorRequired: true, challengeToken: 'challenge-token' });
+      renderPage();
+      const user = await fill();
+      await user.click(screen.getByRole('button', { name: /sign in/i }));
+      await screen.findByRole('heading', { name: /two-factor verification/i });
+      return user;
+    };
+
+    it('asks for the code instead of redirecting, then signs in with it', async () => {
+      const user = await toSecondStep();
+      expect(window.location.href).toBe('');
+
+      mockedVerify.mockResolvedValue({ user: { id: '1' } });
+      await user.type(screen.getByLabelText(/verification code/i), '12a3456');
+      expect(screen.getByLabelText(/verification code/i)).toHaveValue('123456');
+      await user.click(screen.getByRole('button', { name: /^verify$/i }));
+
+      await waitFor(() => expect(window.location.href).toBe('/dashboard'));
+      expect(mockedVerify).toHaveBeenCalledWith('challenge-token', { code: '123456' });
+    });
+
+    it('can use a recovery code instead', async () => {
+      const user = await toSecondStep();
+      mockedVerify.mockResolvedValue({ user: { id: '1' } });
+
+      await user.click(screen.getByRole('button', { name: /use a recovery code/i }));
+      await user.type(screen.getByLabelText(/recovery code/i), 'abcde-12345');
+      await user.click(screen.getByRole('button', { name: /^verify$/i }));
+
+      await waitFor(() => expect(mockedVerify).toHaveBeenCalledWith('challenge-token', { recoveryCode: 'abcde-12345' }));
+    });
+
+    it('shows the server error for a wrong code and stays on the step', async () => {
+      const user = await toSecondStep();
+      mockedVerify.mockRejectedValue(new Error('Invalid verification code'));
+
+      await user.type(screen.getByLabelText(/verification code/i), '000000');
+      await user.click(screen.getByRole('button', { name: /^verify$/i }));
+
+      expect(await screen.findByText('Invalid verification code')).toBeInTheDocument();
+      expect(window.location.href).toBe('');
+    });
+
+    it('cancel returns to the password form and drops the challenge', async () => {
+      const user = await toSecondStep();
+      await user.click(screen.getByRole('button', { name: /cancel sign in/i }));
+      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
+    });
   });
 });

@@ -69,7 +69,7 @@ describe('settings.controller', () => {
         language: 'ar',
         timezone: 'Asia/Hebron',
       } as any);
-      prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', twoFactorEnabledAt: new Date() } as any);
 
       const req = authedReq();
       const res = mockResponse();
@@ -78,7 +78,9 @@ describe('settings.controller', () => {
 
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
       expect(jsonArg.data.notifications.criticalVitalsAlerts).toBe(false);
+      // 2FA state comes from the user row, not from UserSettings (which says false here would be ignored).
       expect(jsonArg.data.security.twoFactorAuth).toBe(true);
+      expect(jsonArg.data.profile).not.toHaveProperty('twoFactorEnabledAt');
       expect(jsonArg.data.display.theme).toBe('dark');
       expect(prismaMock.userSettings.create).not.toHaveBeenCalled();
     });

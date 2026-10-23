@@ -1,6 +1,6 @@
 # Auth hardening plan: cookies, remember me, password reset / email verification, 2FA
 
-Status: PR 1 (cookies), PR 2 (remember me) and PR 3 (password reset / email verification) are implemented on `claude/friendly-johnson-hvwb1m`; PR 4 (2FA) is still a proposal. The PR 3 section below may differ slightly from the code (the code is authoritative).
+Status: PR 1 (cookies), PR 2 (remember me) and PR 3 (password reset / email verification) and PR 4 (2FA) are implemented on `claude/friendly-johnson-hvwb1m`. The PR 3 and PR 4 sections below may differ slightly from the code (the code is authoritative); mandatory 2FA per role and the other follow-ups at the end of PR 4 are still open.
 
 Original status: **proposal**. The diffs below are written against `main` as read on 2026-10-23. They are not applied, compiled or tested yet.
 Each PR must run `npm test` (backend) and `npm run build && npm run lint && npm test` (frontend) before merge.

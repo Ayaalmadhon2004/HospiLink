@@ -34,6 +34,25 @@ export const changePasswordSchema = z.object({
   newPassword: newPasswordField,
 });
 
+const totpCode = z.string().trim().regex(/^\d{6}$/, 'Code must be 6 digits');
+const recoveryCode = z.string().trim().regex(/^[a-fA-F0-9]{5}-?[a-fA-F0-9]{5}$/, 'Invalid recovery code');
+
+// Exactly one of `code` (authenticator app) or `recoveryCode`.
+const secondFactor = {
+  code: totpCode.optional(),
+  recoveryCode: recoveryCode.optional(),
+};
+const exactlyOneFactor = (v: { code?: string; recoveryCode?: string }) => Boolean(v.code) !== Boolean(v.recoveryCode);
+const factorMessage = { message: 'Provide either a code or a recovery code' };
+
+export const twoFactorLoginSchema = z
+  .object({ challengeToken: z.string().min(20).max(1000), ...secondFactor })
+  .refine(exactlyOneFactor, factorMessage);
+export const twoFactorEnableSchema = z.object({ code: totpCode });
+export const twoFactorDisableSchema = z
+  .object({ password: z.string().min(1, 'Password is required').max(128), ...secondFactor })
+  .refine(exactlyOneFactor, factorMessage);
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 

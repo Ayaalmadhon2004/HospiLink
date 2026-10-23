@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import useSettings, { type DisplaySettings, type ProfileSettings } from '../hooks/useSettings';
 import { Bell, Shield, Monitor, User, Building2, Loader2 } from 'lucide-react';
 import { getTimezoneOptions } from '../utils/datetime';
+import { TwoFactorPanel } from '../components/TwoFactorPanel';
 
 const FIELD_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4';
 const INPUT_CLASS =
@@ -159,6 +160,7 @@ const SettingsPage: React.FC = () => {
     updateNotifications,
     updateSecurity,
     updateDisplay,
+    refresh,
   } = useSettings();
 
   const timezones = useMemo(() => {
@@ -242,15 +244,7 @@ const SettingsPage: React.FC = () => {
       <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
         <SectionHeader icon={<Shield className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.security.title')} />
         <div className="space-y-6">
-          {/* Two-factor auth is not implemented yet: shown off and locked so it gives no false sense of security. */}
-          <SettingRow
-            first
-            title={t('settings.security.twoFactorAuth.title')}
-            description={t('settings.security.twoFactorAuth.description')}
-            badge={t('settings.security.twoFactorAuth.comingSoon')}
-          >
-            <Toggle enabled={false} disabled onChange={() => undefined} label={t('settings.security.twoFactorAuth.toggle')} />
-          </SettingRow>
+          <TwoFactorPanel enabled={settings.security.twoFactorAuth} onChanged={() => void refresh()} />
           <SettingRow
             title={t('settings.security.autoLockIdleSessions.title')}
             description={t('settings.security.autoLockIdleSessions.description')}

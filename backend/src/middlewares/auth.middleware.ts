@@ -38,7 +38,12 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & { userId: string };  // ← ✅ Unified secret
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & { userId?: string; purpose?: string };
+
+    // 2FA challenge tokens (and anything else without a userId) are not sessions.
+    if (typeof decoded.userId !== 'string' || decoded.purpose) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }  // ← ✅ Unified secret
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

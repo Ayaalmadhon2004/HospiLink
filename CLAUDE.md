@@ -68,6 +68,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `COOKIE_DOMAIN` optional; shared parent domain (e.g. `.example.com`) switches the auth cookie to SameSite=Lax (default: SameSite=None)
 - `APP_URL`, `SMTP_URL`, `MAIL_FROM`  frontend URL used in emailed links and the SMTP transport for password reset / email verification
                  (without `SMTP_URL` mails are only logged in dev, never sent)
+- `TWO_FACTOR_ENC_KEY`  32 random bytes, base64 (`openssl rand -base64 32`); encrypts TOTP secrets, required to use 2FA (the API boots without it, the `/auth/2fa/*` endpoints fail)
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
 Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
@@ -81,6 +82,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Password reset / email verification: `POST /api/auth/{forgot-password,reset-password,verify-email,resend-verification}`; single-use hashed tokens in `AuthToken`
   (`services/authTokens.ts`), links carry the token in the URL fragment. New signups must verify their email before login (403 `EMAIL_NOT_VERIFIED`); admin-invited
   users and pre-existing users are verified. `User.passwordChangedAt` revokes older tokens in `protect` and `socketAuth`.
+- 2FA (TOTP via `otplib`): `User.twoFactorEnabledAt` is the source of truth (`UserSettings.twoFactorAuth` is no longer read; `PUT /settings/security` rejects `twoFactorAuth`).
+  Login with 2FA answers `{ twoFactorRequired, challengeToken }` (5 min, no cookie; `protect` rejects it) and `POST /api/auth/2fa/login` sets the cookie. Setup/enable/disable live in
+  `controllers/twoFactor.controller.ts`; codes are replay-protected, 5 wrong codes lock the account's 2FA for 15 min, recovery codes are stored hashed. Never return raw `User` rows: use `toPublicUser`.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

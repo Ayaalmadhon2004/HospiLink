@@ -46,6 +46,23 @@ model User {
   // Tokens issued before this instant are rejected (password change/reset revokes sessions).
   passwordChangedAt DateTime?
   authTokens        AuthToken[]
+  // TOTP 2FA. The secret is AES-256-GCM encrypted (config/twoFactor.ts); it is only active once twoFactorEnabledAt is set.
+  twoFactorSecretEnc   String?
+  twoFactorEnabledAt   DateTime?
+  twoFactorLastStep    Int?
+  twoFactorFailures    Int       @default(0)
+  twoFactorLockedUntil DateTime?
+  recoveryCodes        TwoFactorRecoveryCode[]
+}
+
+model TwoFactorRecoveryCode {
+  id       String    @id @default(uuid())
+  userId   String
+  codeHash String
+  usedAt   DateTime?
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 enum AuthTokenType {

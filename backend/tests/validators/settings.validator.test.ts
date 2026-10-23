@@ -25,12 +25,12 @@ describe('settings.validator', () => {
   });
 
   describe('updateSecuritySettingsSchema', () => {
-    it('يرفض تفعيل المصادقة الثنائية لأنها غير منفذة', () => {
+    it('يرفض twoFactorAuth بأي قيمة: تُدار فقط عبر /api/auth/2fa', () => {
       expect(updateSecuritySettingsSchema.safeParse({ twoFactorAuth: true }).success).toBe(false);
+      expect(updateSecuritySettingsSchema.safeParse({ twoFactorAuth: false }).success).toBe(false);
     });
 
     it('يقبل إيقافها وباقي الإعدادات', () => {
-      expect(updateSecuritySettingsSchema.safeParse({ twoFactorAuth: false }).success).toBe(true);
       expect(updateSecuritySettingsSchema.safeParse({ autoLockIdleSessions: true, compactDensity: true }).success).toBe(true);
     });
   });
