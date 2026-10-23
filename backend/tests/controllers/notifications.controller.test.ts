@@ -29,7 +29,7 @@ describe('notifications.controller', () => {
       prismaMock.notification.findMany.mockResolvedValue([{ id: 'n1' }] as any);
       prismaMock.notification.count.mockResolvedValue(3);
 
-      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' } });
+      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' } });
       const res = mockResponse();
 
       await getNotifications(req, res);
@@ -44,7 +44,7 @@ describe('notifications.controller', () => {
       prismaMock.notification.count.mockResolvedValue(0);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         query: { unreadOnly: 'true' },
       });
       const res = mockResponse();
@@ -70,7 +70,7 @@ describe('notifications.controller', () => {
       prismaMock.notification.updateMany.mockResolvedValue({ count: 1 } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         params: { id: 'n1' },
       });
       const res = mockResponse();
@@ -88,7 +88,7 @@ describe('notifications.controller', () => {
     it('يحدث كل الإشعارات الغير مقروءة لنفس المستخدم', async () => {
       prismaMock.notification.updateMany.mockResolvedValue({ count: 5 } as any);
 
-      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' } });
+      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' } });
       const res = mockResponse();
 
       await markAllAsRead(req, res);
@@ -106,7 +106,7 @@ describe('notifications.controller', () => {
       prismaMock.notification.deleteMany.mockResolvedValue({ count: 1 } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         params: { id: 'n1' },
       });
       const res = mockResponse();

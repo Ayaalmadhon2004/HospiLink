@@ -38,10 +38,11 @@ describe('appointments', () => {
 });
 
 describe('beds', () => {
-  it('create requires bedNumber, wardId, hospitalId', () => {
-    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1', wardId: U1, hospitalId: U2, status: 'AVAILABLE' }).success).toBe(true);
-    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1', wardId: U1 }).success).toBe(false);
-    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1', wardId: U1, hospitalId: U2, status: 'BROKEN' }).success).toBe(false);
+  it('create requires bedNumber, wardId and strips hospitalId', () => {
+    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1', wardId: U1, status: 'AVAILABLE' }).success).toBe(true);
+    expect(createBedSchema.parse({ bedNumber: 'ICU-1', wardId: U1, hospitalId: U2 })).not.toHaveProperty('hospitalId');
+    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1' }).success).toBe(false);
+    expect(createBedSchema.safeParse({ bedNumber: 'ICU-1', wardId: U1, status: 'BROKEN' }).success).toBe(false);
   });
   it('update allows patientId uuid / null / empty string', () => {
     expect(updateBedSchema.safeParse({ patientId: U1 }).success).toBe(true);

@@ -4,10 +4,10 @@ import { idSchema, nonEmpty } from './common.validator';
 
 export const bedStatusEnum = z.enum(['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE']);
 
+// hospitalId is not accepted: the bed always belongs to the caller's hospital.
 export const createBedSchema = z.object({
   bedNumber: nonEmpty('bedNumber', 50),
   wardId: idSchema,
-  hospitalId: idSchema,
   status: bedStatusEnum.optional(),
 });
 
@@ -15,7 +15,6 @@ export const createBedSchema = z.object({
 export const updateBedSchema = z.object({
   bedNumber: nonEmpty('bedNumber', 50).optional(),
   wardId: idSchema.optional(),
-  hospitalId: idSchema.optional(),
   status: bedStatusEnum.optional(),
   patientId: z.union([idSchema, z.literal(''), z.null()]).optional(),
 });

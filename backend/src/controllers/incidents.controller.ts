@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
-import { CLINICAL_ROOM } from '../middlewares/socket.auth';
+import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
 import logger from '../config/logger';
 import type { Prisma } from '@prisma/client';
@@ -13,7 +13,8 @@ const handleError = (res: Response, error: unknown, message: string) => {
 };
 
 // Who hears about incidents: admins and clinical staff, never the actor.
-const incidentRecipients = (actorId?: string) => ({
+const incidentRecipients = (hospitalId: string, actorId?: string) => ({
+  hospitalId,
   roles: ['ADMIN', 'DOCTOR', 'NURSE'] as Array<'ADMIN' | 'DOCTOR' | 'NURSE'>,
   excludeUserId: actorId,
 });
@@ -22,17 +23,18 @@ const SEVERITY_RANK: Record<string, number> = { LOW: 0, MODERATE: 1, ELEVATED: 2
 const isEscalation = (from?: string | null, to?: string | null) =>
   !!from && !!to && (SEVERITY_RANK[to] ?? -1) > (SEVERITY_RANK[from] ?? -1);
 
-const notifyResolved = (incident: { code: string }, actorId?: string) =>
+const notifyResolved = (incident: { code: string }, hospitalId: string, actorId?: string) =>
   notify({
     type: 'INCIDENT',
     title: 'Incident Resolved',
     message: `${incident.code} has been marked as resolved`,
     link: '/incidents',
-    recipients: incidentRecipients(actorId),
+    recipients: incidentRecipients(hospitalId, actorId),
   });
 
-const generateIncidentCode = async () => {
-  const count = await prisma.incident.count();
+// Codes are unique per hospital (@@unique([hospitalId, code])).
+const generateIncidentCode = async (hospitalId: string) => {
+  const count = await prisma.incident.count({ where: { hospitalId } });
   return `INC-${String(count + 91).padStart(4, '0')}`;
 };
 
@@ -40,7 +42,7 @@ const generateIncidentCode = async () => {
 export const getIncidents = async (req: Request, res: Response) => {
   try {
     const { status, severity, type } = req.query;
-    const where: Prisma.IncidentWhereInput = {};
+    const where: Prisma.IncidentWhereInput = { hospitalId: hospitalIdOf(req) };
 
     if (status && status !== '') where.status = status as string;
     if (severity && severity !== '') where.severity = severity as string;
@@ -62,7 +64,7 @@ export const getIncidents = async (req: Request, res: Response) => {
 export const getActiveIncidents = async (req: Request, res: Response) => {
   try {
     const incidents = await prisma.incident.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', hospitalId: hospitalIdOf(req) },
       orderBy: [
         { severity: 'asc' },
         { createdAt: 'desc' },
@@ -93,7 +95,7 @@ export const getActiveIncidents = async (req: Request, res: Response) => {
 export const getIncidentById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const incident = await prisma.incident.findUnique({ where: { id } });
+    const incident = await prisma.incident.findFirst({ where: { id, hospitalId: hospitalIdOf(req) } });
 
     if (!incident) {
       return res.status(404).json({ success: false, message: 'Incident not found' });
@@ -110,7 +112,8 @@ export const createIncident = async (req: Request, res: Response) => {
   try {
     const { title, type, severity, location, reportedBy, description } = req.body;
 
-    const code = await generateIncidentCode();
+    const hospitalId = hospitalIdOf(req);
+    const code = await generateIncidentCode(hospitalId);
 
     const incident = await prisma.incident.create({
       data: {
@@ -122,17 +125,18 @@ export const createIncident = async (req: Request, res: Response) => {
         location,
         reportedBy,
         progress: 0,
+        hospitalId,
       },
     });
 
-    io.to(CLINICAL_ROOM).emit('incident-created', incident);
+    io.to(clinicalRoom(hospitalId)).emit('incident-created', incident);
 
     await notify({
       type: 'INCIDENT',
       title: 'New Incident Reported',
       message: `${incident.code}: ${incident.title}`,
       link: '/incidents',
-      recipients: incidentRecipients(req.user?.id),
+      recipients: incidentRecipients(hospitalId, req.user?.id),
     });
 
     res.status(201).json({ success: true, data: incident });
@@ -154,17 +158,18 @@ export const updateIncident = async (req: Request, res: Response) => {
     if (updateData.patientId === '') updateData.patientId = null;
     if (updateData.actionTaken === '') updateData.actionTaken = null;
 
-    const previous =
-      updateData.severity || updateData.status
-        ? await prisma.incident.findUnique({ where: { id }, select: { severity: true, status: true } })
-        : null;
+    const hospitalId = hospitalIdOf(req);
+    const previous = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { severity: true, status: true } });
+    if (!previous) {
+      return res.status(404).json({ success: false, message: 'Incident not found' });
+    }
 
     const incident = await prisma.incident.update({
       where: { id },
       data: updateData,
     });
 
-    io.to(CLINICAL_ROOM).emit('incident-updated', incident);
+    io.to(clinicalRoom(hospitalId)).emit('incident-updated', incident);
 
     if (isEscalation(previous?.severity, incident.severity)) {
       await notify({
@@ -172,11 +177,11 @@ export const updateIncident = async (req: Request, res: Response) => {
         title: 'Incident Escalated',
         message: `${incident.code} escalated from ${previous?.severity} to ${incident.severity}`,
         link: '/incidents',
-        recipients: incidentRecipients(req.user?.id),
+        recipients: incidentRecipients(hospitalId, req.user?.id),
       });
     }
     if (previous && previous.status !== 'RESOLVED' && incident.status === 'RESOLVED') {
-      await notifyResolved(incident, req.user?.id);
+      await notifyResolved(incident, hospitalId, req.user?.id);
     }
     res.status(200).json({ success: true, data: incident });
   } catch (error: unknown) {
@@ -189,6 +194,10 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { status, progress } = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Incident not found' });
 
     const updateData: Prisma.IncidentUpdateInput = { status };
     if (progress !== undefined) updateData.progress = progress;
@@ -199,11 +208,11 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    io.to(CLINICAL_ROOM).emit('incident-status-updated', incident);
+    io.to(clinicalRoom(hospitalId)).emit('incident-status-updated', incident);
 
     // Notify when incident is resolved
     if (status === 'RESOLVED') {
-      await notifyResolved(incident, req.user?.id);
+      await notifyResolved(incident, hospitalId, req.user?.id);
     }
 
     res.status(200).json({ success: true, data: incident });
@@ -217,9 +226,14 @@ export const deleteIncident = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Incident not found' });
+
     await prisma.incident.delete({ where: { id } });
 
-    io.to(CLINICAL_ROOM).emit('incident-deleted', { id });
+    io.to(clinicalRoom(hospitalId)).emit('incident-deleted', { id });
     res.status(200).json({ success: true, message: 'Incident deleted successfully' });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to delete incident');

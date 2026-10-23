@@ -37,7 +37,7 @@ describe('patient.controller', () => {
       await getRecentPatients(req, res);
 
       expect(prismaMock.patient.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ take: 5, orderBy: { admissionDate: 'desc' } })
+        expect.objectContaining({ where: { hospitalId: 'hosp-1' }, take: 5, orderBy: { admissionDate: 'desc' } })
       );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -53,7 +53,7 @@ describe('patient.controller', () => {
 
       await getCriticalPatientCount(mockRequest(), res);
 
-      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL' } });
+      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL', hospitalId: 'hosp-1' } });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: { count: 4 } });
     });
@@ -116,45 +116,63 @@ describe('patient.controller', () => {
   });
 
   describe('admitPatient', () => {
-    it('يرفض لو ما في userId بالتوكن', async () => {
+    it('يفشل بشكل آمن (500) لو ما في سياق مستشفى بالطلب', async () => {
       const req = mockRequest({ user: undefined, body: { name: 'Ali' } });
       const res = mockResponse();
 
       await admitPatient(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
 
-    it('يرفض لو المستخدم مش موجود بالداتابيز', async () => {
-      const req = mockRequest({ user: { id: 'u1' } as any, body: {} });
+    it('يتجاهل hospitalId من الطلب ويستخدم مستشفى المستخدم', async () => {
+      const req = mockRequest({
+        body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu', hospitalId: 'other-hospital' },
+      });
       const res = mockResponse();
-      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.patient.create.mockResolvedValue({ id: 'new-patient' } as any);
 
       await admitPatient(req, res);
 
+      const data = (prismaMock.patient.create.mock.calls[0][0] as any).data;
+      expect(data.hospitalId).toBe('hosp-1');
+    });
+
+    it('يرفض سرير من مستشفى ثاني (404) بدون إنشاء مريض', async () => {
+      const req = mockRequest({ body: { name: 'Ali', age: '40', bedId: 'foreign-bed' } });
+      const res = mockResponse();
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.bed.findFirst.mockResolvedValue(null);
+
+      await admitPatient(req, res);
+
+      expect(prismaMock.bed.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-bed', hospitalId: 'hosp-1' } });
       expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
 
-    it('يرفض لو المستخدم مش مربوط بأي مستشفى', async () => {
-      const req = mockRequest({ user: { id: 'u1' } as any, body: {} });
+    it('يرفض دكتور من مستشفى ثاني (404)', async () => {
+      const req = mockRequest({ body: { name: 'Ali', age: '40', doctorId: 'foreign-doc' } });
       const res = mockResponse();
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: null, name: 'Dr. A' } as any);
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.user.findFirst.mockResolvedValue(null);
 
       await admitPatient(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-doc', hospitalId: 'hosp-1' } }));
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
 
     it('يرفض إدخال المريض لو السرير المطلوب مش موجود', async () => {
       const req = mockRequest({
-        user: { id: 'u1' } as any,
         body: { name: 'Ali', age: '40', bedId: 'bed-x' },
       });
       const res = mockResponse();
-
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(10);
-      prismaMock.bed.findUnique.mockResolvedValue(null);
+      prismaMock.bed.findFirst.mockResolvedValue(null);
 
       await admitPatient(req, res);
 
@@ -164,14 +182,11 @@ describe('patient.controller', () => {
 
     it('يرفض إدخال المريض لو السرير مش متاح', async () => {
       const req = mockRequest({
-        user: { id: 'u1' } as any,
         body: { name: 'Ali', age: '40', bedId: 'bed-x' },
       });
       const res = mockResponse();
-
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(10);
-      prismaMock.bed.findUnique.mockResolvedValue({ id: 'bed-x', status: 'OCCUPIED' } as any);
+      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-x', status: 'OCCUPIED' } as any);
 
       await admitPatient(req, res);
 
@@ -181,15 +196,12 @@ describe('patient.controller', () => {
 
     it('يدخل مريض جديد بنجاح ويحجز السرير (يحوله OCCUPIED)', async () => {
       const req = mockRequest({
-        user: { id: 'u1' } as any,
         body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu', bedId: 'bed-x' },
       });
       const res = mockResponse();
-
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(10);
       prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
-      prismaMock.bed.findUnique.mockResolvedValue({ id: 'bed-x', status: 'AVAILABLE' } as any);
+      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-x', status: 'AVAILABLE' } as any);
       prismaMock.patient.create.mockResolvedValue({ id: 'new-patient', patientCode: 'PT-2051' } as any);
       prismaMock.bed.update.mockResolvedValue({} as any);
 
@@ -201,7 +213,7 @@ describe('patient.controller', () => {
             patientCode: 'PT-2051',
             age: 40, // لازم يترحول لرقم صحيح
             bedId: 'bed-x',
-            hospitalId: 'h1',
+            hospitalId: 'hosp-1',
           }),
         })
       );
@@ -214,18 +226,15 @@ describe('patient.controller', () => {
 
     it('يدخل مريض بدون سرير (بدون bedId) بدون ما يحاول يحدث أي سرير', async () => {
       const req = mockRequest({
-        user: { id: 'u1' } as any,
         body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu' },
       });
       const res = mockResponse();
-
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(0);
       prismaMock.patient.create.mockResolvedValue({ id: 'new-patient' } as any);
 
       await admitPatient(req, res);
 
-      expect(prismaMock.bed.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.bed.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
@@ -234,12 +243,10 @@ describe('patient.controller', () => {
   describe('admitPatient patientCode', () => {
     const admitReq = () =>
       mockRequest({
-        user: { id: 'u1' } as any,
         body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu' },
       });
 
     beforeEach(() => {
-      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
     });
 
     it('يبدأ بعد أعلى كود موجود لما العدد أقل منه (seed)', async () => {
@@ -288,7 +295,7 @@ describe('patient.controller', () => {
 
   describe('getPatientById', () => {
     it('يرجع 404 لو المريض مش موجود', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue(null);
+      prismaMock.patient.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'ghost' } });
       const res = mockResponse();
 
@@ -298,7 +305,7 @@ describe('patient.controller', () => {
     });
 
     it('يرجع بيانات المريض لو موجود', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1', name: 'Ali' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', name: 'Ali' } as any);
       const req = mockRequest({ params: { id: 'p1' } });
       const res = mockResponse();
 
@@ -319,7 +326,7 @@ describe('patient.controller', () => {
       await getPatients(req, res);
 
       expect(prismaMock.patient.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 0, take: 10 })
+        expect.objectContaining({ skip: 0, take: 10, where: { hospitalId: 'hosp-1' } })
       );
     });
 
@@ -435,6 +442,7 @@ describe('patient.controller', () => {
 
   describe('updatePatient', () => {
     it('يحدث بيانات المريض ويرجعها', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
       prismaMock.patient.update.mockResolvedValue({ id: 'p1', name: 'Updated' } as any);
       const req = mockRequest({ params: { id: 'p1' }, body: { name: 'Updated' } });
       const res = mockResponse();
@@ -448,9 +456,37 @@ describe('patient.controller', () => {
     });
   });
 
+  describe('updatePatient multi-tenancy', () => {
+    it('يرجع 404 لمريض من مستشفى ثاني ولا يعدل شي', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+
+      await updatePatient(mockRequest({ params: { id: 'foreign' }, body: { name: 'x' } }), res);
+
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1' } }));
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.update).not.toHaveBeenCalled();
+    });
+
+    it('يرفض نقل المريض لسرير أو دكتور من مستشفى ثاني', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.bed.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+
+      await updatePatient(mockRequest({ params: { id: 'p1' }, body: { bedId: 'foreign-bed' } }), res);
+      expect(res.status).toHaveBeenCalledWith(404);
+
+      prismaMock.user.findFirst.mockResolvedValue(null);
+      const res2 = mockResponse();
+      await updatePatient(mockRequest({ params: { id: 'p1' }, body: { doctorId: 'foreign-doc' } }), res2);
+      expect(res2.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.update).not.toHaveBeenCalled();
+    });
+  });
+
   describe('dischargePatient', () => {
     it('يرجع 404 لو المريض مش موجود', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue(null);
+      prismaMock.patient.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'ghost' } });
       const res = mockResponse();
 
@@ -460,7 +496,7 @@ describe('patient.controller', () => {
     });
 
     it('يحرر السرير ويسرح المريض ضمن transaction واحدة', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1', bedId: 'bed-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: 'bed-1' } as any);
       prismaMock.bed.update.mockResolvedValue({} as any);
       prismaMock.patient.update.mockResolvedValue({ id: 'p1', status: 'DISCHARGED' } as any);
 
@@ -481,7 +517,7 @@ describe('patient.controller', () => {
     });
 
     it('ما بيحاول يحرر سرير لو المريض ما كان أصلاً مربوط بسرير', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1', bedId: null } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: null } as any);
       prismaMock.patient.update.mockResolvedValue({ id: 'p1', status: 'DISCHARGED' } as any);
 
       const req = mockRequest({ params: { id: 'p1' } });
@@ -496,11 +532,11 @@ describe('patient.controller', () => {
 
   describe('report files stored in the database', () => {
     it('uploadReport يحفظ الملف بالداتابيز ولا يرجع fileData بالرد', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
       prismaMock.report.create.mockImplementation(async ({ data }: any) => ({ ...data, createdAt: new Date() }));
       const req = mockRequest({
         params: { id: 'p1' },
-        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' },
+        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1' },
         file: { originalname: 'xray.pdf', mimetype: 'application/pdf', buffer: Buffer.from('%PDF') },
       } as any);
       const res = mockResponse();
@@ -526,19 +562,20 @@ describe('patient.controller', () => {
       prismaMock.report.findMany.mockResolvedValue([] as any);
       await getPatientReports(mockRequest({ params: { id: 'p1' } } as any), mockResponse());
       expect(prismaMock.report.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ omit: { fileData: true } })
+        expect.objectContaining({ omit: { fileData: true }, where: { patientId: 'p1', patient: { hospitalId: 'hosp-1' } } })
       );
     });
 
-    it('getReportFile يرجع 404 لو الملف مش موجود', async () => {
-      prismaMock.report.findUnique.mockResolvedValue(null);
+    it('getReportFile يرجع 404 لو الملف مش موجود أو لمريض من مستشفى ثاني', async () => {
+      prismaMock.report.findFirst.mockResolvedValue(null);
       const res = mockResponse();
       await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
+      expect(prismaMock.report.findFirst).toHaveBeenCalledWith({ where: { id: 'r1', patient: { hospitalId: 'hosp-1' } } });
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
     it('getReportFile يرجع الملف بنوعه الأصلي', async () => {
-      prismaMock.report.findUnique.mockResolvedValue({
+      prismaMock.report.findFirst.mockResolvedValue({
         id: 'r1', fileType: 'application/pdf', fileData: new Uint8Array([1, 2, 3]),
       } as any);
       const res = mockResponse();

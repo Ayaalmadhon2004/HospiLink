@@ -15,7 +15,7 @@ describe('settings.controller', () => {
   afterEach(() => jest.restoreAllMocks());
 
   const authedReq = (overrides: any = {}) =>
-    mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' }, ...overrides });
+    mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' }, ...overrides });
 
   describe('getUserSettings', () => {
     it('يرفض بـ 401 لو ما في مستخدم', async () => {

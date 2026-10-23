@@ -29,7 +29,7 @@ const optionalId = z.preprocess((v) => (v === '' || v === null ? undefined : v),
 
 const isoDate = z.coerce.date('must be a valid date');
 
-// POST /api/patients/admit. patientCode / status / admissionDate are server-controlled and stripped.
+// POST /api/patients/admit. patientCode / status / admissionDate / hospitalId are server-controlled and stripped.
 export const admitPatientSchema = z.object({
   name: nonEmpty('name', MAX_SHORT_TEXT),
   age: ageSchema,
@@ -38,7 +38,6 @@ export const admitPatientSchema = z.object({
   diagnosis: nonEmpty('diagnosis', MAX_LONG_TEXT),
   bedId: optionalId,
   doctorId: optionalId,
-  hospitalId: optionalId,
 });
 
 // PUT /api/patients/:id. Whitelist only: patientCode, hospitalId, id, timestamps are stripped.

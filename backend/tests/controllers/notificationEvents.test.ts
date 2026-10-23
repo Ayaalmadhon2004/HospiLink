@@ -7,7 +7,7 @@ import { createCall, assignUnitToCall } from '../../src/controllers/dispatch.con
 import { createAppointment, updateAppointment, deleteAppointment } from '../../src/controllers/appointments.controller';
 import { broadcastNotification } from '../../src/controllers/notifications.controller';
 
-const actor = { id: 'actor', email: 'a@a.com', role: 'NURSE' };
+const actor = { id: 'actor', email: 'a@a.com', role: 'NURSE', hospitalId: 'hosp-1' };
 const whereOf = () => JSON.stringify((prismaMock.user.findMany.mock.calls[0][0] as any).where);
 
 describe('notification events', () => {
@@ -22,7 +22,7 @@ describe('notification events', () => {
 
   describe('critical vitals', () => {
     const critical = () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1', name: 'Sam', department: 'ICU', doctorId: 'doc1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', name: 'Sam', department: 'ICU', doctorId: 'doc1', hospitalId: 'hosp-1' } as any);
       (prismaMock as any).vitalThresholds.findMany.mockResolvedValue([
         { vitalType: 'HEART_RATE', minCritical: 40, maxCritical: 130, alertEnabled: true },
       ]);
@@ -35,6 +35,7 @@ describe('notification events', () => {
 
       const w = whereOf();
       expect(w).toContain('"id":{"in":["doc1"]}');
+      expect(w).toContain('"hospitalId":"hosp-1"'); // never spans hospitals
       expect(w).toContain('"department":"ICU"');
       expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledWith({
         data: [expect.objectContaining({ type: 'VITALS', link: '/patients/p1' })],
@@ -59,16 +60,16 @@ describe('notification events', () => {
 
     it('updateVitals notifies only when the reading becomes critical', async () => {
       critical();
-      prismaMock.patientVitals.findUnique.mockResolvedValue({
-        id: 'v1', isCritical: false, heartRate: 80, patient: { id: 'p1', name: 'Sam', department: 'ICU', doctorId: null },
+      prismaMock.patientVitals.findFirst.mockResolvedValue({
+        id: 'v1', isCritical: false, heartRate: 80, patient: { id: 'p1', name: 'Sam', department: 'ICU', doctorId: null, hospitalId: 'hosp-1' },
       } as any);
       prismaMock.patientVitals.update.mockResolvedValue({ id: 'v1' } as any);
       await updateVitals(mockRequest({ user: actor, params: { id: 'v1' }, body: { heartRate: 170 } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledTimes(1);
 
       prismaMock.notification.createManyAndReturn.mockClear();
-      prismaMock.patientVitals.findUnique.mockResolvedValue({
-        id: 'v1', isCritical: true, heartRate: 170, patient: { id: 'p1', name: 'Sam', department: 'ICU', doctorId: null },
+      prismaMock.patientVitals.findFirst.mockResolvedValue({
+        id: 'v1', isCritical: true, heartRate: 170, patient: { id: 'p1', name: 'Sam', department: 'ICU', doctorId: null, hospitalId: 'hosp-1' },
       } as any);
       await updateVitals(mockRequest({ user: actor, params: { id: 'v1' }, body: { heartRate: 175 } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
@@ -111,8 +112,8 @@ describe('notification events', () => {
     });
 
     it('create notifies the doctor (Staff -> User by email)', async () => {
-      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'h1' } as any);
-      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
       prismaMock.appointment.findFirst.mockResolvedValue(null);
       prismaMock.appointment.create.mockResolvedValue(apt as any);
       await createAppointment(
@@ -126,6 +127,7 @@ describe('notification events', () => {
     });
 
     it('update notifies on schedule changes but not on notes-only edits', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'a1' } as any);
       prismaMock.appointment.update.mockResolvedValue(apt as any);
       await updateAppointment(mockRequest({ user: actor, params: { id: 'a1' }, body: { notes: 'hi' } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
@@ -137,6 +139,7 @@ describe('notification events', () => {
     });
 
     it('cancel notifies the doctor', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'a1' } as any);
       prismaMock.appointment.update.mockResolvedValue(apt as any);
       await deleteAppointment(mockRequest({ user: actor, params: { id: 'a1' } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledWith({
@@ -146,6 +149,7 @@ describe('notification events', () => {
 
     it('does not notify when the doctor has no login', async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'a1' } as any);
       prismaMock.appointment.update.mockResolvedValue(apt as any);
       await deleteAppointment(mockRequest({ user: actor, params: { id: 'a1' } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
@@ -153,11 +157,11 @@ describe('notification events', () => {
   });
 
   describe('POST /notifications/broadcast', () => {
-    const admin = { id: 'adm', email: 'x', role: 'ADMIN' };
+    const admin = { id: 'adm', email: 'x', role: 'ADMIN', hospitalId: 'h1' };
 
     it('401 without a user', async () => {
       const res = mockResponse();
-      await broadcastNotification(mockRequest({ body: { title: 'T', message: 'M' } }), res);
+      await broadcastNotification(mockRequest({ user: undefined, body: { title: 'T', message: 'M' } }), res);
       expect(res.status).toHaveBeenCalledWith(401);
     });
 

@@ -99,7 +99,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         bedNumber,
         wardId,
         status,
-        hospitalId: "e4eb651b-fc3c-4284-a73d-9178e77195d8",
       };
 
       if (selectedPatientId) {

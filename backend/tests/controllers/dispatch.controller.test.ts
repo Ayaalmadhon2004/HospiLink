@@ -25,7 +25,7 @@ describe('dispatch.controller', () => {
       await getAllUnits(req, res);
 
       expect(prismaMock.dispatchUnit.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ orderBy: { unitCode: 'asc' } })
+        expect.objectContaining({ where: { hospitalId: 'hosp-1' }, orderBy: { unitCode: 'asc' } })
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
@@ -40,7 +40,7 @@ describe('dispatch.controller', () => {
       await getActiveUnits(req, res);
 
       expect(prismaMock.dispatchUnit.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { status: { not: 'OFF_DUTY' } } })
+        expect.objectContaining({ where: { hospitalId: 'hosp-1', status: { not: 'OFF_DUTY' } } })
       );
     });
   });
@@ -53,7 +53,7 @@ describe('dispatch.controller', () => {
       await getCalls(mockRequest({ query: {} }), res);
 
       expect(prismaMock.dispatchCall.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { status: 'PENDING' }, orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] })
+        expect.objectContaining({ where: { status: 'PENDING', hospitalId: 'hosp-1' }, orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] })
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
@@ -61,7 +61,7 @@ describe('dispatch.controller', () => {
     it('honours the status filter', async () => {
       prismaMock.dispatchCall.findMany.mockResolvedValue([]);
       await getCalls(mockRequest({ query: { status: 'ASSIGNED' } }), mockResponse());
-      expect(prismaMock.dispatchCall.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'ASSIGNED' } }));
+      expect(prismaMock.dispatchCall.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'ASSIGNED', hospitalId: 'hosp-1' } }));
     });
 
     it('returns 500 with a generic message on failure', async () => {
@@ -75,6 +75,7 @@ describe('dispatch.controller', () => {
 
   describe('updateUnitStatus', () => {
     it('يحدث حالة الوحدة ويبث لغرفة dispatch-room وغرفة القسم', async () => {
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'u1' } as any);
       prismaMock.dispatchUnit.update.mockResolvedValue({
         id: 'u1',
         department: 'ER',
@@ -90,19 +91,35 @@ describe('dispatch.controller', () => {
       await updateUnitStatus(req, res);
 
       expect(mockRoomEmit).toHaveBeenCalledWith(
-        'dispatch-room',
+        'h-hosp-1:dispatch-room',
         'unit-status-update',
         expect.objectContaining({ unitId: 'u1', status: 'EN_ROUTE' })
       );
       expect(mockRoomEmit).toHaveBeenCalledWith(
-        'department-ER',
+        'h-hosp-1:department-ER',
         'unit-status-update',
         expect.objectContaining({ unitCode: 'AMB-01' })
       );
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
+    it('يرجع 404 لوحدة أو نداء من مستشفى ثاني ولا يحدث شي', async () => {
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+      await updateUnitStatus(mockRequest({ params: { id: 'foreign' }, body: { status: 'EN_ROUTE' } }), res);
+      expect(res.status).toHaveBeenCalledWith(404);
+
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'u1' } as any);
+      prismaMock.dispatchCall.findFirst.mockResolvedValue(null);
+      const res2 = mockResponse();
+      await updateUnitStatus(mockRequest({ params: { id: 'u1' }, body: { status: 'EN_ROUTE', callId: 'foreign-call' } }), res2);
+      expect(res2.status).toHaveBeenCalledWith(404);
+
+      expect(prismaMock.dispatchUnit.update).not.toHaveBeenCalled();
+    });
+
     it('يحول location كائن لـ JSON string قبل التحديث', async () => {
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'u1' } as any);
       prismaMock.dispatchUnit.update.mockResolvedValue({ id: 'u1', department: 'ER' } as any);
 
       const req = mockRequest({
@@ -129,13 +146,16 @@ describe('dispatch.controller', () => {
 
       await createCall(req, res);
 
+      expect(prismaMock.dispatchCall.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ hospitalId: 'hosp-1', status: 'PENDING' }),
+      });
       expect(mockRoomEmit).toHaveBeenCalledWith(
-        'dispatch-room',
+        'h-hosp-1:dispatch-room',
         'new-call',
         expect.objectContaining({ callId: 'call-1' })
       );
       expect(mockRoomEmit).not.toHaveBeenCalledWith(
-        'dispatch-room',
+        'h-hosp-1:dispatch-room',
         'critical-alert',
         expect.anything()
       );
@@ -153,7 +173,7 @@ describe('dispatch.controller', () => {
       await createCall(req, res);
 
       expect(mockRoomEmit).toHaveBeenCalledWith(
-        'dispatch-room',
+        'h-hosp-1:dispatch-room',
         'critical-alert',
         expect.objectContaining({ callId: 'call-2' })
       );
@@ -176,20 +196,20 @@ describe('dispatch.controller', () => {
       await assignUnitToCall(req(), res);
 
       expect(prismaMock.dispatchCall.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'call-1', status: 'PENDING', assignedUnitId: null } })
+        expect.objectContaining({ where: { id: 'call-1', hospitalId: 'hosp-1', status: 'PENDING', assignedUnitId: null } })
       );
       expect(prismaMock.dispatchUnit.updateMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'unit-1', status: 'AVAILABLE', currentCallId: null } })
+        expect.objectContaining({ where: { id: 'unit-1', hospitalId: 'hosp-1', status: 'AVAILABLE', currentCallId: null } })
       );
-      expect(mockRoomEmit).toHaveBeenCalledWith('dispatch-room', 'call-assigned', expect.objectContaining({ callId: 'call-1', unitId: 'unit-1' }));
-      expect(mockRoomEmit).toHaveBeenCalledWith('unit-unit-1', 'unit-assigned', expect.objectContaining({ callId: 'call-1' }));
+      expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:dispatch-room', 'call-assigned', expect.objectContaining({ callId: 'call-1', unitId: 'unit-1' }));
+      expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:unit-unit-1', 'unit-assigned', expect.objectContaining({ callId: 'call-1' }));
       expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it('returns 409 when the call was already assigned', async () => {
       runTx();
       prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 0 });
-      prismaMock.dispatchCall.findUnique.mockResolvedValue({ id: 'call-1' });
+      prismaMock.dispatchCall.findFirst.mockResolvedValue({ id: 'call-1' });
       const res = mockResponse();
 
       await assignUnitToCall(req(), res);
@@ -199,10 +219,20 @@ describe('dispatch.controller', () => {
       expect(mockRoomEmit).not.toHaveBeenCalled();
     });
 
+    it('returns 404 (not 409) for a call of another hospital: the scoped claim finds nothing', async () => {
+      runTx();
+      prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 0 });
+      prismaMock.dispatchCall.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+      await assignUnitToCall(req(), res);
+      expect(prismaMock.dispatchCall.findFirst).toHaveBeenCalledWith({ where: { id: 'call-1', hospitalId: 'hosp-1' }, select: { id: true } });
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
     it('returns 404 when the call does not exist', async () => {
       runTx();
       prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 0 });
-      prismaMock.dispatchCall.findUnique.mockResolvedValue(null);
+      prismaMock.dispatchCall.findFirst.mockResolvedValue(null);
       const res = mockResponse();
       await assignUnitToCall(req(), res);
       expect(res.status).toHaveBeenCalledWith(404);
@@ -212,7 +242,7 @@ describe('dispatch.controller', () => {
       runTx();
       prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 1 });
       prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 0 });
-      prismaMock.dispatchUnit.findUnique.mockResolvedValue({ id: 'unit-1' });
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'unit-1' });
       const res = mockResponse();
       await assignUnitToCall(req(), res);
       expect(res.status).toHaveBeenCalledWith(409);
@@ -223,7 +253,7 @@ describe('dispatch.controller', () => {
       runTx();
       prismaMock.dispatchCall.updateMany.mockResolvedValue({ count: 1 });
       prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 0 });
-      prismaMock.dispatchUnit.findUnique.mockResolvedValue(null);
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue(null);
       const res = mockResponse();
       await assignUnitToCall(req(), res);
       expect(res.status).toHaveBeenCalledWith(404);

@@ -45,7 +45,7 @@ export interface RecipientSelector {
   userIds?: string[];
   /** Never notify this user (usually the actor). */
   excludeUserId?: string;
-  /** Restrict to a hospital. Defaults to the hospital of `scopeUserId ?? excludeUserId`. */
+  /** Restrict to a hospital. Defaults to the hospital of `scopeUserId ?? excludeUserId`. Required for role/department selectors. */
   hospitalId?: string;
   scopeUserId?: string;
 }
@@ -87,6 +87,11 @@ export const notify = async (input: NotifyInput) => {
   try {
     const { type, title, message, recipients } = input;
     const hospitalId = await resolveHospitalId(recipients);
+    // Role/department selectors address "everyone like this": without a hospital they would span tenants.
+    if (!hospitalId && (recipients.roles?.length || recipients.department)) {
+      logger.error('[Notifications] refusing role/department broadcast without a hospital scope');
+      return [];
+    }
     const where = buildWhere(recipients, hospitalId);
     if (!where) return [];
 

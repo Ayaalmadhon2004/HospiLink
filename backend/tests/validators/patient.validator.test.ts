@@ -19,7 +19,9 @@ describe('admitPatientSchema', () => {
   it('accepts a payload without a bed and with optional ids', () => {
     const { bedId, ...noBed } = uiPayload;
     expect(admitPatientSchema.safeParse(noBed).success).toBe(true);
-    expect(admitPatientSchema.parse({ ...noBed, doctorId: U2, hospitalId: U2 })).toMatchObject({ doctorId: U2, hospitalId: U2 });
+    expect(admitPatientSchema.parse({ ...noBed, doctorId: U2 })).toMatchObject({ doctorId: U2 });
+    // hospitalId is never accepted from the client: it is stripped
+    expect(admitPatientSchema.parse({ ...noBed, hospitalId: U2 })).not.toHaveProperty('hospitalId');
   });
 
   it('treats empty / null ids as not provided', () => {
@@ -40,7 +42,6 @@ describe('admitPatientSchema', () => {
   it('rejects unknown gender / non-uuid ids / blank text', () => {
     expect(admitPatientSchema.safeParse({ ...uiPayload, gender: 'OTHER' }).success).toBe(false);
     expect(admitPatientSchema.safeParse({ ...uiPayload, bedId: 'nope' }).success).toBe(false);
-    expect(admitPatientSchema.safeParse({ ...uiPayload, hospitalId: 'nope' }).success).toBe(false);
     expect(admitPatientSchema.safeParse({ ...uiPayload, name: '  ' }).success).toBe(false);
     expect(admitPatientSchema.safeParse({ ...uiPayload, diagnosis: '' }).success).toBe(false);
   });

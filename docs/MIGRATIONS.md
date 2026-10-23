@@ -21,6 +21,14 @@ left that table missing (`P2021` on `GET /api/notifications`). Migration `202610
 with `IF NOT EXISTS`, so it is a no-op on databases that already have it. Tested against a fresh database and against one built
 from the baseline without `Notification`. If you repaired production by hand first, deploying it is still safe.
 
+## Multi-tenancy migrations (`20261022000000`, `20261022000001`)
+
+- `user_account_status` adds `User.accountStatus` (default `ACTIVE`, so existing users keep working).
+- `hospital_scoping` adds a required `hospitalId` to `Staff`, `Incident`, `DispatchUnit`, `DispatchCall`. It adds the column as nullable, backfills it
+  (Staff -> hospital of the `User` with the same email, otherwise the oldest hospital; the other tables -> the oldest hospital), then sets NOT NULL.
+  It fails loudly if rows exist but no `Hospital` does. `Incident.code` and `DispatchUnit.unitCode` become unique per hospital.
+- Check before deploying: if production already has more than one hospital, review which hospital the pre-existing incidents, dispatch units and calls belong to.
+
 ## Day to day
 
 - Change `schema.prisma`, then `npx prisma migrate dev --name <topic>` against a local/dev database.

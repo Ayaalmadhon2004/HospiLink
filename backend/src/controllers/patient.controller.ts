@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import { hospitalIdOf } from '../utils/tenant';
 import { randomUUID } from 'crypto';
 import type { Bed, PatientStatus, Prisma } from '@prisma/client';
 
@@ -37,7 +38,8 @@ export const getRecentPatients = async (req: Request, res: Response) => {
     }
 
     const recentPatients = await prisma.patient.findMany({
-      take: 5,           
+      where: { hospitalId: hospitalIdOf(req) },
+      take: 5,
       orderBy: { admissionDate: 'desc' },
       include: { bed: true },
     });
@@ -60,9 +62,9 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 // GET /api/patients/critical-count
 // عدد المرضى بحالة CRITICAL (للـ badge في الـ Sidebar)
 // ============================================
-export const getCriticalPatientCount = async (_req: Request, res: Response) => {
+export const getCriticalPatientCount = async (req: Request, res: Response) => {
   try {
-    const count = await prisma.patient.count({ where: { status: 'CRITICAL' } });
+    const count = await prisma.patient.count({ where: { status: 'CRITICAL', hospitalId: hospitalIdOf(req) } });
     res.status(200).json({ success: true, data: { count } });
   } catch (error) {
     logger.error({ err: error }, 'getCriticalPatientCount error:');
@@ -84,7 +86,10 @@ export const getPatientFlow = async (req: Request, res: Response) => {
     const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (days - 1) * DAY_MS);
 
     const rows = await prisma.patient.findMany({
-      where: { OR: [{ admissionDate: { gte: start } }, { dischargeDate: { gte: start } }] },
+      where: {
+        hospitalId: hospitalIdOf(req),
+        OR: [{ admissionDate: { gte: start } }, { dischargeDate: { gte: start } }],
+      },
       select: { admissionDate: true, dischargeDate: true },
     });
 
@@ -118,38 +123,11 @@ class AdmitError extends Error {
 }
 
 export const admitPatient = async (req: Request, res: Response) => {
-  const { name, age, gender, department, diagnosis, bedId, hospitalId, doctorId } = req.body;
+  // hospitalId is never read from the body: the patient joins the admitting user's hospital.
+  const { name, age, gender, department, diagnosis, bedId, doctorId } = req.body;
 
   try {
-    const userId = req.user?.id; // set by protect()
-    
-    if (!userId) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'User not authenticated - no userId in token' 
-      });
-    }
-
-    const userFromDB = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { hospitalId: true, name: true }
-    });
-
-    if (!userFromDB) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'User not found in database' 
-      });
-    }
-
-    if (!userFromDB.hospitalId) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'User has no hospital assigned. Please contact admin.' 
-      });
-    }
-
-    const effectiveHospitalId = hospitalId || userFromDB.hospitalId;
+    const hospitalId = hospitalIdOf(req);
 
     const firstNumber = await nextPatientNumber();
 
@@ -160,8 +138,13 @@ export const admitPatient = async (req: Request, res: Response) => {
         result = await prisma.$transaction(async (tx) => {
           let validBedId = null;
 
+          if (doctorId) {
+            const doctor = await tx.user.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
+            if (!doctor) throw new AdmitError('Doctor not found', 404);
+          }
+
           if (bedId) {
-            const bed = await tx.bed.findUnique({ where: { id: bedId } });
+            const bed = await tx.bed.findFirst({ where: { id: bedId, hospitalId } });
             if (!bed) throw new AdmitError('السرير غير موجود', 404);
             if (bed.status !== 'AVAILABLE') throw new AdmitError('السرير غير متاح حالياً', 400);
             validBedId = bedId;
@@ -175,7 +158,7 @@ export const admitPatient = async (req: Request, res: Response) => {
             department,
             diagnosis,
             status: 'OBSERVATION',
-            hospitalId: effectiveHospitalId,
+            hospitalId,
           };
 
           if (validBedId) patientData.bedId = validBedId;
@@ -225,7 +208,7 @@ export const uploadReport = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Patient ID is required' });
     }
 
-    const patient = await prisma.patient.findUnique({ where: { id: patientId } });
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId: hospitalIdOf(req) } });
     if (!patient) {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
@@ -258,7 +241,7 @@ export const uploadReport = async (req: Request, res: Response) => {
 export const getReportFile = async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params as { reportId: string };
-    const report = await prisma.report.findUnique({ where: { id: reportId } });
+    const report = await prisma.report.findFirst({ where: { id: reportId, patient: { hospitalId: hospitalIdOf(req) } } });
     if (!report || !report.fileData) {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
@@ -282,7 +265,7 @@ export const getPatientReports = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const reports = await prisma.report.findMany({
-      where: { patientId: id },
+      where: { patientId: id, patient: { hospitalId: hospitalIdOf(req) } },
       omit: { fileData: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -308,8 +291,8 @@ export const getPatientById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
-    const patient = await prisma.patient.findUnique({
-      where: { id },
+    const patient = await prisma.patient.findFirst({
+      where: { id, hospitalId: hospitalIdOf(req) },
       include: {
         bed: { 
           select: { 
@@ -342,7 +325,7 @@ export const getPatients = async (req: Request, res: Response) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const whereClause: Prisma.PatientWhereInput = {};
+    const whereClause: Prisma.PatientWhereInput = { hospitalId: hospitalIdOf(req) };
 
     if (status && status !== 'undefined' && status !== 'ALL' && status !== '' && status !== 'All') {
       whereClause.status = (status as string).toUpperCase() as PatientStatus;
@@ -414,10 +397,11 @@ export const getPatients = async (req: Request, res: Response) => {
 export const getAvailableBeds = async (req: Request, res: Response) => {
   try {
     const { department } = req.query;
+    const hospitalId = hospitalIdOf(req);
     let beds: Bed[] = [];
     
     try {
-      beds = await prisma.bed.findMany({ where: { status: 'AVAILABLE' }, orderBy: { bedNumber: 'asc' } });
+      beds = await prisma.bed.findMany({ where: { status: 'AVAILABLE', hospitalId }, orderBy: { bedNumber: 'asc' } });
     } catch (err: unknown) {
       logger.error({ err }, 'Get available beds error:');
       return res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
@@ -426,10 +410,10 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
     let bedsWithWard: BedWithWard[] = [];
     
     try {
-      const testQuery = await prisma.bed.findFirst({ include: { ward: true } });
+      const testQuery = await prisma.bed.findFirst({ where: { hospitalId }, include: { ward: true } });
       if (testQuery) {
         bedsWithWard = await prisma.bed.findMany({
-          where: { status: 'AVAILABLE' },
+          where: { status: 'AVAILABLE', hospitalId },
           include: {
             ward: {
               select: { id: true, name: true }
@@ -467,6 +451,19 @@ export const updatePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const data = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.patient.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) {
+      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
+    }
+    // A bed / doctor reassignment must stay inside the caller's hospital.
+    if (data.bedId && !(await prisma.bed.findFirst({ where: { id: data.bedId, hospitalId }, select: { id: true } }))) {
+      return res.status(404).json({ success: false, message: 'السرير غير موجود' });
+    }
+    if (data.doctorId && !(await prisma.user.findFirst({ where: { id: data.doctorId, hospitalId }, select: { id: true } }))) {
+      return res.status(404).json({ success: false, message: 'Doctor not found' });
+    }
 
     const updated = await prisma.patient.update({
       where: { id },
@@ -488,8 +485,8 @@ export const dischargePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
-    const patient = await prisma.patient.findUnique({
-      where: { id },
+    const patient = await prisma.patient.findFirst({
+      where: { id, hospitalId: hospitalIdOf(req) },
       include: { bed: true }
     });
 

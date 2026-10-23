@@ -20,6 +20,7 @@ describe('vitals.controller', () => {
 
   describe('createVital', () => {
     it('ينشئ قراءة سريعة ويبثها لغرفة المريض', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
       prismaMock.patientVitals.create.mockResolvedValue({
         id: 'v1',
         patientId: 'p1',
@@ -34,7 +35,7 @@ describe('vitals.controller', () => {
 
       const dataArg = (prismaMock.patientVitals.create.mock.calls[0][0] as any).data;
       expect(dataArg.heartRate).toBe(80); // لازم يترحول لرقم
-      expect(dataArg.recordedBy).toBe('system'); // required by the schema; no authenticated user on this request
+      expect(dataArg.recordedBy).toBe('user-1'); // the authenticated user
       expect(mockRoomEmit).toHaveBeenCalledWith('patient-p1', 'new-vital', expect.objectContaining({ id: 'v1' }));
       expect(res.status).toHaveBeenCalledWith(201);
     });
@@ -42,7 +43,7 @@ describe('vitals.controller', () => {
 
   describe('recordVitals', () => {
     it('يرجع 404 لو المريض مش موجود', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue(null);
+      prismaMock.patient.findFirst.mockResolvedValue(null);
       const req = mockRequest({ body: { patientId: 'ghost' } });
       const res = mockResponse();
 
@@ -50,10 +51,13 @@ describe('vitals.controller', () => {
 
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patientVitals.create).not.toHaveBeenCalled();
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'ghost', hospitalId: 'hosp-1' } })
+      );
     });
 
     it('يسجل القراءة كـ Critical لو تجاوزت الحد الأقصى المسموح للقسم', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ department: 'ICU' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ department: 'ICU' } as any);
       (prismaMock as any).vitalThresholds.findMany.mockResolvedValue([
         {
           vitalType: 'HEART_RATE',
@@ -66,7 +70,7 @@ describe('vitals.controller', () => {
       prismaMock.patientVitals.create.mockResolvedValue({ id: 'v1', patientId: 'p1' } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'NURSE' },
+        user: { id: 'u1', email: 'a@a.com', role: 'NURSE', hospitalId: 'hosp-1' },
         body: { patientId: 'p1', heartRate: '160', systolicBP: '120', spO2: '98', temperature: '37', respiratoryRate: '16' },
       });
       const res = mockResponse();
@@ -83,7 +87,7 @@ describe('vitals.controller', () => {
     });
 
     it('يسجل القراءة كطبيعية (غير حرجة) لو كل القيم ضمن الحدود المسموحة', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ department: 'ICU' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ department: 'ICU' } as any);
       (prismaMock as any).vitalThresholds.findMany.mockResolvedValue([
         { vitalType: 'HEART_RATE', minCritical: 40, maxCritical: 130, department: 'ICU', alertEnabled: true },
       ]);
@@ -101,7 +105,7 @@ describe('vitals.controller', () => {
     });
 
     it('ما بيفشل ولا بيعتبر القراءة حرجة لو تحقق العتبات نفسه رمى استثناء', async () => {
-      prismaMock.patient.findUnique.mockResolvedValue({ department: 'ICU' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ department: 'ICU' } as any);
       (prismaMock as any).vitalThresholds.findMany.mockRejectedValue(new Error('table missing'));
       prismaMock.patientVitals.create.mockResolvedValue({ id: 'v3', patientId: 'p1' } as any);
 
@@ -128,6 +132,7 @@ describe('vitals.controller', () => {
 
       const whereArg = (prismaMock as any).patientVitals.findMany.mock.calls[0][0].where;
       expect(whereArg.isCritical).toBe(true);
+      expect(whereArg.patient).toEqual({ hospitalId: 'hosp-1' });
     });
 
     it('يستخدم limit افتراضي 50 لو ما تم تحديده', async () => {
@@ -152,13 +157,14 @@ describe('vitals.controller', () => {
 
       const callArg = (prismaMock as any).patientVitals.findMany.mock.calls[0][0];
       expect(callArg.where.isCritical).toBe(true);
+      expect(callArg.where.patient).toEqual({ hospitalId: 'hosp-1' });
       expect(callArg.take).toBe(20);
     });
   });
 
   describe('getVitalsById', () => {
     it('يرجع 404 لو القراءة مش موجودة', async () => {
-      (prismaMock as any).patientVitals.findUnique.mockResolvedValue(null);
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'nope' } });
       const res = mockResponse();
 
@@ -170,7 +176,7 @@ describe('vitals.controller', () => {
 
   describe('updateVitals', () => {
     it('يرجع 404 لو القراءة الأصلية مش موجودة', async () => {
-      (prismaMock as any).patientVitals.findUnique.mockResolvedValue(null);
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'nope' }, body: {} });
       const res = mockResponse();
 
@@ -180,7 +186,7 @@ describe('vitals.controller', () => {
     });
 
     it('يعيد فحص الخطورة (critical) بعد التحديث بناءً على القيم الجديدة', async () => {
-      (prismaMock as any).patientVitals.findUnique.mockResolvedValue({
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue({
         id: 'v1',
         heartRate: 80,
         patient: { department: 'ER' },
@@ -203,6 +209,7 @@ describe('vitals.controller', () => {
 
   describe('deleteVitals', () => {
     it('يحذف القراءة ويرجع رسالة نجاح', async () => {
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue({ id: 'v1' });
       (prismaMock as any).patientVitals.delete.mockResolvedValue({});
       const req = mockRequest({ params: { id: 'v1' } });
       const res = mockResponse();
@@ -210,6 +217,19 @@ describe('vitals.controller', () => {
       await deleteVitals(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('يرجع 404 لقراءة مريض من مستشفى ثاني ولا يحذف', async () => {
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+
+      await deleteVitals(mockRequest({ params: { id: 'foreign' } }), res);
+
+      expect((prismaMock as any).patientVitals.findFirst).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'foreign', patient: { hospitalId: 'hosp-1' } } })
+      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((prismaMock as any).patientVitals.delete).not.toHaveBeenCalled();
     });
   });
 
@@ -221,7 +241,7 @@ describe('vitals.controller', () => {
     const metricKeys = ['heartRate', 'systolicBP', 'diastolicBP', 'spO2', 'temperature', 'respiratoryRate'];
 
     beforeEach(() => {
-      prismaMock.patient.findUnique.mockResolvedValue({ department: 'ICU' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ department: 'ICU' } as any);
       (prismaMock as any).vitalThresholds.findMany.mockResolvedValue(hrThreshold);
       prismaMock.patientVitals.create.mockResolvedValue({ id: 'v1', patientId: 'p1' } as any);
     });
@@ -314,7 +334,7 @@ describe('vitals.controller', () => {
     });
 
     it('updateVitals: only provided fields are updated; absent ones are not touched', async () => {
-      (prismaMock as any).patientVitals.findUnique.mockResolvedValue({
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue({
         id: 'v1', heartRate: 80, spO2: 97, patient: { department: 'ICU' },
       });
       (prismaMock as any).patientVitals.update.mockResolvedValue({ id: 'v1' });
@@ -328,7 +348,7 @@ describe('vitals.controller', () => {
     });
 
     it('updateVitals: stored critical value is still evaluated when not in the body', async () => {
-      (prismaMock as any).patientVitals.findUnique.mockResolvedValue({
+      (prismaMock as any).patientVitals.findFirst.mockResolvedValue({
         id: 'v1', heartRate: 200, patient: { department: 'ICU' },
       });
       (prismaMock as any).patientVitals.update.mockResolvedValue({ id: 'v1' });

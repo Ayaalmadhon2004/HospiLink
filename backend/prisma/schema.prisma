@@ -16,6 +16,10 @@ model Hospital {
   patients  Patient[]
   users     User[]
   wards     Ward[]
+  staff     Staff[]
+  incidents Incident[]
+  dispatchUnits DispatchUnit[]
+  dispatchCalls DispatchCall[]
 }
 
 model User {
@@ -27,6 +31,8 @@ model User {
   department String
   shift      String
   status     String        @default("OFF_DUTY")
+  // Login/approval state. Public signup creates PENDING; only an ADMIN activates (see users.controller).
+  accountStatus AccountStatus @default(ACTIVE)
   hospitalId String
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
@@ -87,6 +93,8 @@ model Patient {
   hospital      Hospital        @relation(fields: [hospitalId], references: [id])
   vitals        PatientVitals[]
   reports       Report[]
+
+  @@index([hospitalId])
 }
 
 model Report {
@@ -112,6 +120,8 @@ model Ward {
   updatedAt  DateTime @updatedAt
   beds       Bed[]
   hospital   Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId])
 }
 
 model Bed {
@@ -125,6 +135,7 @@ model Bed {
   patient    Patient?  @relation("BedPatient")
 
   @@unique([bedNumber, wardId])
+  @@index([hospitalId])
 }
 
 model PatientVitals {
@@ -171,10 +182,14 @@ model Staff {
   avatar       String?
   phone        String?
   isActive     Boolean       @default(true)
+  hospitalId   String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   appointments Appointment[]
   shifts       Shift[]
+  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId])
 }
 
 model Shift {
@@ -214,7 +229,7 @@ model Appointment {
 
 model Incident {
   id          String    @id @default(uuid())
-  code        String    @unique
+  code        String
   title       String
   description String?
   type        String
@@ -226,9 +241,13 @@ model Incident {
   triageLevel String?
   reportedBy  String
   resolvedAt  DateTime?
+  hospitalId  String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
+  @@unique([hospitalId, code])
+  @@index([hospitalId])
   @@index([status])
   @@index([severity])
   @@index([createdAt])
@@ -236,7 +255,7 @@ model Incident {
 
 model DispatchUnit {
   id            String        @id @default(uuid())
-  unitCode      String        @unique
+  unitCode      String
   unitType      UnitType
   status        UnitStatus    @default(AVAILABLE)
   location      String?
@@ -244,9 +263,14 @@ model DispatchUnit {
   department    String        @default("ER")
   crew          String[]
   currentCallId String?       @unique
+  hospitalId    String
   lastUpdated   DateTime      @updatedAt
   createdAt     DateTime      @default(now())
   currentCall   DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
+  hospital      Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@unique([hospitalId, unitCode])
+  @@index([hospitalId])
 }
 
 model DispatchCall {
@@ -257,9 +281,19 @@ model DispatchCall {
   status         CallStatus    @default(PENDING)
   notes          String?
   assignedUnitId String?       @unique
+  hospitalId     String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   assignedUnit   DispatchUnit? @relation("UnitCall")
+  hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId])
+}
+
+enum AccountStatus {
+  PENDING   // self-registered, waiting for an ADMIN
+  ACTIVE
+  DISABLED  // rejected or deactivated by an ADMIN
 }
 
 enum Role {

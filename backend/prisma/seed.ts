@@ -97,6 +97,7 @@ async function main() {
         data: {
           ...s,
           isActive: true,
+          hospitalId: hospital.id,
         },
       });
       console.log(`👨‍⚕️ Created Staff: ${staff.name} (${staff.role})`);
@@ -421,11 +422,11 @@ async function main() {
 
   for (const inc of incidentsData) {
     const existing = await prisma.incident.findUnique({
-      where: { code: inc.code },
+      where: { hospitalId_code: { hospitalId: hospital.id, code: inc.code } },
     });
 
     if (!existing) {
-      await prisma.incident.create({ data: inc });
+      await prisma.incident.create({ data: { ...inc, hospitalId: hospital.id } });
       console.log(`🚨 Created Incident: ${inc.code} — ${inc.title}`);
     } else {
       console.log(`🚨 Incident exists: ${inc.code}`);
@@ -434,7 +435,7 @@ async function main() {
 
   // 12. Create Dispatch Units
   const units = await prisma.dispatchUnit.createMany({
-    data: [
+    data: ([
       {
         unitCode: 'AMB-04',
         unitType: 'AMBULANCE',
@@ -464,13 +465,13 @@ async function main() {
         department: 'ICU',
         crew: ['Paramedic Smith'],
       },
-    ],
+    ] as const).map((u) => ({ ...u, crew: [...u.crew], hospitalId: hospital.id })),
   });
   console.log(`🚑 Created ${units.count} dispatch units`);
 
   // 13. Create Dispatch Calls
   const calls = await prisma.dispatchCall.createMany({
-    data: [
+    data: ([
       {
         type: 'Cardiac arrest',
         location: '14 Elm St',
@@ -483,7 +484,7 @@ async function main() {
         priority: 'HIGH',
         status: 'ASSIGNED',
       },
-    ],
+    ] as const).map((c) => ({ ...c, hospitalId: hospital.id })),
   });
   console.log(`📞 Created ${calls.count} dispatch calls`);
 

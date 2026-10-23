@@ -3,10 +3,12 @@ import type { Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET } from '../config/jwt';
+import { clinicalRoom } from '../utils/tenant';
 
 export interface SocketUser {
   id: string;
   role: string;
+  hospitalId: string;
 }
 
 // يقرأ كوكي `token` من هيدر الـ handshake
@@ -48,11 +50,13 @@ export const socketAuth = async (
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, role: true },
+      select: { id: true, role: true, hospitalId: true, accountStatus: true },
     });
     if (!user) return next(new Error('Unauthorized: user not found'));
+    // Same rule as `protect`: PENDING / DISABLED accounts get no realtime data either.
+    if (user.accountStatus !== 'ACTIVE') return next(new Error('Forbidden: account not active'));
 
-    socket.data.user = { id: user.id, role: user.role } as SocketUser;
+    socket.data.user = { id: user.id, role: user.role, hospitalId: user.hospitalId } as SocketUser;
     next();
   } catch {
     next(new Error('Unauthorized: invalid or expired token'));
@@ -73,11 +77,17 @@ export const joinUserRoom = (socket: Socket): string | null => {
   return room;
 };
 
-// غرفة الطاقم السريري: نفس الأدوار المسموح لها بالـ REST لمواعيد وحوادث المرضى
-export const CLINICAL_ROOM = 'clinical-staff';
-
+// غرفة الطاقم السريري (لكل مستشفى): نفس الأدوار المسموح لها بالـ REST لمواعيد وحوادث المرضى
 export const joinClinicalRoom = (socket: Socket): boolean => {
+  const hospitalId = socket.data?.user?.hospitalId;
+  if (typeof hospitalId !== 'string' || !hospitalId) return false;
   if (!hasRole(socket, 'ADMIN', 'DOCTOR', 'NURSE')) return false;
-  socket.join(CLINICAL_ROOM);
+  socket.join(clinicalRoom(hospitalId));
   return true;
+};
+
+// Hospital of the connected user (set by socketAuth, loaded from the DB), or null.
+export const socketHospitalId = (socket: Socket): string | null => {
+  const id = socket.data?.user?.hospitalId;
+  return typeof id === 'string' && id ? id : null;
 };

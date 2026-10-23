@@ -14,7 +14,6 @@ import {
 describe('incidents.controller', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1' } as any);
     prismaMock.user.findMany.mockResolvedValue([{ id: 'u2', settings: null }] as any);
     prismaMock.notification.createManyAndReturn.mockResolvedValue([{ id: 'n1', userId: 'u2' }] as any);
   });
@@ -29,7 +28,7 @@ describe('incidents.controller', () => {
       await getIncidents(req, res);
 
       const whereArg = (prismaMock.incident.findMany.mock.calls[0][0] as any).where;
-      expect(whereArg).toEqual({ status: 'ACTIVE', type: 'FIRE' });
+      expect(whereArg).toEqual({ hospitalId: 'hosp-1', status: 'ACTIVE', type: 'FIRE' });
     });
   });
 
@@ -47,6 +46,9 @@ describe('incidents.controller', () => {
 
       await getActiveIncidents(req, res);
 
+      expect(prismaMock.incident.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: 'ACTIVE', hospitalId: 'hosp-1' } })
+      );
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
       expect(jsonArg.data.critical).toHaveLength(2);
       expect(jsonArg.data.elevated).toHaveLength(1);
@@ -57,12 +59,13 @@ describe('incidents.controller', () => {
 
   describe('getIncidentById', () => {
     it('يرجع 404 لو الحادث مش موجود', async () => {
-      prismaMock.incident.findUnique.mockResolvedValue(null);
+      prismaMock.incident.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'nope' } });
       const res = mockResponse();
 
       await getIncidentById(req, res);
 
+      expect(prismaMock.incident.findFirst).toHaveBeenCalledWith({ where: { id: 'nope', hospitalId: 'hosp-1' } });
       expect(res.status).toHaveBeenCalledWith(404);
     });
   });
@@ -77,17 +80,18 @@ describe('incidents.controller', () => {
       } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         body: { title: 'Fire in Ward 3', type: 'FIRE', severity: 'CRITICAL', location: 'Ward 3' },
       });
       const res = mockResponse();
 
       await createIncident(req, res);
 
+      expect(prismaMock.incident.count).toHaveBeenCalledWith({ where: { hospitalId: 'hosp-1' } });
       expect(prismaMock.incident.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ code: 'INC-0100', progress: 0 }) })
+        expect.objectContaining({ data: expect.objectContaining({ code: 'INC-0100', progress: 0, hospitalId: 'hosp-1' }) })
       );
-      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'incident-created', expect.objectContaining({ id: 'inc-1' }));
+      expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:clinical-staff', 'incident-created', expect.objectContaining({ id: 'inc-1' }));
       expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledWith({
         data: [expect.objectContaining({ type: 'INCIDENT', userId: 'u2', title: 'New Incident Reported' })],
       });
@@ -101,6 +105,7 @@ describe('incidents.controller', () => {
 
   describe('updateIncident', () => {
     it('يضيف resolvedAt تلقائياً لو الحالة صارت RESOLVED وما تم تمريره', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', status: 'RESOLVED' } as any);
 
       const req = mockRequest({ params: { id: 'inc-1' }, body: { status: 'RESOLVED' } });
@@ -113,10 +118,10 @@ describe('incidents.controller', () => {
     });
 
     it('ينشئ إشعار "Incident Escalated" لما الخطورة ترتفع', async () => {
-      prismaMock.incident.findUnique.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
+      prismaMock.incident.findFirst.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', code: 'INC-1', severity: 'CRITICAL', status: 'ACTIVE' } as any);
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         params: { id: 'inc-1' },
         body: { severity: 'CRITICAL' },
       });
@@ -129,7 +134,7 @@ describe('incidents.controller', () => {
     });
 
     it('ما بينشئ إشعار لو الخطورة انخفضت', async () => {
-      prismaMock.incident.findUnique.mockResolvedValue({ severity: 'CRITICAL', status: 'ACTIVE' } as any);
+      prismaMock.incident.findFirst.mockResolvedValue({ severity: 'CRITICAL', status: 'ACTIVE' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', code: 'INC-1', severity: 'LOW', status: 'ACTIVE' } as any);
       const req = mockRequest({ params: { id: 'inc-1' }, body: { severity: 'LOW' } });
 
@@ -139,7 +144,7 @@ describe('incidents.controller', () => {
     });
 
     it('ينشئ إشعار "Incident Resolved" لما التحديث العام يحل الحادث', async () => {
-      prismaMock.incident.findUnique.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
+      prismaMock.incident.findFirst.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', code: 'INC-1', severity: 'LOW', status: 'RESOLVED' } as any);
       const req = mockRequest({ params: { id: 'inc-1' }, body: { status: 'RESOLVED' } });
 
@@ -151,6 +156,7 @@ describe('incidents.controller', () => {
     });
 
     it('يحول الحقول الفاضية (patientId, actionTaken) إلى null', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue({ severity: 'LOW', status: 'ACTIVE' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1' } as any);
 
       const req = mockRequest({
@@ -169,10 +175,11 @@ describe('incidents.controller', () => {
 
   describe('updateIncidentStatus', () => {
     it('ينشئ إشعار "Incident Resolved" لما الحالة تصير RESOLVED', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue({ id: 'inc-1' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', code: 'INC-0001' } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         params: { id: 'inc-1' },
         body: { status: 'RESOLVED' },
       });
@@ -186,10 +193,11 @@ describe('incidents.controller', () => {
     });
 
     it('ما بينشئ إشعار لو الحالة مش RESOLVED', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue({ id: 'inc-1' } as any);
       prismaMock.incident.update.mockResolvedValue({ id: 'inc-1', code: 'INC-0001' } as any);
 
       const req = mockRequest({
-        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN' },
+        user: { id: 'u1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' },
         params: { id: 'inc-1' },
         body: { status: 'IN_PROGRESS', progress: 50 },
       });
@@ -203,15 +211,45 @@ describe('incidents.controller', () => {
     });
   });
 
+  describe('incidents of another hospital', () => {
+    it('update / status / delete return 404 and change nothing', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue(null);
+
+      const r1 = mockResponse();
+      await updateIncident(mockRequest({ params: { id: 'foreign' }, body: { severity: 'LOW' } }), r1);
+      const r2 = mockResponse();
+      await updateIncidentStatus(mockRequest({ params: { id: 'foreign' }, body: { status: 'RESOLVED' } }), r2);
+      const r3 = mockResponse();
+      await deleteIncident(mockRequest({ params: { id: 'foreign' } }), r3);
+
+      [r1, r2, r3].forEach((r) => expect(r.status).toHaveBeenCalledWith(404));
+      expect(prismaMock.incident.update).not.toHaveBeenCalled();
+      expect(prismaMock.incident.delete).not.toHaveBeenCalled();
+    });
+
+    it('createIncident takes the hospital from the caller, not the body', async () => {
+      prismaMock.incident.count.mockResolvedValue(0);
+      prismaMock.incident.create.mockResolvedValue({ id: 'i', code: 'INC-0091', title: 't' } as any);
+
+      await createIncident(
+        mockRequest({ body: { title: 't', type: 'FIRE', severity: 'LOW', location: 'l', hospitalId: 'other-hospital' } }),
+        mockResponse()
+      );
+
+      expect((prismaMock.incident.create.mock.calls[0][0] as any).data.hospitalId).toBe('hosp-1');
+    });
+  });
+
   describe('deleteIncident', () => {
     it('يحذف الحادث ويبث incident-deleted', async () => {
+      prismaMock.incident.findFirst.mockResolvedValue({ id: 'inc-1' } as any);
       prismaMock.incident.delete.mockResolvedValue({} as any);
       const req = mockRequest({ params: { id: 'inc-1' } });
       const res = mockResponse();
 
       await deleteIncident(req, res);
 
-      expect(mockRoomEmit).toHaveBeenCalledWith('clinical-staff', 'incident-deleted', { id: 'inc-1' });
+      expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:clinical-staff', 'incident-deleted', { id: 'inc-1' });
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

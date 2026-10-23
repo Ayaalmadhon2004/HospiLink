@@ -32,18 +32,21 @@ describe('auth.middleware', () => {
         id: 'user-1',
         email: 'doc@hospilink.com',
         role: 'DOCTOR',
+        hospitalId: 'hosp-1',
+        accountStatus: 'ACTIVE',
       } as any);
 
       await protect(req, res, next);
 
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { id: true, email: true, role: true },
+        select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true },
       });
       expect(req.user).toEqual({
         id: 'user-1',
         email: 'doc@hospilink.com',
         role: 'DOCTOR',
+        hospitalId: 'hosp-1',
       });
       expect(next).toHaveBeenCalledTimes(1);
       expect(res.status).not.toHaveBeenCalled();
@@ -59,12 +62,48 @@ describe('auth.middleware', () => {
         id: 'user-2',
         email: 'nurse@hospilink.com',
         role: 'NURSE',
+        hospitalId: 'hosp-1',
+        accountStatus: 'ACTIVE',
       } as any);
 
       await protect(req, res, next);
 
       expect(next).toHaveBeenCalledTimes(1);
       expect(req.user?.id).toBe('user-2');
+    });
+
+    it('يرفض حساب PENDING بـ 403 ولا يكمل للـ controller', async () => {
+      const token = jwt.sign({ userId: 'user-3' }, JWT_SECRET);
+      const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
+      const res = mockResponse();
+      const next = mockNext();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-3', email: 'p@x.com', role: 'NURSE', hospitalId: 'hosp-1', accountStatus: 'PENDING',
+      } as any);
+
+      await protect(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, error: 'Account pending admin approval', code: 'ACCOUNT_PENDING' })
+      );
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('يرفض حساب DISABLED بـ 403', async () => {
+      const token = jwt.sign({ userId: 'user-4' }, JWT_SECRET);
+      const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
+      const res = mockResponse();
+      const next = mockNext();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-4', email: 'd@x.com', role: 'DOCTOR', hospitalId: 'hosp-1', accountStatus: 'DISABLED',
+      } as any);
+
+      await protect(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ code: 'ACCOUNT_DISABLED' }));
+      expect(next).not.toHaveBeenCalled();
     });
 
     it('يرفض التوكن غير الصالح أو المنتهي', async () => {
@@ -101,7 +140,7 @@ describe('auth.middleware', () => {
 
   describe('authorize', () => {
     it('يسمح بالمرور لو الرول موجود ضمن الأدوار المسموحة', () => {
-      const req = mockRequest({ user: { id: '1', email: 'a@a.com', role: 'ADMIN' } });
+      const req = mockRequest({ user: { id: '1', email: 'a@a.com', role: 'ADMIN', hospitalId: 'hosp-1' } });
       const res = mockResponse();
       const next = mockNext();
 
@@ -112,7 +151,7 @@ describe('auth.middleware', () => {
     });
 
     it('يرفض بـ 403 لو الرول مش من ضمن المسموح فيهم', () => {
-      const req = mockRequest({ user: { id: '1', email: 'a@a.com', role: 'NURSE' } });
+      const req = mockRequest({ user: { id: '1', email: 'a@a.com', role: 'NURSE', hospitalId: 'hosp-1' } });
       const res = mockResponse();
       const next = mockNext();
 

@@ -15,7 +15,7 @@ describe('ward.controller', () => {
 
       await getAllWards(req, res);
 
-      expect(prismaMock.ward.findMany).toHaveBeenCalledWith({ orderBy: { name: 'asc' } });
+      expect(prismaMock.ward.findMany).toHaveBeenCalledWith({ where: { hospitalId: 'hosp-1' }, orderBy: { name: 'asc' } });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: wards });
     });
@@ -33,7 +33,7 @@ describe('ward.controller', () => {
 
   describe('getWardById', () => {
     it('يرجع 404 لو القسم مش موجود', async () => {
-      prismaMock.ward.findUnique.mockResolvedValue(null);
+      prismaMock.ward.findFirst.mockResolvedValue(null);
       const req = mockRequest({ params: { id: 'nope' } });
       const res = mockResponse();
 
@@ -45,12 +45,13 @@ describe('ward.controller', () => {
 
     it('يرجع القسم مع أسرته لو موجود', async () => {
       const ward = { id: 'w1', name: 'ICU', beds: [{ id: 'b1', patient: null }] };
-      prismaMock.ward.findUnique.mockResolvedValue(ward as any);
+      prismaMock.ward.findFirst.mockResolvedValue(ward as any);
       const req = mockRequest({ params: { id: 'w1' } });
       const res = mockResponse();
 
       await getWardById(req, res);
 
+      expect(prismaMock.ward.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'w1', hospitalId: 'hosp-1' } }));
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: ward });
     });

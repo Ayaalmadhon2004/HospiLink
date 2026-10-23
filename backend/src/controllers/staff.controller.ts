@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
+import { hospitalIdOf, departmentRoom } from '../utils/tenant';
 import type { Prisma } from '@prisma/client';
 
 type TimelineEntry = {
@@ -25,9 +26,8 @@ const handleError = (res: Response, error: unknown, message: string) => {
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
-    const staff = await prisma.staff.findMany();
-    logger.debug({ count: staff.length }, 'All staff fetched (no filter)');
-    
+    const staff = await prisma.staff.findMany({ where: { hospitalId: hospitalIdOf(req) } });
+
     res.status(200).json({ success: true, count: staff.length, data: staff });
   } catch (error: unknown) {
     logger.error({ err: error }, 'ERROR:');
@@ -43,8 +43,8 @@ export const getStaffById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
-    const staff = await prisma.staff.findUnique({
-      where: { id },
+    const staff = await prisma.staff.findFirst({
+      where: { id, hospitalId: hospitalIdOf(req) },
       include: {
         shifts: { orderBy: { startTime: 'desc' }, take: 10 },
       },
@@ -66,7 +66,7 @@ export const createStaff = async (req: Request, res: Response) => {
     const { name, email, role, department, phone, avatar } = req.body;
 
     const staff = await prisma.staff.create({
-      data: { name, email, role, department, phone, avatar },
+      data: { name, email, role, department, phone, avatar, hospitalId: hospitalIdOf(req) },
     });
 
     res.status(201).json({ success: true, data: staff });
@@ -80,6 +80,9 @@ export const updateStaff = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const updateData = req.body;
+
+    const existing = await prisma.staff.findFirst({ where: { id, hospitalId: hospitalIdOf(req) }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
 
     const staff = await prisma.staff.update({
       where: { id },
@@ -97,6 +100,9 @@ export const deleteStaff = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
+    const existing = await prisma.staff.findFirst({ where: { id, hospitalId: hospitalIdOf(req) }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+
     await prisma.staff.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Staff deleted' });
@@ -112,7 +118,7 @@ export const getShifts = async (req: Request, res: Response) => {
   try {
     const { department, staffId, date } = req.query;
 
-    const where: Prisma.ShiftWhereInput = {};
+    const where: Prisma.ShiftWhereInput = { staff: { hospitalId: hospitalIdOf(req) } };
     if (department) where.department = department as string;
     if (staffId) where.staffId = staffId as string;
     if (date) {
@@ -137,6 +143,10 @@ export const getShifts = async (req: Request, res: Response) => {
 export const createShift = async (req: Request, res: Response) => {
   try {
     const { staffId, type, startTime, endTime, department, notes } = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const owner = await prisma.staff.findFirst({ where: { id: staffId, hospitalId }, select: { id: true } });
+    if (!owner) return res.status(404).json({ success: false, message: 'Staff not found' });
 
     const shift = await prisma.shift.create({
       data: {
@@ -151,7 +161,7 @@ export const createShift = async (req: Request, res: Response) => {
     });
 
     // Emit real-time update
-    io.to(`department-${department}`).emit('shift-update', shift);
+    io.to(departmentRoom(hospitalId, department)).emit('shift-update', shift);
 
     res.status(201).json({ success: true, data: shift });
   } catch (error: unknown) {
@@ -164,6 +174,10 @@ export const updateShift = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { type, startTime, endTime, department, notes } = req.body;
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.shift.findFirst({ where: { id, staff: { hospitalId } }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Shift not found' });
 
     const shift = await prisma.shift.update({
       where: { id },
@@ -177,7 +191,7 @@ export const updateShift = async (req: Request, res: Response) => {
       include: { staff: { select: { name: true, role: true, avatar: true } } },
     });
 
-    io.to(`department-${shift.department}`).emit('shift-update', shift);
+    io.to(departmentRoom(hospitalId, shift.department)).emit('shift-update', shift);
 
     res.status(200).json({ success: true, data: shift });
   } catch (error: unknown) {
@@ -188,13 +202,18 @@ export const updateShift = async (req: Request, res: Response) => {
 // DELETE /api/staff/shifts/:id - Delete shift
 export const deleteShift = async (req: Request, res: Response) => {
   try {
-const { id } = req.params as { id: string }
+    const { id } = req.params as { id: string };
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.shift.findFirst({ where: { id, staff: { hospitalId } }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Shift not found' });
+
     const shift = await prisma.shift.delete({
       where: { id },
       include: { staff: { select: { name: true, role: true } } },
     });
 
-    io.to(`department-${shift.department}`).emit('shift-delete', { id });
+    io.to(departmentRoom(hospitalId, shift.department)).emit('shift-delete', { id });
 
     res.status(200).json({ success: true, message: 'Shift deleted' });
   } catch (error: unknown) {
@@ -212,6 +231,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
 
     const shifts = await prisma.shift.findMany({
       where: {
+        staff: { hospitalId: hospitalIdOf(req) },
         startTime: { gte: startOfDay },
         endTime: { lte: endOfDay },
       },
