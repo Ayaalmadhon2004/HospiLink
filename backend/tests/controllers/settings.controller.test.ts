@@ -84,6 +84,39 @@ describe('settings.controller', () => {
     });
   });
 
+  describe('getUserSettings hospital code', () => {
+    const settingsRow = { userId: 'u1', theme: 'light', language: 'en', timezone: 'UTC' };
+
+    it('يطلب code للـ ADMIN فقط ومن مستشفى المستخدم نفسه', async () => {
+      prismaMock.userSettings.findUnique.mockResolvedValue(settingsRow as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ name: 'H', code: 'NORTH-1' } as any);
+      const res = mockResponse();
+
+      await getUserSettings(authedReq(), res);
+
+      expect(prismaMock.hospital.findUnique).toHaveBeenCalledWith({
+        where: { id: 'hosp-1' },
+        select: { name: true, code: true },
+      });
+      expect((res.json as jest.Mock).mock.calls[0][0].data.hospital).toEqual({ name: 'H', code: 'NORTH-1' });
+    });
+
+    it('ما يطلب code لغير الـ ADMIN', async () => {
+      prismaMock.userSettings.findUnique.mockResolvedValue(settingsRow as any);
+      prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ name: 'H' } as any);
+      const req = mockRequest({ user: { id: 'u1', email: 'a@a.com', role: 'NURSE', hospitalId: 'hosp-1' } });
+
+      await getUserSettings(req, mockResponse());
+
+      expect(prismaMock.hospital.findUnique).toHaveBeenCalledWith({
+        where: { id: 'hosp-1' },
+        select: { name: true, code: false },
+      });
+    });
+  });
+
   describe('updateProfile', () => {
     it('يحدث الحقول المرسلة بس بدون ما يمسح الباقي', async () => {
       prismaMock.user.update.mockResolvedValue({ id: 'u1', name: 'New Name' } as any);

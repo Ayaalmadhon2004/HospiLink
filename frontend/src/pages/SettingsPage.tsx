@@ -2,7 +2,7 @@
 import { useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSettings, { type DisplaySettings, type ProfileSettings } from '../hooks/useSettings';
-import { Bell, Shield, Monitor, User, Loader2 } from 'lucide-react';
+import { Bell, Shield, Monitor, User, Building2, Loader2 } from 'lucide-react';
 import { getTimezoneOptions } from '../utils/datetime';
 
 const FIELD_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4';
@@ -208,6 +208,16 @@ const SettingsPage: React.FC = () => {
           onSave={updateProfile}
         />
       </section>
+
+      {settings.hospital?.code && (
+        <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+          <SectionHeader icon={<Building2 className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.hospital.title')} />
+          <Field label={settings.hospital.name} htmlFor="hospital-code">
+            <input id="hospital-code" type="text" readOnly value={settings.hospital.code} className={`${READONLY_CLASS} font-mono tracking-wider`} />
+          </Field>
+          <p className="text-sm text-gray-500 mt-2">{t('settings.hospital.hint')}</p>
+        </section>
+      )}
 
       <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
         <SectionHeader icon={<Bell className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.notifications.title')} />

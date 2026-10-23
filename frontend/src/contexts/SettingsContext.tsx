@@ -43,14 +43,21 @@ export interface DisplaySettings {
   timezone: string;
 }
 
+// `code` (the signup code) is only sent to ADMIN users.
+export interface HospitalInfo {
+  name: string;
+  code?: string;
+}
+
 export interface UserSettings {
   profile: ProfileSettings;
+  hospital?: HospitalInfo | null;
   notifications: NotificationSettings;
   security: SecuritySettings;
   display: DisplaySettings;
 }
 
-type Section = keyof UserSettings;
+type Section = Exclude<keyof UserSettings, 'hospital'>;
 export interface UpdateResult {
   success: boolean;
   error?: string;

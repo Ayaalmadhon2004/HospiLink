@@ -724,6 +724,10 @@
     "saveError": "Could not save your changes. Please try again.",
     "profileUpdated": "Profile updated",
     "title": "Settings",
+    "hospital": {
+      "title": "Hospital signup code",
+      "hint": "Share this code with staff so they can sign up to your hospital. You approve each account before it can sign in."
+    },
     "profile": {
       "title": "Profile",
       "fullName": "Full name",

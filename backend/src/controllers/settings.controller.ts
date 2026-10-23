@@ -34,10 +34,19 @@ export const getUserSettings = async (req: Request, res: Response) => {
       select: { id: true, name: true, email: true, role: true, department: true, shift: true, status: true }
     });
 
+    // The signup code is only shown to admins, who share it with staff joining their hospital.
+    const hospital = req.user?.hospitalId
+      ? await prisma.hospital.findUnique({
+          where: { id: req.user.hospitalId },
+          select: { name: true, code: req.user.role === 'ADMIN' },
+        })
+      : null;
+
     res.status(200).json({
       success: true,
       data: {
         profile: user,
+        hospital,
         notifications: {
           criticalVitalsAlerts: settings.criticalVitalsAlerts,
           incidentEscalations: settings.incidentEscalations,
