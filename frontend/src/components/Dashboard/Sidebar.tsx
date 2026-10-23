@@ -45,11 +45,11 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   };
 
   return (
-    <aside className="w-64 h-screen bg-slate-900 text-white flex flex-col">
+    <aside className="w-64 h-screen bg-brand-sidebar text-white flex flex-col">
       {/* Logo */}
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-teal-500 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
             <Heart className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -70,25 +70,25 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             onClick={() => onItemClick(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
               activeItem === item.id
-                ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500 shadow-sm shadow-teal-500/10'
-                : 'text-slate-200 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
+                ? 'bg-emerald-400/15 text-emerald-300 border-l-2 border-emerald-400'
+                : 'text-slate-200 hover:bg-white/10 hover:text-white border-l-2 border-transparent'
             }`}
           >
             <item.icon className={`w-5 h-5 transition-colors ${
-              activeItem === item.id ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
+              activeItem === item.id ? 'text-emerald-300' : 'text-slate-300 group-hover:text-white'
             }`} />
             <span className="flex-1 text-left font-medium">{item.label}</span>
             {item.badge && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
-                  ? 'bg-teal-700 text-white' 
-                  : 'bg-slate-700 text-slate-200'
+                  ? 'bg-emerald-500 text-emerald-950' 
+                  : 'bg-white/10 text-slate-200'
               }`}>
                 {item.badge}
               </span>
             )}
             {activeItem === item.id && (
-              <ChevronRight className="w-4 h-4 text-teal-400" />
+              <ChevronRight className="w-4 h-4 text-emerald-300" />
             )}
           </button>
         ))}
@@ -100,19 +100,19 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           onClick={() => onItemClick('Settings')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
             activeItem === 'Settings'
-              ? 'bg-teal-500/15 text-teal-400 border-l-2 border-teal-500'
-              : 'text-slate-200 hover:bg-slate-800 hover:text-white border-l-2 border-transparent'
+              ? 'bg-emerald-400/15 text-emerald-300 border-l-2 border-emerald-400'
+              : 'text-slate-200 hover:bg-white/10 hover:text-white border-l-2 border-transparent'
           }`}
         >
           <Settings className={`w-5 h-5 ${
-            activeItem === 'Settings' ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
+            activeItem === 'Settings' ? 'text-emerald-300' : 'text-slate-300 group-hover:text-white'
           }`} />
           <span className="flex-1 text-left font-medium">Settings</span>
         </button>
       </div>
 
       {/* Bottom - Dynamic Profile */}
-      <div className="p-4 border-t border-slate-800">
+      <div className="p-4 border-t border-white/10">
         {loading ? (
           <div className="flex items-center gap-3 px-4 py-3">
             <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
@@ -120,7 +120,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           </div>
         ) : user ? (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center text-sm font-bold text-white shrink-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {getInitials(user.name)}
             </div>
             <div className="flex-1 min-w-0">

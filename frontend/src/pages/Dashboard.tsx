@@ -519,7 +519,7 @@ const Dashboard = () => {
   ]);
 
   return (
-    <div className="flex w-full h-screen overflow-hidden bg-gray-50">
+    <div className="flex w-full h-screen overflow-hidden bg-clinic-bg">
       <div className="flex-shrink-0">
         <Sidebar 
           activeItem={activeItem} 

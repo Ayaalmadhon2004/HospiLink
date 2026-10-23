@@ -27,37 +27,22 @@
   --color-teal-900: #0b3c34;
   --color-teal-950: #06241f;
 
-  /* Warm neutrals instead of the cold default gray/slate. */
-  --color-gray-50: #faf8f4;
-  --color-gray-100: #f3f0ea;
-  --color-gray-200: #e7e2d9;
-  --color-gray-300: #d4cec2;
-  --color-gray-400: #a39d92;
-  --color-gray-500: #78726a;
-  --color-gray-600: #5c574f;
-  --color-gray-700: #45413b;
-  --color-gray-800: #2e2b27;
-  --color-gray-900: #1e1c19;
-  --color-gray-950: #12110f;
-  --color-slate-50: #faf8f4;
-  --color-slate-100: #f3f0ea;
-  --color-slate-200: #e7e2d9;
-  --color-slate-300: #d4cec2;
-  --color-slate-400: #a39d92;
-  --color-slate-500: #78726a;
-  --color-slate-600: #5c574f;
-  --color-slate-700: #45413b;
-  --color-slate-800: #2e2b27;
-  --color-slate-900: #1e1c19;
-  --color-slate-950: #12110f;
-
-  --color-hospital-navy: #0b3c34;
+  /* Brand: deep clinical green (emerald-900 / emerald-950 for the sidebar). */
+  --color-hospital-navy: #064e3b;
+  --color-brand-sidebar: #022c22;
   --color-medical-teal: #2a9a80;
-  --color-clinic-bg: #faf8f4;
-  --color-clinic-text: #1e1c19;
+  --color-clinic-bg: #f8fafc;
+  --color-clinic-text: #0f291e;
 }
 
 @layer base {
+  /* Tailwind 4 defaults borders to currentColor; keep panels on a subtle slate hairline. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--color-slate-200);
+  }
+
   body {
     @apply bg-clinic-bg text-clinic-text font-sans antialiased;
     font-feature-settings: 'tnum' 1;
