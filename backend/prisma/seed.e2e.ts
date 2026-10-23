@@ -28,7 +28,7 @@ export const SEED_NOTIFICATION = {
 async function main(): Promise<void> {
   const hospital =
     (await prisma.hospital.findFirst()) ??
-    (await prisma.hospital.create({ data: { name: 'E2E Test Hospital', location: 'Test District' } }));
+    (await prisma.hospital.create({ data: { name: 'E2E Test Hospital', location: 'Test District', code: 'E2E-TEST' } }));
 
   const admin = await prisma.user.upsert({
     where: { email: E2E_ADMIN.email },

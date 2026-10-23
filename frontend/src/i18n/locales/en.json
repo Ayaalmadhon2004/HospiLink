@@ -43,6 +43,8 @@
     "createAccount": "Create Account",
     "fullName": "Full Name",
     "fullNamePlaceholder": "Dr. John Smith",
+    "hospitalCode": "Hospital code",
+    "hospitalCodePlaceholder": "Ask your hospital admin",
     "emailAddress": "Email Address",
     "emailPlaceholder": "doctor@hospital.com",
     "passwordPlaceholder": "Create a strong password",

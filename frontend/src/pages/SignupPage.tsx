@@ -12,7 +12,8 @@ export const SignupPage = () => {
     name: '', 
     email: '', 
     password: '', 
-    department: 'General'
+    department: 'General',
+    hospitalCode: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -103,6 +104,22 @@ export const SignupPage = () => {
               onChange={e => setFormData({...formData, password: e.target.value})} 
               required 
               autoComplete="new-password"
+              aria-required="true"
+            />
+          </div>
+
+          <div className="col-span-2">
+            <label htmlFor="hospitalCode" className="block text-sm font-medium text-slate-700 mb-1">
+              {t('auth.hospitalCode')}
+            </label>
+            <input
+              id="hospitalCode"
+              className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none transition uppercase"
+              placeholder={t('auth.hospitalCodePlaceholder')}
+              value={formData.hospitalCode}
+              onChange={e => setFormData({...formData, hospitalCode: e.target.value})}
+              required
+              autoComplete="off"
               aria-required="true"
             />
           </div>

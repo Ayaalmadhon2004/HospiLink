@@ -21,6 +21,7 @@ export const signup = async (userData: {
   password: string;
   department: string;
   shift: string;
+  hospitalCode: string;
 }) => {
   const data = await apiPost('/auth/signup', userData);
 

@@ -1,12 +1,15 @@
 import { registerSchema, loginSchema } from '../../src/validators/auth.validator';
 
-const valid = { email: 'A@B.com', password: 'password1', name: 'Sara', department: 'ER', shift: 'DAY' };
+const valid = { email: 'A@B.com', password: 'password1', name: 'Sara', department: 'ER', shift: 'DAY', hospitalCode: 'north-1' };
 
 describe('registerSchema', () => {
   it('accepts valid input and normalizes email', () => {
     const r = registerSchema.safeParse(valid);
     expect(r.success).toBe(true);
-    if (r.success) expect(r.data.email).toBe('a@b.com');
+    if (r.success) {
+      expect(r.data.email).toBe('a@b.com');
+      expect(r.data.hospitalCode).toBe('NORTH-1');
+    }
   });
 
   it('strips role and hospitalId', () => {
@@ -24,6 +27,8 @@ describe('registerSchema', () => {
     ['short name', { name: 'A' }],
     ['missing department', { department: undefined }],
     ['missing shift', { shift: undefined }],
+    ['missing hospitalCode', { hospitalCode: undefined }],
+    ['blank hospitalCode', { hospitalCode: '  ' }],
   ])('rejects %s', (_l, patch) => {
     expect(registerSchema.safeParse({ ...valid, ...patch }).success).toBe(false);
   });

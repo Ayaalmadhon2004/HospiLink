@@ -27,6 +27,7 @@ describe('auth.controller', () => {
       name: 'Dr. Sara',
       department: 'ER',
       shift: 'DAY',
+      hospitalCode: 'north-1',
     };
 
     it('يرفض بيانات غير صالحة بـ 400 ولا يلمس الداتابيز', async () => {
@@ -47,7 +48,7 @@ describe('auth.controller', () => {
       const res = mockResponse();
 
       prismaMock.user.findUnique.mockResolvedValue(null);
-      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'server-hosp' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ id: 'server-hosp' } as any);
       prismaMock.user.create.mockResolvedValue({
         id: 'u', email: validBody.email, role: 'NURSE',
       } as any);
@@ -61,11 +62,41 @@ describe('auth.controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
+    it('يبحث عن المستشفى بالكود (uppercase) ويرفض كود غير معروف بـ 400', async () => {
+      const req = mockRequest({ body: validBody });
+      const res = mockResponse();
+
+      prismaMock.hospital.findUnique.mockResolvedValue(null);
+
+      await register(req, res);
+
+      expect(prismaMock.hospital.findUnique).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { code: 'NORTH-1' } })
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false, message: 'Invalid hospital code' })
+      );
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+
+    it('يرفض التسجيل بدون hospitalCode', async () => {
+      const { hospitalCode: _omit, ...body } = validBody;
+      const req = mockRequest({ body });
+      const res = mockResponse();
+
+      await register(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.hospital.findUnique).not.toHaveBeenCalled();
+      expect(prismaMock.user.create).not.toHaveBeenCalled();
+    });
+
     it('يرجع 500 عام بدون تسريب رسالة الخطأ الداخلية', async () => {
       const req = mockRequest({ body: validBody });
       const res = mockResponse();
 
-      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'h' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ id: 'h' } as any);
       prismaMock.user.findUnique.mockRejectedValue(new Error('secret db detail'));
 
       await register(req, res);
@@ -80,7 +111,7 @@ describe('auth.controller', () => {
       });
       const res = mockResponse();
 
-      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'h' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ id: 'h' } as any);
       prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
 
       await register(req, res);
@@ -98,7 +129,7 @@ describe('auth.controller', () => {
       });
       const res = mockResponse();
 
-      prismaMock.hospital.findFirst.mockResolvedValue({ id: 'hosp-1' } as any);
+      prismaMock.hospital.findUnique.mockResolvedValue({ id: 'hosp-1' } as any);
       prismaMock.user.findUnique.mockResolvedValue(null);
       prismaMock.user.create.mockResolvedValue({
         id: 'new-user',

@@ -75,7 +75,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Every route except login/signup/health must use `protect`; restrict with
   `authorize('ADMIN', 'DOCTOR', ...)`. Roles come from the DB (`protect` reloads the user), never from the token body.
 - Roles: ADMIN, DOCTOR, NURSE, DISPATCHER (see `Role` enum in schema.prisma).
-- Account approval: public signup creates `accountStatus: PENDING` (no token/cookie issued). `protect`, `login` and `socketAuth` answer 403
+- Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).
 - Multi-tenancy: every query is scoped by `hospitalIdOf(req)` (`src/utils/tenant.ts`, = `req.user.hospitalId` loaded from the DB by `protect`).
