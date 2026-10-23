@@ -75,8 +75,8 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, child
       <div
         id={menuId}
         ref={drawerRef}
-        className={`fixed inset-y-0 start-0 z-40 shrink-0 transition-[transform,visibility] duration-200 lg:static lg:block lg:visible lg:translate-x-0 lg:rtl:translate-x-0 ${
-          menuOpen ? 'visible translate-x-0' : 'invisible ltr:-translate-x-full rtl:translate-x-full'
+        className={`fixed inset-y-0 start-0 z-40 shrink-0 transition-[transform,visibility] duration-200 lg:static lg:block ${
+          menuOpen ? 'visible translate-x-0' : 'max-lg:invisible max-lg:ltr:-translate-x-full max-lg:rtl:translate-x-full'
         }`}
       >
         {renderSidebar(closeMenu)}
