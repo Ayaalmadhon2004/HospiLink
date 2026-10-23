@@ -21,12 +21,15 @@ interface ComboboxProps {
   loading?: boolean;
   /** Overrides the default "no options" text */
   emptyMessage?: string;
+  /** Free-text mode: parent owns the typed text and does any (e.g. server-side) filtering */
+  query?: string;
+  onQueryChange?: (query: string) => void;
   id?: string;
   className?: string;
 }
 
 export const Combobox = ({
-  options, value, onChange, placeholder, clearLabel, disabled, loading, emptyMessage, id, className = '',
+  options, value, onChange, placeholder, clearLabel, disabled, loading, emptyMessage, query: freeQuery = '', onQueryChange, id, className = '',
 }: ComboboxProps) => {
   const { t, i18n } = useTranslation();
   const listId = useId();
@@ -36,17 +39,22 @@ export const Combobox = ({
   const [active, setActive] = useState(0);
 
   const selected = options.find((o) => o.value === value);
+  const freeText = onQueryChange !== undefined;
   const items = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const list = q
+    const list = q && !freeText
       ? options.filter((o) => `${o.label} ${o.hint ?? ''}`.toLowerCase().includes(q))
       : options;
     return clearLabel ? [{ label: clearLabel, value: '' }, ...list] : list;
-  }, [options, query, clearLabel]);
+  }, [options, query, clearLabel, freeText]);
 
   let emptyText = '';
   if (loading) emptyText = t('common.loading');
-  else if (items.length === 0) emptyText = emptyMessage ?? t('forms.noOptions');
+  else if (items.length === 0) emptyText = freeText ? emptyMessage ?? '' : emptyMessage ?? t('forms.noOptions');
+
+  let inputValue = selected?.label ?? '';
+  if (open) inputValue = query;
+  if (freeText) inputValue = freeQuery;
 
   const close = () => { setOpen(false); setQuery(''); };
   const pick = (v: string) => { onChange(v); close(); };
@@ -78,16 +86,21 @@ export const Combobox = ({
         aria-activedescendant={open && items[active] ? `${listId}-${active}` : undefined}
         disabled={disabled}
         autoComplete="off"
-        value={open ? query : selected?.label ?? ''}
+        value={inputValue}
         placeholder={placeholder}
         onFocus={() => { setOpen(true); setActive(0); }}
-        onChange={(e) => { setQuery(e.target.value); setActive(0); setOpen(true); }}
+        onChange={(e) => {
+          if (freeText) onQueryChange(e.target.value);
+          else setQuery(e.target.value);
+          setActive(0);
+          setOpen(true);
+        }}
         onKeyDown={onKeyDown}
         onBlur={close}
         className="w-full ps-4 pe-9 py-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-medical-teal focus:ring-2 focus:ring-medical-teal/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
       />
       <ChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute end-3 top-3.5 text-slate-400" />
-      {open && (
+      {open && (emptyText || items.length > 0) && (
         <ul
           id={listId}
           role="listbox"

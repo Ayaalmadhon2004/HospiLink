@@ -1,9 +1,10 @@
 // frontend/src/components/Appointments/NewAppointmentModal.tsx
 import { useState, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
-import { X, Search, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
+import { X, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
 import { createAppointment, updateAppointment} from '../../services/appointmentsService';
 import { apiGet } from '../../services/api';
+import { Combobox } from '../Form/Combobox';
 import { extractList, getResponseData } from '../../types/api';
 import type { Appointment } from '../../services/appointmentsService';
 import { toast } from 'sonner';
@@ -60,7 +61,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   // Form state
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientSearch, setPatientSearch] = useState('');
-  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   
   const [doctorId, setDoctorId] = useState('');
   const [scheduledAt, setScheduledAt] = useState('');
@@ -169,7 +169,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   const handleSelectPatient = (patient: Patient) => {
     setSelectedPatient(patient);
     setPatientSearch(patient.name);
-    setShowPatientDropdown(false);
     setPatients([]);
   };
 
@@ -179,7 +178,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
     if (selectedPatient && selectedPatient.name !== value) {
       setSelectedPatient(null);
     }
-    setShowPatientDropdown(true);
   };
 
   // ─── Submit ────────────────────────────────────────
@@ -269,56 +267,23 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
             <label className="block text-sm font-medium text-gray-700 mb-1">
               {t('appointments.modal.patient')} *
             </label>
-            <div className="relative">
-              <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                value={patientSearch}
-                onChange={(e) => handlePatientInputChange(e.target.value)}
-                onFocus={() => setShowPatientDropdown(true)}
-                placeholder={t('appointments.modal.patientPlaceholder')}
-                className="w-full ps-10 pe-4 py-2.5 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none"
-                required
-              />
-              {selectedPatient && (
-                <span className="absolute end-3 top-1/2 -translate-y-1/2">
-                  <span className="text-xs bg-teal-100 text-teal-700 px-2 py-1 rounded-full">
-                    <bdi dir="ltr">#{selectedPatient.patientCode}</bdi>
-                  </span>
-                </span>
-              )}
-            </div>
-
-            {/* Patient Dropdown */}
-            {showPatientDropdown && (patients.length > 0 || fetchingPatients) && !selectedPatient && (
-              <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto">
-                {fetchingPatients ? (
-                  <div className="p-3 text-sm text-gray-500 text-center">{t('appointments.modal.searching')}</div>
-                ) : patients.length === 0 ? (
-                  <div className="p-3 text-sm text-gray-500 text-center">
-                    <UserPlus size={14} className="inline me-1" />
-                    {t('appointments.modal.willCreateColon', { name: patientSearch })}
-                  </div>
-                ) : (
-                  patients.map((patient) => (
-                    <button
-                      key={patient.id}
-                      type="button"
-                      onClick={() => handleSelectPatient(patient)}
-                      className="w-full text-start px-4 py-3 hover:bg-gray-50 border-b last:border-b-0 transition flex items-center justify-between"
-                    >
-                      <div>
-                        <span className="font-medium text-gray-900">{patient.name}</span>
-                        <span className="text-xs text-gray-500 ms-2"><bdi dir="ltr">#{patient.patientCode}</bdi></span>
-                      </div>
-                      {patient.phone && (
-                        <bdi dir="ltr" className="text-xs text-gray-400">{patient.phone}</bdi>
-                      )}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
+            <Combobox
+              options={patients.map((p) => ({ label: p.name, value: p.id, hint: p.patientCode }))}
+              value={selectedPatient?.id ?? ''}
+              onChange={(id) => {
+                const patient = patients.find((p) => p.id === id);
+                if (patient) handleSelectPatient(patient);
+              }}
+              query={patientSearch}
+              onQueryChange={handlePatientInputChange}
+              loading={fetchingPatients}
+              emptyMessage={
+                patientSearch.length >= 2 && !selectedPatient
+                  ? t('appointments.modal.willCreateColon', { name: patientSearch })
+                  : undefined
+              }
+              placeholder={t('appointments.modal.patientPlaceholder')}
+            />
 
             {/* Selected Patient Badge */}
             {selectedPatient && (
