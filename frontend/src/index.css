@@ -167,3 +167,10 @@
 :root[data-density='compact'] {
   font-size: 14px;
 }
+
+/* Smoother text rendering. Also changes the built CSS hash, so service workers
+   that cached a bad copy of the old stylesheet fetch a fresh one. */
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
