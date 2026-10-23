@@ -3,7 +3,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
-import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
+import { JWT_SECRET, SESSION_TTL } from '../config/jwt';
 import { registerSchema, loginSchema, formatZodError } from '../validators/auth.validator';
 import logger from '../config/logger';
 import { authCookieOptions, clearCookieOptions } from '../config/cookies';
@@ -16,7 +16,7 @@ const PUBLIC_SIGNUP_ROLE = 'NURSE' as const;
 // ============================================
 // Generate JWT Token
 // ============================================
-const generateToken = (user: { id: string; email: string; role: string }): string => {
+const generateToken = (user: { id: string; email: string; role: string }, ttl: { jwt: string }): string => {
   return jwt.sign(
     {
       userId: user.id,
@@ -24,7 +24,7 @@ const generateToken = (user: { id: string; email: string; role: string }): strin
       role: user.role,
     },
     JWT_SECRET,
-    { expiresIn: JWT_EXPIRES_IN }
+    { expiresIn: ttl.jwt as jwt.SignOptions['expiresIn'] }
   );
 };
 
@@ -116,7 +116,8 @@ export const login = async (req: Request, res: Response) => {
       });
       return;
     }
-    const { email, password } = parsed.data;
+    const { email, password, rememberMe } = parsed.data;
+    const ttl = rememberMe ? SESSION_TTL.remember : SESSION_TTL.default;
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -164,9 +165,9 @@ export const login = async (req: Request, res: Response) => {
       id: user.id,
       email: user.email,
       role: user.role,
-    });
+    }, ttl);
 
-    res.cookie('token', token, authCookieOptions(30 * 24 * 60 * 60 * 1000));
+    res.cookie('token', token, authCookieOptions(ttl.cookieMs));
 
     const { password: _, ...userWithoutPassword } = user;
 

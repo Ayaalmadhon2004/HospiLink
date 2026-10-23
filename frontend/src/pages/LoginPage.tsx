@@ -92,8 +92,9 @@ export const LoginPage = () => {
           </div>
 
           <div className="flex items-center justify-between">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label htmlFor="remember-me" className="flex items-center gap-2 cursor-pointer">
               <input
+                id="remember-me"
                 type="checkbox"
                 checked={formData.rememberMe}
                 onChange={(e) => setFormData({ ...formData, rememberMe: e.target.checked })}

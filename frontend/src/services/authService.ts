@@ -4,7 +4,7 @@ import { apiPost, apiGet } from './api';
 // ============================================
 // LOGIN
 // ============================================
-export const login = async (credentials: { email: string; password: string }) => {
+export const login = async (credentials: { email: string; password: string; rememberMe?: boolean }) => {
   const data = await apiPost('/auth/login', credentials);
 
   // الـ token بينحفظ بكوكي httpOnly من السيرفر — ما منخزنه بالـ localStorage
