@@ -1,22 +1,23 @@
 // frontend/src/pages/Dispatch/DispatchDashboard.tsx
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useQuery } from '@tanstack/react-query';
 import { apiGet } from '../services/api';
 import type { ApiResponse } from '../types/api';
 import { AlertCircle, X } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import UnitActions from '../components/Dashboard/UnitActions';
+import {
+  computeUnitStats,
+  getStatusStyle,
+  getUnitAlarm,
+  type DispatchUnit,
+} from '../utils/dispatchUnits';
 
-interface DispatchUnit {
-  id: string;
-  unitCode: string;
-  unitType: string;
-  status: string;
-  currentCall?: string;
-  destination?: string;
-  crew: string[];
-  eta?: number;
-}
+const POLL_INTERVAL_MS = 10_000;
+const CLOCK_TICK_MS = 30_000;
+const CAN_DISPATCH = ['ADMIN', 'DISPATCHER'];
 
 interface Toast {
   id: string;
@@ -34,6 +35,9 @@ const DispatchDashboard: React.FC = () => {
 
   const [units, setUnits] = useState<DispatchUnit[]>([]);
   const [toasts, setToasts] = useState<Toast[]>([]);
+  const [now, setNow] = useState(() => Date.now());
+  const { user } = useAuth();
+  const canDispatch = !!user && CAN_DISPATCH.includes(user.role);
 
   const { data: unitsData } = useQuery({
     queryKey: ['dispatch-units'],
@@ -41,8 +45,15 @@ const DispatchDashboard: React.FC = () => {
       const res = await apiGet<ApiResponse<DispatchUnit[]>>('/dispatch/units/active');
       return res?.data || [];
     },
-    refetchInterval: 30000
+    refetchInterval: POLL_INTERVAL_MS,
+    refetchIntervalInBackground: false,
   });
+
+  // Re-evaluate time-based alarms (prolonged on-scene, delayed) between polls
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
+    return () => clearInterval(id);
+  }, []);
 
   // Toast helper
   const showToast = useCallback((message: string, type: 'error' | 'warning' | 'success') => {
@@ -83,22 +94,7 @@ const DispatchDashboard: React.FC = () => {
     }
   }, [criticalAlert, showToast]);
 
-  const stats = {
-    active: units.filter(u => u.status !== 'OFF_DUTY').length,
-    enRoute: units.filter(u => u.status === 'EN_ROUTE').length,
-    onScene: units.filter(u => u.status === 'ON_SCENE').length,
-    available: units.filter(u => u.status === 'AVAILABLE').length,
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'EN_ROUTE': return 'bg-blue-100 text-blue-800';
-      case 'ON_SCENE': return 'bg-red-100 text-red-800';
-      case 'AVAILABLE': return 'bg-green-100 text-green-800';
-      case 'TRANSPORTING': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const stats = useMemo(() => computeUnitStats(units, now), [units, now]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
@@ -146,11 +142,12 @@ const DispatchDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <StatCard title={t('dispatch.stats.active')} value={stats.active} />
         <StatCard title={t('dispatch.stats.enRoute')} value={stats.enRoute} />
         <StatCard title={t('dispatch.stats.onScene')} value={stats.onScene} />
         <StatCard title={t('dispatch.stats.available')} value={stats.available} />
+        <StatCard title={t('dispatch.stats.alarms')} value={stats.alarms} alarm={stats.alarms > 0} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm p-6">
@@ -175,11 +172,19 @@ const DispatchDashboard: React.FC = () => {
                 <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.crew')}</th>
                 <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.eta')}</th>
                 <th scope="col" className="pb-3 font-medium text-start">{t('dispatch.columns.status')}</th>
+                {canDispatch && (
+                  <th scope="col" className="pb-3 font-medium text-end">
+                    <span className="sr-only">{t('dispatch.columns.actions')}</span>
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody>
-              {units.map(unit => (
-                <tr key={unit.id} className="border-b last:border-0 hover:bg-gray-50 transition">
+              {units.map(unit => {
+                const alarm = getUnitAlarm(unit, now);
+                const style = getStatusStyle(unit.status);
+                return (
+                <tr key={unit.id} className={`border-b last:border-0 transition ${alarm ? 'bg-red-50/40' : 'hover:bg-gray-50'}`}>
                   <td className="py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center" aria-hidden="true">
@@ -192,25 +197,41 @@ const DispatchDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.currentCall || '—'}</p>
+                    <p className="text-gray-700">{unit.currentCall?.type ?? t('dispatch.noCall')}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.destination || '—'}</p>
+                    <p className="text-gray-700">{unit.currentCall?.location ?? t('dispatch.noCall')}</p>
                   </td>
                   <td className="py-4">
                     <p className="text-gray-700">{unit.crew.join(t('common.listSeparator'))}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { count: unit.eta }) : '—'}</p>
+                    <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { count: unit.eta }) : t('dispatch.noCall')}</p>
                   </td>
                   <td className="py-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(unit.status)}`}>
-                      <span className="me-1" aria-hidden="true">●</span>
-                      {t(`dispatch.status.${unit.status}`, { defaultValue: unit.status.replace('_', ' ') })}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-3 py-1 rounded-full border text-xs font-medium ${style.badge}`}>
+                        <span className="me-1" aria-hidden="true">●</span>
+                        {t(`dispatch.status.${unit.status}`, { defaultValue: unit.status.replace('_', ' ') })}
+                      </span>
+                      {alarm && (
+                        <span
+                          role="status"
+                          className="px-2 py-1 rounded-full bg-red-100 text-red-700 text-xs font-semibold ring-2 ring-red-300 animate-pulse"
+                        >
+                          {t(`dispatch.alarms.${alarm}`)}
+                        </span>
+                      )}
+                    </div>
                   </td>
+                  {canDispatch && (
+                    <td className="py-4 text-end">
+                      <UnitActions unit={unit} />
+                    </td>
+                  )}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -219,10 +240,10 @@ const DispatchDashboard: React.FC = () => {
   );
 };
 
-const StatCard: React.FC<{ title: string; value: number }> = ({ title, value }) => (
-  <div className="bg-white rounded-xl shadow-sm p-6">
+const StatCard: React.FC<{ title: string; value: number; alarm?: boolean }> = ({ title, value, alarm }) => (
+  <div className={`rounded-xl shadow-sm p-6 ${alarm ? 'bg-red-50 ring-2 ring-red-300 animate-pulse' : 'bg-white'}`}>
     <p className="text-sm text-gray-500 mb-2">{title}</p>
-    <p className="text-3xl font-bold text-gray-800">{value}</p>
+    <p className={`text-3xl font-bold ${alarm ? 'text-red-700' : 'text-gray-800'}`}>{value}</p>
   </div>
 );
 

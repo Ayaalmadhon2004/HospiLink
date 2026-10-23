@@ -21,3 +21,6 @@ export const createCallSchema = z.object({
 });
 
 export const assignUnitSchema = z.object({ unitId: idSchema });
+
+export const callStatusEnum = z.enum(['PENDING', 'ASSIGNED', 'EN_ROUTE', 'ON_SCENE', 'COMPLETED', 'CANCELLED']);
+export const listCallsQuery = z.object({ status: callStatusEnum.optional() });

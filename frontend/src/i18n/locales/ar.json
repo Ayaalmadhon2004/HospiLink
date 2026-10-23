@@ -700,7 +700,8 @@
       "active": "الوحدات النشطة",
       "enRoute": "في الطريق",
       "onScene": "في موقع الحدث",
-      "available": "متاحة"
+      "available": "متاحة",
+      "alarms": "تنبيهات"
     },
     "columns": {
       "unit": "الوحدة",
@@ -708,7 +709,8 @@
       "destination": "الوجهة",
       "crew": "الطاقم",
       "eta": "الوصول المتوقع",
-      "status": "الحالة"
+      "status": "الحالة",
+      "actions": "إجراءات"
     },
     "unitTypes": {
       "AMBULANCE": "سيارة إسعاف",
@@ -724,6 +726,20 @@
       "TRANSPORTING": "ينقل مريضاً",
       "AT_HOSPITAL": "في المستشفى",
       "OFF_DUTY": "خارج الخدمة"
+    },
+    "noCall": "—",
+    "actions": {
+      "setStatus": "تغيير الحالة",
+      "open": "إجراءات {{unit}}",
+      "updated": "تم تحديث {{unit}}",
+      "assign": "تعيين لبلاغ",
+      "noPending": "لا توجد بلاغات معلّقة",
+      "assigned": "تم تعيين {{unit}}"
+    },
+    "alarms": {
+      "critical": "مهمة حرجة",
+      "prolongedOnScene": "مدة طويلة في الموقع",
+      "delayed": "متأخرة"
     }
   },
   "settings": {

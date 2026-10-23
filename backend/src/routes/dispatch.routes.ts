@@ -3,6 +3,7 @@ import { Router } from 'express';
 import {
   getAllUnits,
   getActiveUnits,
+  getCalls,
   updateUnitStatus,
   createCall,
   assignUnitToCall,
@@ -11,13 +12,14 @@ import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { idParams } from '../validators/common.validator';
-import { updateUnitStatusSchema, createCallSchema, assignUnitSchema } from '../validators/dispatch.validator';
+import { updateUnitStatusSchema, createCallSchema, assignUnitSchema, listCallsQuery } from '../validators/dispatch.validator';
 
 const router = Router();
 
 // كل المستخدمين المصادقين يقدروا يشوفوا
 router.get('/units', protect, getAllUnits);
 router.get('/units/active', protect, getActiveUnits);
+router.get('/calls', protect, validate({ query: listCallsQuery }), getCalls);
 
 // Dispatchers و Admins فقط يقدروا يعدلوا
 router.put('/units/:id/status', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams, body: updateUnitStatusSchema }), logActivity('UPDATE_UNIT_STATUS'), updateUnitStatus);

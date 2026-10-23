@@ -90,10 +90,10 @@ describe('notification events', () => {
     });
 
     it('assignUnitToCall notifies dispatchers', async () => {
-      prismaMock.$transaction.mockResolvedValue([
-        { id: 'c1', type: 'Cardiac', location: 'Gate 2' },
-        { id: 'u1', unitCode: 'AMB-1' },
-      ] as any);
+      prismaMock.$transaction.mockResolvedValue({
+        updatedCall: { id: 'c1', type: 'Cardiac', location: 'Gate 2' },
+        updatedUnit: { id: 'u1', unitCode: 'AMB-1' },
+      } as any);
       await assignUnitToCall(mockRequest({ user: actor, params: { id: 'c1' }, body: { unitId: 'u1' } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledWith({
         data: [expect.objectContaining({ title: 'Unit assigned to call' })],
