@@ -31,8 +31,8 @@ export const updateNotificationSettingsSchema = z.object({
 });
 
 export const updateSecuritySettingsSchema = z.object({
-  // 2FA is not implemented: only "off" is accepted so the UI can never show a false sense of security.
-  twoFactorAuth: z.literal(false, { message: 'Two-factor authentication is not available yet' }).optional(),
+  // Managed only through /api/auth/2fa/*; a toggle sent here must never be silently ignored.
+  twoFactorAuth: z.never({ message: 'Manage two-factor authentication via /api/auth/2fa' }).optional(),
   autoLockIdleSessions: z.boolean().optional(),
   compactDensity: z.boolean().optional(),
 });

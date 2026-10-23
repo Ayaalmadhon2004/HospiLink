@@ -57,6 +57,6 @@ docker compose --env-file .env.docker down -v     # stop and delete the database
 ```
 
 Notes:
-- The auth cookie is `secure` + `sameSite=none`. Browsers accept this on `localhost` over http, but not on other plain-http hosts;
+- The auth cookie is `secure` + `sameSite=none` (the default when `COOKIE_DOMAIN` is unset; with it, the cookie is `sameSite=lax`). Browsers accept this on `localhost` over http, but not on other plain-http hosts;
   put the stack behind HTTPS for anything beyond local use.
 - Uploaded report files are stored in the database (`Report.fileData`), so no uploads volume is needed.

@@ -4,8 +4,17 @@ import { apiPost, apiGet } from './api';
 // ============================================
 // LOGIN
 // ============================================
-export const login = async (credentials: { email: string; password: string }) => {
-  const data = await apiPost('/auth/login', credentials);
+export interface LoginResponse {
+  success?: boolean;
+  message?: string;
+  user?: { id: string };
+  // Set instead of `user` when the account has 2FA: finish with verifyTwoFactor().
+  twoFactorRequired?: boolean;
+  challengeToken?: string;
+}
+
+export const login = async (credentials: { email: string; password: string; rememberMe?: boolean }) => {
+  const data = await apiPost<LoginResponse>('/auth/login', credentials);
 
   // الـ token بينحفظ بكوكي httpOnly من السيرفر — ما منخزنه بالـ localStorage
   return data;
@@ -65,3 +74,32 @@ export const isAuthenticated = async () => {
     return false;
   }
 };
+
+// ============================================
+// PASSWORD RESET / EMAIL VERIFICATION
+// ============================================
+export const forgotPassword = (email: string) => apiPost('/auth/forgot-password', { email });
+
+export const resetPassword = (token: string, password: string) =>
+  apiPost('/auth/reset-password', { token, password });
+
+export const verifyEmail = (token: string) => apiPost('/auth/verify-email', { token });
+
+export const resendVerification = (email: string) => apiPost('/auth/resend-verification', { email });
+
+// ============================================
+// TWO-FACTOR AUTHENTICATION
+// ============================================
+export type SecondFactor = { code: string } | { recoveryCode: string };
+
+export const verifyTwoFactor = (challengeToken: string, factor: SecondFactor) =>
+  apiPost<LoginResponse>('/auth/2fa/login', { challengeToken, ...factor });
+
+export const setupTwoFactor = () =>
+  apiPost<{ data: { secret: string; otpauthUrl: string } }>('/auth/2fa/setup');
+
+export const enableTwoFactor = (code: string) =>
+  apiPost<{ data: { recoveryCodes: string[] } }>('/auth/2fa/enable', { code });
+
+export const disableTwoFactor = (password: string, factor: SecondFactor) =>
+  apiPost('/auth/2fa/disable', { password, ...factor });

@@ -40,7 +40,7 @@ describe('auth.middleware', () => {
 
       expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
         where: { id: 'user-1' },
-        select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true },
+        select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true, passwordChangedAt: true },
       });
       expect(req.user).toEqual({
         id: 'user-1',
@@ -50,6 +50,37 @@ describe('auth.middleware', () => {
       });
       expect(next).toHaveBeenCalledTimes(1);
       expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it('يرفض توكن صدر قبل آخر تغيير للباسورد (revocation)', async () => {
+      const token = jwt.sign({ userId: 'user-1', iat: Math.floor(Date.now() / 1000) - 3600 }, JWT_SECRET);
+      const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
+      const res = mockResponse();
+      const next = mockNext();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1', accountStatus: 'ACTIVE',
+        passwordChangedAt: new Date(),
+      } as any);
+
+      await protect(req, res, next);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('يقبل توكن صدر بعد آخر تغيير للباسورد', async () => {
+      const token = jwt.sign({ userId: 'user-1' }, JWT_SECRET);
+      const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
+      const res = mockResponse();
+      const next = mockNext();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1', accountStatus: 'ACTIVE',
+        passwordChangedAt: new Date(Date.now() - 3600_000),
+      } as any);
+
+      await protect(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
     });
 
     it('ياخد التوكن من الكوكيز لو ما في Authorization header', async () => {

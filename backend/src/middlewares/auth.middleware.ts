@@ -38,11 +38,16 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & { userId: string };  // ← ✅ Unified secret
+    const decoded = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & { userId?: string; purpose?: string };
+
+    // 2FA challenge tokens (and anything else without a userId) are not sessions.
+    if (typeof decoded.userId !== 'string' || decoded.purpose) {
+      return res.status(401).json({ error: 'Invalid or expired token' });
+    }  // ← ✅ Unified secret
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true },
+      select: { id: true, email: true, role: true, hospitalId: true, accountStatus: true, passwordChangedAt: true },
     });
 
     if (!user) {
@@ -59,6 +64,11 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
         message,
         code: pending ? 'ACCOUNT_PENDING' : 'ACCOUNT_DISABLED',
       });
+    }
+
+    // Tokens issued before the last password change/reset are dead.
+    if (user.passwordChangedAt && (decoded.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+      return res.status(401).json({ error: 'Session expired, please sign in again' });
     }
 
     // hospitalId comes from the DB row, never from the token or the request: it is the tenant for every query.

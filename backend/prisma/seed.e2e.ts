@@ -41,6 +41,7 @@ async function main(): Promise<void> {
       department: 'Emergency',
       shift: 'Day',
       status: 'On Duty',
+      emailVerifiedAt: new Date(),
       hospitalId: hospital.id,
     },
   });

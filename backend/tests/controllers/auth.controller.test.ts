@@ -237,6 +237,35 @@ describe('auth.controller', () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
 
+    it.each([
+      [true, 7 * 24 * 60 * 60, 7 * 24 * 60 * 60 * 1000],
+      [false, 24 * 60 * 60, undefined],
+    ])('rememberMe=%s: JWT lifetime %ss and cookie maxAge %s', async (rememberMe, jwtSeconds, maxAge) => {
+      const hashed = await bcrypt.hash('correct-password', 4);
+      const req = mockRequest({ body: { email: 'a@a.com', password: 'correct-password', rememberMe } });
+      const res = mockResponse();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'u1', email: 'a@a.com', password: hashed, role: 'DOCTOR', accountStatus: 'ACTIVE', emailVerifiedAt: new Date(), hospital: null,
+      } as any);
+
+      await login(req, res);
+
+      const [, token, opts] = (res.cookie as jest.Mock).mock.calls[0];
+      const decoded = jwt.decode(token) as { iat: number; exp: number };
+      expect(decoded.exp - decoded.iat).toBe(jwtSeconds);
+      expect(opts.maxAge).toBe(maxAge);
+    });
+
+    it('يرفض rememberMe غير boolean بـ 400', async () => {
+      const req = mockRequest({ body: { email: 'a@a.com', password: 'x', rememberMe: 'yes' } });
+      const res = mockResponse();
+
+      await login(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
+    });
+
     it('يسجل الدخول بنجاح ويرجع توكن + بيانات المستخدم بدون الباسورد', async () => {
       const hashed = await bcrypt.hash('correct-password', 4);
       const req = mockRequest({ body: { email: 'a@a.com', password: 'correct-password' } });
@@ -249,6 +278,7 @@ describe('auth.controller', () => {
         role: 'DOCTOR',
         name: 'Dr. A',
         accountStatus: 'ACTIVE',
+        emailVerifiedAt: new Date(),
         hospital: { id: 'h1', name: 'HospiLink General', location: 'Nablus' },
       } as any);
 
@@ -257,6 +287,7 @@ describe('auth.controller', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
       expect(jsonArg.success).toBe(true);
+      expect(res.cookie).toHaveBeenCalledWith('token', expect.any(String), expect.objectContaining({ httpOnly: true, sameSite: 'none' }));
       expect(jsonArg.user.password).toBeUndefined();
       expect(jsonArg.user.email).toBe('a@a.com');
 
@@ -347,7 +378,7 @@ describe('auth.controller', () => {
 
       expect(prismaMock.user.update).toHaveBeenCalledWith({
         where: { id: 'u1' },
-        data: { password: expect.any(String) },
+        data: { password: expect.any(String), passwordChangedAt: expect.any(Date) },
       });
       const newHashed = (prismaMock.user.update.mock.calls[0][0] as any).data.password;
       expect(await bcrypt.compare('newpass123', newHashed)).toBe(true);

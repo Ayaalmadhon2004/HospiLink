@@ -60,6 +60,8 @@ export const inviteUser = async (req: Request, res: Response) => {
         department,
         shift,
         accountStatus: 'ACTIVE',
+        // The admin vouches for the address of an invited user.
+        emailVerifiedAt: new Date(),
         hospitalId: hospitalIdOf(req),
       },
       select: USER_SELECT,

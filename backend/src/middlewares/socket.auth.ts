@@ -43,18 +43,22 @@ export const socketAuth = async (
   if (!token) return next(new Error('Unauthorized: no token provided'));
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; iat?: number };
     if (!decoded || typeof decoded.userId !== 'string') {
       return next(new Error('Unauthorized: invalid token'));
     }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, role: true, hospitalId: true, accountStatus: true },
+      select: { id: true, role: true, hospitalId: true, accountStatus: true, passwordChangedAt: true },
     });
     if (!user) return next(new Error('Unauthorized: user not found'));
     // Same rule as `protect`: PENDING / DISABLED accounts get no realtime data either.
     if (user.accountStatus !== 'ACTIVE') return next(new Error('Forbidden: account not active'));
+
+    if (user.passwordChangedAt && (decoded.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
+      return next(new Error('Unauthorized: session expired'));
+    }
 
     socket.data.user = { id: user.id, role: user.role, hospitalId: user.hospitalId } as SocketUser;
     next();

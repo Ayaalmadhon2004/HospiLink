@@ -44,3 +44,35 @@ describe('loginSchema', () => {
     expect(loginSchema.safeParse({ email: { $ne: '' }, password: 'x' }).success).toBe(false);
   });
 });
+
+import {
+  forgotPasswordSchema,
+  resetPasswordSchema,
+  verifyEmailSchema,
+  changePasswordSchema,
+} from '../../src/validators/auth.validator';
+
+describe('recovery schemas', () => {
+  const token = 'a'.repeat(32);
+
+  it('forgotPassword lowercases and validates the email', () => {
+    expect(forgotPasswordSchema.parse({ email: ' A@B.com ' }).email).toBe('a@b.com');
+    expect(forgotPasswordSchema.safeParse({ email: 'x' }).success).toBe(false);
+  });
+
+  it('resetPassword needs a token and an 8+ char password', () => {
+    expect(resetPasswordSchema.safeParse({ token, password: 'long-enough' }).success).toBe(true);
+    expect(resetPasswordSchema.safeParse({ token, password: 'short' }).success).toBe(false);
+    expect(resetPasswordSchema.safeParse({ token: 'x', password: 'long-enough' }).success).toBe(false);
+  });
+
+  it('verifyEmail needs a token', () => {
+    expect(verifyEmailSchema.safeParse({ token }).success).toBe(true);
+    expect(verifyEmailSchema.safeParse({}).success).toBe(false);
+  });
+
+  it('changePassword enforces the new password length', () => {
+    expect(changePasswordSchema.safeParse({ currentPassword: 'old', newPassword: 'long-enough' }).success).toBe(true);
+    expect(changePasswordSchema.safeParse({ currentPassword: 'old', newPassword: 'short' }).success).toBe(false);
+  });
+});
