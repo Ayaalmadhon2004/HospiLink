@@ -672,7 +672,8 @@
       "active": "Units Active",
       "enRoute": "En Route",
       "onScene": "On Scene",
-      "available": "Available"
+      "available": "Available",
+      "alarms": "Alerts"
     },
     "columns": {
       "unit": "UNIT",
@@ -680,7 +681,8 @@
       "destination": "DESTINATION",
       "crew": "CREW",
       "eta": "ETA",
-      "status": "STATUS"
+      "status": "STATUS",
+      "actions": "Actions"
     },
     "unitTypes": {
       "AMBULANCE": "Ambulance",
@@ -696,6 +698,17 @@
       "TRANSPORTING": "TRANSPORTING",
       "AT_HOSPITAL": "AT HOSPITAL",
       "OFF_DUTY": "OFF DUTY"
+    },
+    "noCall": "—",
+    "actions": {
+      "setStatus": "Set status",
+      "open": "Actions for {{unit}}",
+      "updated": "{{unit}} updated"
+    },
+    "alarms": {
+      "critical": "Critical mission",
+      "prolongedOnScene": "Prolonged on scene",
+      "delayed": "Delayed"
     }
   },
   "settings": {
