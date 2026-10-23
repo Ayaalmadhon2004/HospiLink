@@ -12,14 +12,6 @@ import logger from '../config/logger';
 // route until an ADMIN approves it and assigns the real role (users.controller).
 const PUBLIC_SIGNUP_ROLE = 'NURSE' as const;
 
-// Hospital for public signups comes from the server, never from the request body:
-// HOSPITAL_ID env var if set, otherwise the first hospital (single-tenant deployment).
-const resolveSignupHospitalId = async (): Promise<string | null> => {
-  if (process.env.HOSPITAL_ID) return process.env.HOSPITAL_ID;
-  const hospital = await prisma.hospital.findFirst({ select: { id: true }, orderBy: { createdAt: 'asc' } });
-  return hospital?.id ?? null;
-};
-
 // ============================================
 // Generate JWT Token
 // ============================================
@@ -46,14 +38,15 @@ export const register = async (req: Request, res: Response) => {
       return;
     }
     // role / hospitalId from the body are intentionally ignored.
-    const { email, password, name, department, shift } = parsed.data;
+    const { email, password, name, department, shift, hospitalCode } = parsed.data;
 
-    const hospitalId = await resolveSignupHospitalId();
-    if (!hospitalId) {
-      logger.error('Register error: no hospital configured for signup');
-      res.status(500).json({ success: false, message: 'Registration is currently unavailable' });
+    // The hospital comes from its signup code, never from a client-supplied id.
+    const hospital = await prisma.hospital.findUnique({ where: { code: hospitalCode }, select: { id: true } });
+    if (!hospital) {
+      res.status(400).json({ success: false, message: 'Invalid hospital code' });
       return;
     }
+    const hospitalId = hospital.id;
 
     const existingUser = await prisma.user.findUnique({
       where: { email },

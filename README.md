@@ -155,7 +155,6 @@ Environment variables (`backend/.env`, never commit it):
 | `DATABASE_URL` | yes | PostgreSQL connection string |
 | `JWT_SECRET` | yes | Long random string. The server refuses to start without it. |
 | `PORT` | no | Defaults to `5000` |
-| `HOSPITAL_ID` | no | Hospital that public signups join. Defaults to the first hospital in the database. |
 | `NODE_ENV` | no | `production` disables dev logging |
 | `SENTRY_DSN` | no | Enables error reporting to Sentry (no PII is sent) |
 

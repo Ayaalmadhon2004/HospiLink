@@ -43,6 +43,8 @@
     "createAccount": "إنشاء حساب",
     "fullName": "الاسم الكامل",
     "fullNamePlaceholder": "د. محمد أحمد",
+    "hospitalCode": "رمز المستشفى",
+    "hospitalCodePlaceholder": "اطلب الرمز من مدير المستشفى",
     "emailAddress": "البريد الإلكتروني",
     "emailPlaceholder": "doctor@hospital.com",
     "passwordPlaceholder": "أنشئ كلمة مرور قوية",
@@ -750,6 +752,10 @@
     "saveError": "تعذّر حفظ التغييرات. يرجى المحاولة مرة أخرى.",
     "profileUpdated": "تم تحديث الملف الشخصي",
     "title": "الإعدادات",
+    "hospital": {
+      "title": "رمز تسجيل المستشفى",
+      "hint": "شارك هذا الرمز مع الموظفين ليسجّلوا في مستشفاك. تتم الموافقة على كل حساب قبل أن يتمكن من الدخول."
+    },
     "profile": {
       "title": "الملف الشخصي",
       "fullName": "الاسم الكامل",

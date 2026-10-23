@@ -13,6 +13,7 @@ async function main() {
       data: {
         name: 'Northside Regional Medical Center',
         location: 'Central District',
+        code: 'HOSPILINK',
       },
     });
     console.log(`🏥 Created Hospital: ${hospital.name} (${hospital.id})`);
