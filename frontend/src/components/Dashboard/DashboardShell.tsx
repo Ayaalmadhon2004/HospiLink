@@ -46,7 +46,7 @@ export const DashboardShell = ({ title, renderSidebar, mainLabel, actions, child
   }, [menuOpen]);
 
   return (
-    <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden bg-gray-50">
+    <div className="flex flex-col lg:flex-row w-full h-screen overflow-hidden bg-clinic-bg">
       {/* Top bar, phones only */}
       <header className="lg:hidden flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-hospital-navy to-teal-700 text-white shrink-0">
         <button

@@ -92,13 +92,13 @@ const Beds = () => {
   const getStatusConfig = (status: BedStatus) => {
     switch (status) {
       case 'AVAILABLE':
-        return { badge: 'bg-emerald-100 text-emerald-800', label: t('beds.status.AVAILABLE'), dot: 'bg-emerald-500' };
+        return { badge: 'bg-emerald-50 text-emerald-800 ring-1 ring-inset ring-emerald-200', label: t('beds.status.AVAILABLE'), dot: 'bg-emerald-500' };
       case 'OCCUPIED':
-        return { badge: 'bg-rose-100 text-rose-800', label: t('beds.status.OCCUPIED'), dot: 'bg-rose-500' };
+        return { badge: 'bg-red-50 text-red-800 ring-1 ring-inset ring-red-200', label: t('beds.status.OCCUPIED'), dot: 'bg-red-500' };
       case 'MAINTENANCE':
-        return { badge: 'bg-amber-100 text-amber-800', label: t('beds.status.MAINTENANCE'), dot: 'bg-amber-500' };
+        return { badge: 'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200', label: t('beds.status.MAINTENANCE'), dot: 'bg-slate-500' };
       case 'CLEANING':
-        return { badge: 'bg-blue-100 text-blue-800', label: t('beds.status.CLEANING'), dot: 'bg-blue-500' };
+        return { badge: 'bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200', label: t('beds.status.CLEANING'), dot: 'bg-amber-500' };
     }
   };
 
@@ -138,7 +138,7 @@ const Beds = () => {
 
       {/* Stats */}
       <section className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-white rounded-xl shadow-sm border p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">{t('beds.stats.total')}</p>
@@ -149,7 +149,7 @@ const Beds = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">{t('beds.status.AVAILABLE')}</p>
@@ -160,36 +160,36 @@ const Beds = () => {
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">{t('beds.status.OCCUPIED')}</p>
-              <p className="text-2xl font-bold text-rose-600 mt-1">{stats.occupied}</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{stats.occupied}</p>
             </div>
-            <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center">
-              <User className="w-5 h-5 text-rose-600" />
+            <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
+              <User className="w-5 h-5 text-red-600" />
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">{t('beds.status.CLEANING')}</p>
-              <p className="text-2xl font-bold text-blue-600 mt-1">{stats.cleaning}</p>
+              <p className="text-2xl font-bold text-amber-600 mt-1">{stats.cleaning}</p>
             </div>
-            <div className="w-10 h-10 bg-blue-50 rounded-lg flex items-center justify-center">
-              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
+              <div className="w-3 h-3 rounded-full bg-amber-500"></div>
             </div>
           </div>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border p-5">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-500">{t('beds.status.MAINTENANCE')}</p>
-              <p className="text-2xl font-bold text-amber-600 mt-1">{stats.maintenance}</p>
+              <p className="text-2xl font-bold text-slate-600 mt-1">{stats.maintenance}</p>
             </div>
-            <div className="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center">
-              <Filter className="w-5 h-5 text-amber-600" />
+            <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center">
+              <Filter className="w-5 h-5 text-slate-600" />
             </div>
           </div>
         </div>
@@ -224,7 +224,7 @@ const Beds = () => {
       </section>
 
       {/* Beds Table */}
-      <div className="bg-white rounded-xl shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-gray-50 border-b">
             <tr>
@@ -282,7 +282,7 @@ const Beds = () => {
                       <button
                         onClick={() => handleDeleteClick(bed.id, t('beds.bedLabel', { number: bed.bedNumber }))}
                         aria-label={t('beds.deleteLabel', { number: bed.bedNumber })}
-                        className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition"
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>

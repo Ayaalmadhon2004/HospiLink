@@ -50,11 +50,11 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
   };
 
   return (
-    <aside className="w-64 h-full lg:h-screen bg-gradient-to-b from-hospital-navy to-teal-700 text-white flex flex-col">
+    <aside className="w-64 h-full lg:h-screen bg-sidebar text-white flex flex-col">
       {/* Logo */}
       <div className="p-6">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <div className="w-10 h-10 bg-emerald-500 rounded-xl flex items-center justify-center">
             <Heart className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -75,7 +75,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             onClick={() => onItemClick(item.id)}
             className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
               activeItem === item.id
-                ? 'bg-white/20 text-white font-semibold border-s-2 border-white shadow-sm'
+                ? 'bg-emerald-400/15 text-emerald-300 font-semibold border-s-2 border-emerald-400'
                 : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
             }`}
           >
@@ -86,14 +86,14 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
             {item.badge && (
               <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
                 activeItem === item.id 
-                  ? 'bg-white text-hospital-navy'
+                  ? 'bg-emerald-500 text-emerald-950'
                   : 'bg-white/20 text-white'
               }`}>
                 {item.badge}
               </span>
             )}
             {activeItem === item.id && (
-              <ChevronRight className="w-4 h-4 text-teal-400 rtl:rotate-180" aria-hidden="true" />
+              <ChevronRight className="w-4 h-4 text-emerald-300 rtl:rotate-180" aria-hidden="true" />
             )}
           </button>
         ))}
@@ -106,7 +106,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           onClick={() => onItemClick('Settings')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
             activeItem === 'Settings'
-              ? 'bg-white/20 text-white font-semibold border-s-2 border-white'
+              ? 'bg-emerald-400/15 text-emerald-300 font-semibold border-s-2 border-emerald-400'
               : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
           }`}
         >
@@ -126,7 +126,7 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
           </div>
         ) : user ? (
           <div className="flex items-center gap-3 px-4 py-3">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-sm font-bold text-white shrink-0">
+            <div className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center text-sm font-bold text-white shrink-0">
               {getInitials(user.name)}
             </div>
             <div className="flex-1 min-w-0">

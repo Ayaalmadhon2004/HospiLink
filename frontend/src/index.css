@@ -27,34 +27,36 @@
   --color-teal-900: #0b3c34;
   --color-teal-950: #06241f;
 
-  /* Warm neutrals instead of the cold default gray/slate (800-950 are green-tinted ink, never black). */
-  --color-gray-50: #faf8f4;
-  --color-gray-100: #f3f0ea;
-  --color-gray-200: #e7e2d9;
-  --color-gray-300: #d4cec2;
-  --color-gray-400: #a39d92;
-  --color-gray-500: #78726a;
-  --color-gray-600: #5c574f;
-  --color-gray-700: #45413b;
-  --color-gray-800: #2c3b37;
-  --color-gray-900: #1f2a27;
-  --color-gray-950: #17302a;
-  --color-slate-50: #faf8f4;
-  --color-slate-100: #f3f0ea;
-  --color-slate-200: #e7e2d9;
-  --color-slate-300: #d4cec2;
-  --color-slate-400: #a39d92;
-  --color-slate-500: #78726a;
-  --color-slate-600: #5c574f;
-  --color-slate-700: #45413b;
-  --color-slate-800: #2c3b37;
-  --color-slate-900: #1f2a27;
-  --color-slate-950: #17302a;
+  /* Cool slate neutrals (50-700); 800-950 are green-tinted ink, never black. */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #24362f;
+  --color-gray-900: #0f291e;
+  --color-gray-950: #0a1f17;
 
-  --color-hospital-navy: #0b3c34;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #24362f;
+  --color-slate-900: #0f291e;
+  --color-slate-950: #0a1f17;
+
+  /* Brand: deep clinical green (emerald-900; sidebar is emerald-950). */
+  --color-hospital-navy: #064e3b;
   --color-medical-teal: #2a9a80;
-  --color-clinic-bg: #faf8f4;
-  --color-clinic-text: #1f2a27;
+  --color-clinic-bg: #f8fafc;
+  --color-clinic-text: #0f291e;
 
   /* Semantic tokens (values come from :root / :root[data-theme="dark"] below). */
   --color-surface: var(--surface);
@@ -69,14 +71,14 @@
 
 /* Light (default). */
 :root {
-  --bg: #faf8f4;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --surface-muted: #f3f0ea;
-  --sidebar: #0b3c34;
-  --sidebar-hover: #0f5c4d;
-  --ink: #1f2a27;
-  --ink-muted: #5a6662;
-  --line: #e7e2d9;
+  --surface-muted: #f1f5f9;
+  --sidebar: #022c22;
+  --sidebar-hover: #064e3b;
+  --ink: #0f291e;
+  --ink-muted: #475569;
+  --line: #e2e8f0;
   --accent: #2a9a80;
 }
 
@@ -142,6 +144,13 @@
 }
 
 @layer base {
+  /* Tailwind 4 defaults borders to currentColor; keep panels on a subtle hairline. */
+  *,
+  ::before,
+  ::after {
+    border-color: var(--line);
+  }
+
   body {
     @apply bg-clinic-bg text-clinic-text font-sans antialiased;
     font-feature-settings: 'tnum' 1;
