@@ -14,7 +14,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { LanguageSwitcher } from '../LanguageSwitcher';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 
@@ -101,7 +100,6 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
 
       {/* Settings */}
       <div className="px-4 pb-2 space-y-1">
-        <LanguageSwitcher className="w-full px-4 py-3 text-white/90 hover:bg-white/15 hover:text-white" />
         <button
           onClick={() => onItemClick('Settings')}
           className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
