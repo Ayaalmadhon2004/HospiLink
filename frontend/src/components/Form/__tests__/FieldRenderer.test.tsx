@@ -136,7 +136,7 @@ describe('FieldRenderer', () => {
 
     it('does not fetch until the parent field has a value', async () => {
       renderField(field, { formValues: {} });
-      await userEvent.click(screen.getByRole('button', { name: /select/i }));
+      await userEvent.click(screen.getByRole('combobox'));
       expect(apiGet).not.toHaveBeenCalled();
       expect(screen.getByText('Please select department first')).toBeInTheDocument();
     });
@@ -146,7 +146,7 @@ describe('FieldRenderer', () => {
       const setValue = renderField(field, { formValues: { department: 'ICU' } });
 
       await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/beds?department=ICU'));
-      await userEvent.click(screen.getByRole('button', { name: /select/i }));
+      await userEvent.click(screen.getByRole('combobox'));
       expect(await screen.findByText('Bed Two')).toBeInTheDocument();
       await userEvent.click(screen.getByText('B-1'));
       expect(setValue).toHaveBeenCalledWith('bedId', 'b1');
@@ -157,7 +157,7 @@ describe('FieldRenderer', () => {
       vi.mocked(apiGet).mockRejectedValue(new Error('boom'));
       renderField(field, { formValues: { department: 'ICU' } });
       await waitFor(() => expect(apiGet).toHaveBeenCalled());
-      await userEvent.click(screen.getByRole('button', { name: /select/i }));
+      await userEvent.click(screen.getByRole('combobox'));
       expect(await screen.findByText('No options available')).toBeInTheDocument();
     });
   });

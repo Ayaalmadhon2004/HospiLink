@@ -51,7 +51,7 @@ const Beds = () => {
       const data = await apiGet<ApiResponse<Patient[]>>('/patients?status=OBSERVATION');
       if (data.success) {
         const unassigned = data.data.filter((p) => !p.bedId);
-        setPatients(unassigned.map((p) => ({ id: p.id, name: p.name })));
+        setPatients(unassigned.map((p) => ({ id: p.id, name: p.name, patientCode: p.patientCode })));
       }
     } catch (err) {
       logger.error('Error fetching patients:', err);

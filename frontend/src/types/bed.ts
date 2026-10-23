@@ -18,4 +18,5 @@ export interface BedWithDetails extends Bed {
 export interface PatientOption {
   id: string;
   name: string;
+  patientCode?: string;
 }

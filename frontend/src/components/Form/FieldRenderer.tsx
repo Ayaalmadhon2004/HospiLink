@@ -1,10 +1,10 @@
 // components/Form/FieldRenderer.tsx
 import { useState, useEffect, useCallback } from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../../services/api';
 import { extractList } from '../../types/api';
 import type { FieldConfig } from './types';
+import { Combobox } from './Combobox';
 
 interface FieldRendererProps<T = Record<string, unknown>> {
   field: FieldConfig<T>;
@@ -26,9 +26,8 @@ export const FieldRenderer = <T extends object>({
   const { t } = useTranslation();
   // Config text may be an i18n key or a plain literal (literal is the fallback)
   const tr = (text?: string) => (text ? t(text, { defaultValue: text }) : text);
-  const [searchOptions, setSearchOptions] = useState<{ label: string; value: string }[]>([]);
+  const [searchOptions, setSearchOptions] = useState<{ label: string; value: string; hint?: string }[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const [showDropdown, setShowDropdown] = useState(false);
 
   // ✅ Fetch options for search-select (with or without dependsOn)
   const fetchOptions = useCallback(async () => {
@@ -61,6 +60,7 @@ export const FieldRenderer = <T extends object>({
             item.code ||
             String(item),
           value: item.id || item.value || String(item),
+          hint: item.patientCode,
         }))
       );
     } catch {
@@ -116,65 +116,24 @@ export const FieldRenderer = <T extends object>({
 
   if (field.type === 'search-select') {
     const allOptions = field.options || searchOptions;
-    const selectedOption = allOptions.find((o) => o.value === value);
+    const blocked = !!field.dependsOn && !formValues[field.dependsOn as keyof T];
 
     return (
       <div className={colSpan}>
         {renderLabel()}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => !isDisabled && setShowDropdown(!showDropdown)}
-            className={`${baseInputClass} text-start flex items-center justify-between`}
-            disabled={isDisabled}
-          >
-            <span className={value ? 'text-clinic-text' : 'text-slate-400'}>
-              {tr(selectedOption?.label) || tr(field.placeholder) || t('forms.select')}
-            </span>
-            <ChevronDown
-              aria-hidden="true"
-              size={16}
-              className={`text-slate-400 transition ${showDropdown ? 'rotate-180' : ''}`}
-            />
-          </button>
-          {showDropdown && (
-            <>
-              <div
-                className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-48 overflow-y-auto"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {field.dependsOn && !formValues[field.dependsOn as keyof T] ? (
-                  <div className="px-4 py-3 text-sm text-slate-400">
-                    {t('forms.selectFirst', { field: t(`forms.fields.${field.dependsOn}`, { defaultValue: field.dependsOn }) })}
-                  </div>
-                ) : searchLoading ? (
-                  <div className="px-4 py-3 text-sm text-slate-400">{t('common.loading')}</div>
-                ) : allOptions.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-slate-400">{t('forms.noOptions')}</div>
-                ) : (
-                  allOptions.map((option) => (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        setValue(field.name, option.value);
-                        setShowDropdown(false);
-                      }}
-                      className={`w-full text-start px-4 py-2.5 text-sm hover:bg-slate-50 transition ${
-                        value === option.value
-                          ? 'bg-medical-teal/5 text-medical-teal'
-                          : 'text-clinic-text'
-                      }`}
-                    >
-                      {tr(option.label)}
-                    </button>
-                  ))
-                )}
-              </div>
-              <div className="fixed inset-0 z-40" onClick={() => setShowDropdown(false)} />
-            </>
-          )}
-        </div>
+        <Combobox
+          options={blocked ? [] : allOptions.map((o) => ({ ...o, label: tr(o.label) ?? o.label }))}
+          value={(value as string) || ''}
+          onChange={(v) => setValue(field.name, v)}
+          placeholder={tr(field.placeholder) || t('forms.select')}
+          loading={searchLoading}
+          emptyMessage={
+            blocked
+              ? t('forms.selectFirst', { field: t(`forms.fields.${field.dependsOn}`, { defaultValue: field.dependsOn }) })
+              : undefined
+          }
+          disabled={isDisabled}
+        />
         {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}
         {error && <p className={errorClass}>{error}</p>}
       </div>

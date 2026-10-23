@@ -3,6 +3,7 @@ import { logger } from '../utils/logger';
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from 'react-i18next';
 import { apiGet, apiPost, apiPut } from '../services/api';
+import { Combobox } from './Form/Combobox';
 import { getErrorMessage, type ApiResponse } from '../types/api';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
@@ -33,11 +34,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [showWardDropdown, setShowWardDropdown] = useState(false);
-  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
 
   const wardBtnRef = useRef<HTMLButtonElement>(null);
-  const patientBtnRef = useRef<HTMLButtonElement>(null);
   const statusBtnRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -77,7 +76,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setShowWardDropdown(false);
-        setShowPatientDropdown(false);
         setShowStatusDropdown(false);
       }
     };
@@ -128,7 +126,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   };
 
   const selectedWard = wards.find(w => w.id === wardId);
-  const selectedPatient = patients.find(p => p.id === selectedPatientId);
 
   const statusLabels: Record<BedStatus, string> = {
     AVAILABLE: t('beds.status.AVAILABLE'),
@@ -209,7 +206,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               aria-labelledby="ward-label ward-value"
               onClick={() => {
                 setShowWardDropdown(!showWardDropdown);
-                setShowPatientDropdown(false);
                 setShowStatusDropdown(false);
               }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
@@ -261,79 +257,17 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
 
           {/* Patient - Custom Dropdown */}
           <div className="relative">
-            <label id="patient-label" className="block text-sm font-medium text-gray-700 mb-1.5">
+            <label id="patient-label" htmlFor="patient-select" className="block text-sm font-medium text-gray-700 mb-1.5">
               {t('beds.modal.assignPatient')}
             </label>
-            <button
-              ref={patientBtnRef}
-              type="button"
+            <Combobox
               id="patient-select"
-              aria-haspopup="listbox"
-              aria-expanded={showPatientDropdown}
-              aria-labelledby="patient-label patient-value"
-              onClick={() => {
-                setShowPatientDropdown(!showPatientDropdown);
-                setShowWardDropdown(false);
-                setShowStatusDropdown(false);
-              }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
-            >
-              <span id="patient-value" className={selectedPatient ? 'text-gray-900' : 'text-gray-400'}>
-                {selectedPatient ? selectedPatient.name : t('beds.modal.unassigned')}
-              </span>
-              <svg
-                className={`w-4 h-4 text-gray-400 transition ${showPatientDropdown ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {showPatientDropdown && (
-              <div
-                className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                role="listbox"
-                aria-labelledby="patient-label"
-              >
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={!selectedPatientId}
-                  onClick={() => {
-                    setSelectedPatientId('');
-                    setShowPatientDropdown(false);
-                  }}
-                  className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
-                    !selectedPatientId ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                  }`}
-                >
-                  {t('beds.modal.unassigned')}
-                </button>
-                {patients.map(p => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    role="option"
-                    aria-selected={selectedPatientId === p.id}
-                    onClick={() => {
-                      setSelectedPatientId(p.id);
-                      setShowPatientDropdown(false);
-                    }}
-                    className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
-                      selectedPatientId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                    }`}
-                  >
-                    {p.name}
-                  </button>
-                ))}
-                {patients.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noPatients')}</div>
-                )}
-              </div>
-            )}
+              options={patients.map((p) => ({ label: p.name, value: p.id, hint: p.patientCode }))}
+              value={selectedPatientId}
+              onChange={setSelectedPatientId}
+              placeholder={t('beds.modal.unassigned')}
+              clearLabel={t('beds.modal.unassigned')}
+            />
             <p className="text-xs text-gray-400 mt-1" id="patient-hint">
               {selectedPatientId ? t('beds.modal.willBeOccupied') : t('beds.modal.willBeAvailable')}
             </p>
@@ -356,7 +290,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 if (!selectedPatientId) {
                   setShowStatusDropdown(!showStatusDropdown);
                   setShowWardDropdown(false);
-                  setShowPatientDropdown(false);
                 }
               }}
               disabled={!!selectedPatientId}
@@ -436,13 +369,12 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         </form>
 
         {/* Click outside to close dropdowns */}
-        {(showWardDropdown || showPatientDropdown || showStatusDropdown) && (
+        {(showWardDropdown || showStatusDropdown) && (
           <button
             type="button"
             className="fixed inset-0 z-40 bg-transparent border-none p-0 m-0 w-full h-full cursor-default"
             onClick={() => {
               setShowWardDropdown(false);
-              setShowPatientDropdown(false);
               setShowStatusDropdown(false);
             }}
             tabIndex={-1}
