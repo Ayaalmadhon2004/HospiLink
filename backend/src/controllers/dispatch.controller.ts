@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { io } from '../server';
 import prisma from '../config/db';
+import type { CallStatus } from '@prisma/client';
 import logger from '../config/logger';
 import { notify } from '../services/notification.service';
 
@@ -48,6 +49,20 @@ export const getActiveUnits = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: units });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch active units');
+  }
+};
+
+// GET /api/dispatch/calls?status=PENDING — النداءات (الافتراضي: بانتظار التعيين)
+export const getCalls = async (req: Request, res: Response) => {
+  try {
+    const { status } = req.query as { status?: CallStatus };
+    const calls = await prisma.dispatchCall.findMany({
+      where: { status: status ?? 'PENDING' },
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+    });
+    res.status(200).json({ success: true, data: calls });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to fetch calls');
   }
 };
 

@@ -703,7 +703,10 @@
     "actions": {
       "setStatus": "Set status",
       "open": "Actions for {{unit}}",
-      "updated": "{{unit}} updated"
+      "updated": "{{unit}} updated",
+      "assign": "Assign to call",
+      "noPending": "No pending calls",
+      "assigned": "{{unit}} assigned"
     },
     "alarms": {
       "critical": "Critical mission",

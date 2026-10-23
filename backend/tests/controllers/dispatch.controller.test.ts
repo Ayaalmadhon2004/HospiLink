@@ -4,6 +4,7 @@ import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getAllUnits,
   getActiveUnits,
+  getCalls,
   updateUnitStatus,
   createCall,
   assignUnitToCall,
@@ -41,6 +42,34 @@ describe('dispatch.controller', () => {
       expect(prismaMock.dispatchUnit.findMany).toHaveBeenCalledWith(
         expect.objectContaining({ where: { status: { not: 'OFF_DUTY' } } })
       );
+    });
+  });
+
+  describe('getCalls', () => {
+    it('defaults to PENDING calls, most urgent first', async () => {
+      prismaMock.dispatchCall.findMany.mockResolvedValue([{ id: 'c1' }] as any);
+      const res = mockResponse();
+
+      await getCalls(mockRequest({ query: {} }), res);
+
+      expect(prismaMock.dispatchCall.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { status: 'PENDING' }, orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }] })
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('honours the status filter', async () => {
+      prismaMock.dispatchCall.findMany.mockResolvedValue([]);
+      await getCalls(mockRequest({ query: { status: 'ASSIGNED' } }), mockResponse());
+      expect(prismaMock.dispatchCall.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { status: 'ASSIGNED' } }));
+    });
+
+    it('returns 500 with a generic message on failure', async () => {
+      prismaMock.dispatchCall.findMany.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+      await getCalls(mockRequest({ query: {} }), res);
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Failed to fetch calls' });
     });
   });
 

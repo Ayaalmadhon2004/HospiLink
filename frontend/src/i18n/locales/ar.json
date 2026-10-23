@@ -731,7 +731,10 @@
     "actions": {
       "setStatus": "تغيير الحالة",
       "open": "إجراءات {{unit}}",
-      "updated": "تم تحديث {{unit}}"
+      "updated": "تم تحديث {{unit}}",
+      "assign": "تعيين لبلاغ",
+      "noPending": "لا توجد بلاغات معلّقة",
+      "assigned": "تم تعيين {{unit}}"
     },
     "alarms": {
       "critical": "مهمة حرجة",
