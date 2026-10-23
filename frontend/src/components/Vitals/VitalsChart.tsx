@@ -1,5 +1,6 @@
 // frontend/src/components/Vitals/VitalsChart.tsx
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   LineChart,
   Line,
@@ -9,6 +10,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { formatTime } from '../../utils/datetime';
 
 interface VitalRecord {
   id: string;
@@ -45,19 +47,9 @@ const getValue = (record: VitalRecord, key: string): number | null => {
 };
 
 // ─── Helper: Format time ────────────────────────────────────────────────
-const formatTime = (dateStr: string): string => {
-  if (!dateStr) return '';
-  try {
-    return new Date(dateStr).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  } catch {
-    return '';
-  }
-};
 
 export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartProps) => {
+  const { t, i18n } = useTranslation();
   // ✅ Defensive: ensure history is a valid array
   const safeHistory = ensureArray<VitalRecord>(history);
 
@@ -76,18 +68,19 @@ export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartPro
         value: getValue(v, vitalType as string) ?? 0,
       }))
       .reverse(); // oldest first for the chart
-  }, [safeHistory, vitalType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- language/timezone change the formatted labels
+  }, [safeHistory, vitalType, i18n.language]);
 
   // ✅ Empty state
   if (data.length === 0) {
     return (
       <figure
         className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6"
-        aria-label={`${label} chart — no data available`}
+        aria-label={t('vitals.chartNoData', { label })}
       >
         <figcaption className="text-sm font-semibold text-clinic-text/70 mb-4">{label}</figcaption>
         <div className="h-48 flex items-center justify-center text-slate-500 text-sm">
-          No data available
+          {t('vitals.noDataAvailable')}
         </div>
       </figure>
     );
@@ -96,7 +89,7 @@ export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartPro
   return (
     <figure
       className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6"
-      aria-label={`${label} chart showing ${data.length} data points`}
+      aria-label={t('vitals.chartPoints', { label, count: data.length })}
     >
       <figcaption className="text-sm font-semibold text-clinic-text/70 mb-4">{label}</figcaption>
       <div className="h-48">

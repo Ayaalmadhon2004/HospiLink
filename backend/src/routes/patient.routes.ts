@@ -3,23 +3,27 @@ import {
   admitPatient, 
   uploadReport, 
   getRecentPatients,
-  getPatients,        
+  getCriticalPatientCount,
+  getPatientFlow,
+  getPatients,       
   getPatientById,     
   updatePatient,      
   dischargePatient,    
   getPatientReports,
-  getAvailableBeds    // ← NEW
+  getAvailableBeds,
+  getReportFile
 } from '../controllers/patient.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { upload } from '../middlewares/upload.middleware';
 import { validate } from '../middlewares/validate.middleware';
-import { idParams } from '../validators/common.validator';
+import { idParams, reportIdParams } from '../validators/common.validator';
 import {
   admitPatientSchema,
   updatePatientSchema,
   listPatientsQuerySchema,
   availableBedsQuerySchema,
+  patientFlowQuerySchema,
 } from '../validators/patient.validator';
 
 const router = Router();
@@ -62,6 +66,31 @@ router.get(
 );
 
 // ============================================
+// GET /api/patients/critical-count
+// عدد المرضى الحرجين - DOCTOR, NURSE, ADMIN (no input, so no validator)
+// ⚠️ MUST be BEFORE /:id route!
+// ============================================
+router.get(
+  '/critical-count',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  getCriticalPatientCount
+);
+
+// ============================================
+// GET /api/patients/flow
+// Daily admissions/discharges - DOCTOR, NURSE, ADMIN
+// ⚠️ MUST be BEFORE /:id route!
+// ============================================
+router.get(
+  '/flow',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ query: patientFlowQuerySchema }),
+  getPatientFlow
+);
+
+// ============================================
 // ⚠️ MUST be BEFORE /:id route!
 // GET /api/patients/beds/available
 // الأسرة المتاحة للحجز
@@ -75,6 +104,19 @@ router.get(
 );
 
 // ============================================
+// GET /api/patients/reports/:reportId/file
+// ملف التقرير المخزّن بالداتابيز
+// ============================================
+router.get(
+  '/reports/:reportId/file',
+  protect,
+  authorize('DOCTOR', 'NURSE', 'ADMIN'),
+  validate({ params: reportIdParams }),
+  logActivity('VIEW_REPORT_FILE'),
+  getReportFile
+);
+
+// ============================================
 // GET /api/patients
 // كل المرضى مع فلاتر + Pagination
 // ============================================
@@ -83,6 +125,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN', 'DISPATCHER'),
   validate({ query: listPatientsQuerySchema }),
+  logActivity('LIST_PATIENTS'),
   getPatients
 );
 
@@ -97,6 +140,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   validate({ params: idParams }),
+  logActivity('VIEW_PATIENT'),
   getPatientById
 );
 
@@ -105,6 +149,7 @@ router.get(
   protect,
   authorize('DOCTOR', 'NURSE', 'ADMIN'),
   validate({ params: idParams }),
+  logActivity('VIEW_PATIENT_REPORTS'),
   getPatientReports
 );
 

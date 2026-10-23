@@ -1,4 +1,5 @@
 // frontend/src/hooks/useAppointmentsSocket.ts
+import { logger } from '../utils/logger';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { Appointment } from '../services/appointmentsService';
@@ -22,7 +23,6 @@ export const useAppointmentsSocket = () => {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to appointments stream');
       setIsConnected(true);
     });
 
@@ -31,22 +31,19 @@ export const useAppointmentsSocket = () => {
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Appointments socket error:', err.message);
+      logger.warn('Appointments socket error:', err.message);
       setIsConnected(false);
     });
 
     socket.on('appointment-created', (data) => {
-      console.log('Appointment created:', data);
       setLatestUpdate({ type: 'created', data });
     });
 
     socket.on('appointment-updated', (data) => {
-      console.log('Appointment updated:', data);
       setLatestUpdate({ type: 'updated', data });
     });
 
     socket.on('appointment-cancelled', (data) => {
-      console.log('Appointment cancelled:', data);
       setLatestUpdate({ type: 'cancelled', data });
     });
 

@@ -3,21 +3,33 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
+
+type TimelineEntry = {
+  id: string;
+  staffName: string;
+  role: string;
+  avatar: string | null;
+  type: string;
+  startTime: Date;
+  endTime: Date;
+  notes: string | null;
+};
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
-  res.status(500).json({ success: false, message, error: error.message });
+  res.status(500).json({ success: false, message });
 };
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
-    const staff = await (prisma as any).staff.findMany();
+    const staff = await prisma.staff.findMany();
     logger.debug({ count: staff.length }, 'All staff fetched (no filter)');
     
     res.status(200).json({ success: true, count: staff.length, data: staff });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'ERROR:');
     handleError(res, error, 'Failed to fetch staff');
   }
@@ -31,7 +43,7 @@ export const getStaffById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
-    const staff = await (prisma as any).staff.findUnique({
+    const staff = await prisma.staff.findUnique({
       where: { id },
       include: {
         shifts: { orderBy: { startTime: 'desc' }, take: 10 },
@@ -43,7 +55,7 @@ export const getStaffById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: staff });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch staff');
   }
 };
@@ -53,12 +65,12 @@ export const createStaff = async (req: Request, res: Response) => {
   try {
     const { name, email, role, department, phone, avatar } = req.body;
 
-    const staff = await (prisma as any).staff.create({
+    const staff = await prisma.staff.create({
       data: { name, email, role, department, phone, avatar },
     });
 
     res.status(201).json({ success: true, data: staff });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create staff');
   }
 };
@@ -69,13 +81,13 @@ export const updateStaff = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const updateData = req.body;
 
-    const staff = await (prisma as any).staff.update({
+    const staff = await prisma.staff.update({
       where: { id },
       data: updateData,
     });
 
     res.status(200).json({ success: true, data: staff });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update staff');
   }
 };
@@ -85,10 +97,10 @@ export const deleteStaff = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
-    await (prisma as any).staff.delete({ where: { id } });
+    await prisma.staff.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Staff deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to delete staff');
   }
 };
@@ -100,7 +112,7 @@ export const getShifts = async (req: Request, res: Response) => {
   try {
     const { department, staffId, date } = req.query;
 
-    const where: any = {};
+    const where: Prisma.ShiftWhereInput = {};
     if (department) where.department = department as string;
     if (staffId) where.staffId = staffId as string;
     if (date) {
@@ -109,14 +121,14 @@ export const getShifts = async (req: Request, res: Response) => {
       where.endTime = { lte: new Date(d.getTime() + 24 * 60 * 60 * 1000) };
     }
 
-    const shifts = await (prisma as any).shift.findMany({
+    const shifts = await prisma.shift.findMany({
       where,
       include: { staff: { select: { name: true, role: true, avatar: true } } },
       orderBy: { startTime: 'asc' },
     });
 
     res.status(200).json({ success: true, count: shifts.length, data: shifts });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch shifts');
   }
 };
@@ -126,7 +138,7 @@ export const createShift = async (req: Request, res: Response) => {
   try {
     const { staffId, type, startTime, endTime, department, notes } = req.body;
 
-    const shift = await (prisma as any).shift.create({
+    const shift = await prisma.shift.create({
       data: {
         staffId,
         type,
@@ -142,7 +154,7 @@ export const createShift = async (req: Request, res: Response) => {
     io.to(`department-${department}`).emit('shift-update', shift);
 
     res.status(201).json({ success: true, data: shift });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create shift');
   }
 };
@@ -153,7 +165,7 @@ export const updateShift = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const { type, startTime, endTime, department, notes } = req.body;
 
-    const shift = await (prisma as any).shift.update({
+    const shift = await prisma.shift.update({
       where: { id },
       data: {
         type,
@@ -168,7 +180,7 @@ export const updateShift = async (req: Request, res: Response) => {
     io.to(`department-${shift.department}`).emit('shift-update', shift);
 
     res.status(200).json({ success: true, data: shift });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update shift');
   }
 };
@@ -177,7 +189,7 @@ export const updateShift = async (req: Request, res: Response) => {
 export const deleteShift = async (req: Request, res: Response) => {
   try {
 const { id } = req.params as { id: string }
-    const shift = await (prisma as any).shift.delete({
+    const shift = await prisma.shift.delete({
       where: { id },
       include: { staff: { select: { name: true, role: true } } },
     });
@@ -185,7 +197,7 @@ const { id } = req.params as { id: string }
     io.to(`department-${shift.department}`).emit('shift-delete', { id });
 
     res.status(200).json({ success: true, message: 'Shift deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to delete shift');
   }
 };
@@ -198,7 +210,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
     const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
     const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
 
-    const shifts = await (prisma as any).shift.findMany({
+    const shifts = await prisma.shift.findMany({
       where: {
         startTime: { gte: startOfDay },
         endTime: { lte: endOfDay },
@@ -210,7 +222,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
     });
 
     // Group by department
-    const timeline = shifts.reduce((acc: any, shift: any) => {
+    const timeline = shifts.reduce<Record<string, TimelineEntry[]>>((acc, shift) => {
       const dept = shift.department;
       if (!acc[dept]) acc[dept] = [];
       acc[dept].push({
@@ -227,7 +239,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
     }, {});
 
     res.status(200).json({ success: true, data: timeline });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch shift timeline');
   }
 };

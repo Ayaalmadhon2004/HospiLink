@@ -1,5 +1,6 @@
 // pages/VitalsMonitorPage.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Activity, Plus, RefreshCw, ChevronDown, AlertCircle, X } from 'lucide-react';
 import { getVitals, getCriticalAlerts, recordVitals } from '../services/vitalsService';
 import { getPatients } from '../services/patientService';
@@ -68,6 +69,7 @@ const mergeVitals = (existing: VitalRecord[], incoming: VitalRecord[]): VitalRec
 // ─── Component ─────────────────────────────────────────────────────────
 
 export const VitalsMonitorPage = () => {
+  const { t } = useTranslation();
   // ── Core State ──────────────────────────────────────────────────────
   const [patients, setPatients] = useState<Patient[]>([]);
   const [selectedPatient, setSelectedPatient] = useState<string>('');
@@ -107,12 +109,12 @@ export const VitalsMonitorPage = () => {
     const id = Math.random().toString(36).substring(2, 9);
     setToasts((prev) => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== id));
+      setToasts((prev) => prev.filter((item) => item.id !== id));
     }, 5000);
   }, []);
 
   const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    setToasts((prev) => prev.filter((item) => item.id !== id));
   }, []);
 
   // ── Fetch Patients + Alerts (مرة واحدة عند التحميل) ───────────────
@@ -133,7 +135,7 @@ export const VitalsMonitorPage = () => {
           const patientsRes = await getPatients();
           patientsData = ensureArray<Patient>(patientsRes?.data ?? patientsRes);
         } catch {
-          if (showErrors) showToast('Failed to fetch patients list', 'error');
+          if (showErrors) showToast(t('vitals.page.patientsError'), 'error');
         }
         setPatients(patientsData);
 
@@ -147,7 +149,7 @@ export const VitalsMonitorPage = () => {
         }
         setAlerts(alertsData);
       } catch {
-        if (showErrors) showToast('Failed to fetch vitals data', 'error');
+        if (showErrors) showToast(t('vitals.page.fetchError'), 'error');
       } finally {
         setRefreshing(false);
         setLoading(false);
@@ -155,7 +157,7 @@ export const VitalsMonitorPage = () => {
         isFetching.current = false;
       }
     },
-    [showToast]
+    [showToast, t]
   );
 
   // ── Fetch Historical Vitals ───────────────────────────────────────
@@ -287,10 +289,10 @@ export const VitalsMonitorPage = () => {
         notes: '',
       });
 
-      showToast('Vitals recorded successfully', 'success');
+      showToast(t('vitals.page.recorded'), 'success');
       await fetchData(false); // Refresh alerts silently
     } catch (err: unknown) {
-      showToast(getErrorMessage(err, '') || 'Failed to record vitals', 'error');
+      showToast(getErrorMessage(err, '') || t('vitals.page.recordError'), 'error');
     } finally {
       setSubmitting(false);
     }
@@ -303,7 +305,7 @@ export const VitalsMonitorPage = () => {
   if (loading && patients.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="animate-pulse text-clinic-text/50">Loading vitals monitor...</div>
+        <div className="animate-pulse text-clinic-text/50">{t('vitals.page.loading')}</div>
       </div>
     );
   }
@@ -312,9 +314,9 @@ export const VitalsMonitorPage = () => {
     <div className="min-h-screen bg-clinic-bg p-6 md:p-8">
       {/* Toast Notifications */}
       <div
-        className="fixed top-4 right-4 z-50 space-y-2"
+        className="fixed top-4 end-4 z-50 space-y-2"
         role="region"
-        aria-label="Notifications"
+        aria-label={t('common.notifications')}
       >
         {toasts.map((toast) => (
           <div
@@ -331,8 +333,8 @@ export const VitalsMonitorPage = () => {
             <span className="text-sm font-medium">{toast.message}</span>
             <button
               onClick={() => removeToast(toast.id)}
-              className="ml-2 text-current opacity-50 hover:opacity-100"
-              aria-label="Dismiss notification"
+              className="ms-2 text-current opacity-50 hover:opacity-100"
+              aria-label={t('dispatch.dismiss')}
             >
               <X size={14} />
             </button>
@@ -345,22 +347,22 @@ export const VitalsMonitorPage = () => {
         <div>
           <h1 className="text-2xl font-bold text-hospital-navy flex items-center gap-2">
             <Activity size={28} className="text-medical-teal" aria-hidden="true" />
-            Vitals Monitor
+            {t('vitals.page.title')}
           </h1>
-          <p className="text-clinic-text/50 text-sm">Real-time patient vitals tracking & alerts</p>
+          <p className="text-clinic-text/50 text-sm">{t('vitals.page.subtitle')}</p>
         </div>
         <button
           onClick={handleRefresh}
           className="flex items-center gap-2 bg-white text-clinic-text px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition shadow-sm"
           disabled={refreshing}
-          aria-label="Refresh vitals data"
+          aria-label={t('vitals.page.refreshLabel')}
         >
           <RefreshCw
             size={16}
             className={refreshing ? 'animate-spin' : ''}
             aria-hidden="true"
           />
-          Refresh
+          {t('staff.refresh')}
         </button>
       </div>
 
@@ -374,24 +376,24 @@ export const VitalsMonitorPage = () => {
         <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-center">
           <div className="relative flex-1">
             <label htmlFor="patient-select" className="sr-only">
-              Select Patient
+              {t('vitals.page.selectPatient')}
             </label>
             <select
               id="patient-select"
               value={selectedPatient}
               onChange={(e) => setSelectedPatient(e.target.value)}
-              className="w-full appearance-none border border-slate-200 p-3 pr-10 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none bg-white"
+              className="w-full appearance-none border border-slate-200 p-3 pe-10 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none bg-white"
             >
-              <option value="">Select Patient</option>
+              <option value="">{t('vitals.page.selectPatient')}</option>
               {patients.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.name} • {p.patientCode} • {p.department}
+                  {p.name} • {p.patientCode} • {t(`departments.${p.department}`, { defaultValue: p.department })}
                 </option>
               ))}
             </select>
             <ChevronDown
               size={16}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-clinic-text/40 pointer-events-none"
+              className="absolute end-3 top-1/2 -translate-y-1/2 text-clinic-text/40 pointer-events-none"
               aria-hidden="true"
             />
           </div>
@@ -404,7 +406,7 @@ export const VitalsMonitorPage = () => {
               aria-controls="vitals-form"
             >
               <Plus size={18} aria-hidden="true" />
-              {showForm ? 'Hide Form' : 'Record Vitals'}
+              {showForm ? t('vitals.page.hideForm') : t('vitals.page.recordVitals')}
             </button>
           )}
         </div>
@@ -416,11 +418,11 @@ export const VitalsMonitorPage = () => {
           id="vitals-form"
           className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-6 animate-in fade-in slide-in-from-top-2 duration-200"
         >
-          <h3 className="text-lg font-bold text-hospital-navy mb-4">Record New Vitals</h3>
+          <h3 className="text-lg font-bold text-hospital-navy mb-4">{t('vitals.page.recordNew')}</h3>
           <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div>
               <label htmlFor="heart-rate" className="block text-sm text-clinic-text/60 mb-1">
-                Heart Rate <span className="text-xs text-clinic-text/50">(60-100)</span>
+                {t('vitals.heartRate')} <span className="text-xs text-clinic-text/50">(60-100)</span>
               </label>
               <input
                 id="heart-rate"
@@ -435,7 +437,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="systolic-bp" className="block text-sm text-clinic-text/60 mb-1">
-                Systolic BP <span className="text-xs text-clinic-text/50">(90-140)</span>
+                {t('vitals.page.systolic')} <span className="text-xs text-clinic-text/50">(90-140)</span>
               </label>
               <input
                 id="systolic-bp"
@@ -450,7 +452,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="diastolic-bp" className="block text-sm text-clinic-text/60 mb-1">
-                Diastolic BP <span className="text-xs text-clinic-text/50">(60-90)</span>
+                {t('vitals.page.diastolic')} <span className="text-xs text-clinic-text/50">(60-90)</span>
               </label>
               <input
                 id="diastolic-bp"
@@ -465,7 +467,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="spo2" className="block text-sm text-clinic-text/60 mb-1">
-                SpO2 <span className="text-xs text-clinic-text/50">(%)</span>
+                {t('vitals.spO2')} <span className="text-xs text-clinic-text/50">(%)</span>
               </label>
               <input
                 id="spo2"
@@ -481,7 +483,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="temperature" className="block text-sm text-clinic-text/60 mb-1">
-                Temperature <span className="text-xs text-clinic-text/50">(°C)</span>
+                {t('vitals.temperature')} <span className="text-xs text-clinic-text/50">(°C)</span>
               </label>
               <input
                 id="temperature"
@@ -497,7 +499,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div>
               <label htmlFor="respiratory-rate" className="block text-sm text-clinic-text/60 mb-1">
-                Respiratory Rate <span className="text-xs text-clinic-text/50">(12-20)</span>
+                {t('vitals.respiratoryRate')} <span className="text-xs text-clinic-text/50">(12-20)</span>
               </label>
               <input
                 id="respiratory-rate"
@@ -512,7 +514,7 @@ export const VitalsMonitorPage = () => {
             </div>
             <div className="col-span-2 md:col-span-3">
               <label htmlFor="notes" className="block text-sm text-clinic-text/60 mb-1">
-                Notes
+                {t('vitals.page.notes')}
               </label>
               <textarea
                 id="notes"
@@ -520,7 +522,7 @@ export const VitalsMonitorPage = () => {
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none resize-none"
                 rows={2}
-                placeholder="Optional notes..."
+                placeholder={t('vitals.page.notesPlaceholder')}
               />
             </div>
             <div className="col-span-2 md:col-span-3 flex gap-3">
@@ -529,7 +531,7 @@ export const VitalsMonitorPage = () => {
                 onClick={() => setShowForm(false)}
                 className="flex-1 bg-slate-100 text-clinic-text py-3 rounded-xl hover:bg-slate-200 transition font-medium"
               >
-                Cancel
+                {t('common.cancel')}
               </button>
               <button
                 type="submit"
@@ -537,7 +539,7 @@ export const VitalsMonitorPage = () => {
                 className="flex-1 bg-hospital-navy text-white py-3 rounded-xl hover:bg-hospital-navy/90 transition font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 aria-busy={submitting}
               >
-                {submitting ? 'Saving...' : 'Save Vitals'}
+                {submitting ? t('common.saving') : t('vitals.page.save')}
               </button>
             </div>
           </form>
@@ -564,12 +566,12 @@ export const VitalsMonitorPage = () => {
       {selectedPatient && vitals.length === 0 && !showForm && (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center mb-6">
           <Activity size={48} className="text-clinic-text/20 mx-auto mb-3" aria-hidden="true" />
-          <div className="text-clinic-text/50 font-medium">No vitals recorded for this patient</div>
+          <div className="text-clinic-text/50 font-medium">{t('vitals.page.empty')}</div>
           <button
             onClick={() => setShowForm(true)}
             className="mt-3 text-medical-teal hover:underline text-sm"
           >
-            Record first vitals
+            {t('vitals.page.recordFirst')}
           </button>
         </div>
       )}
@@ -581,20 +583,20 @@ export const VitalsMonitorPage = () => {
             history={vitals}
             vitalType="heartRate"
             color="#ef4444"
-            label="Heart Rate (bpm)"
+            label={t('vitals.page.chartHeartRate')}
           />
           <VitalsChart
             history={vitals}
             vitalType="systolicBP"
             color="#3b82f6"
-            label="Blood Pressure (mmHg)"
+            label={t('vitals.page.chartBP')}
           />
-          <VitalsChart history={vitals} vitalType="spO2" color="#06b6d4" label="SpO2 (%)" />
+          <VitalsChart history={vitals} vitalType="spO2" color="#06b6d4" label={t('vitals.page.chartSpO2')} />
           <VitalsChart
             history={vitals}
             vitalType="temperature"
             color="#f97316"
-            label="Temperature (°C)"
+            label={t('vitals.page.chartTemperature')}
           />
         </div>
       )}

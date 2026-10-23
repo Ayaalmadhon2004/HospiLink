@@ -41,16 +41,22 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (231 tests, no DB needed: Prisma is mocked)
-- `npm run test:coverage`  current coverage ~82% statements
+- `npm test`               jest (283 tests, no DB needed: Prisma is mocked)
+- `npm run test:coverage`  current coverage ~88% statements
 
 Frontend (`cd frontend`):
 - `npm install`
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
 - `npm run lint`           eslint (currently clean)
-- `npm test`               vitest (36 tests)
+- `npm test`               vitest (191 tests)
 - `npm run preview`        serves build on :4173
+- `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
+                           First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
+- `npm run test:e2e:real`  Playwright against the REAL backend + a throwaway PostgreSQL (`playwright.real.config.ts`, files in
+                           `e2e-real/*.e2e.ts`). Needs `E2E_DATABASE_URL` (db name must contain `e2e` or `test`); the config runs
+                           `prisma migrate deploy` + `backend/prisma/seed.e2e.ts`, starts the API on :5000 and the built app on
+                           localhost:4173. Recreate the database between runs. See `docs/E2E_REAL.md`.
 
 ## Environment variables
 
@@ -59,6 +65,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `JWT_SECRET`    required, long random string; the app must not start without it
 - `PORT`          default 5000
 - `NODE_ENV`      `production` disables dev logging
+- `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
 Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
@@ -77,7 +84,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   Passwords hashed with bcryptjs (12 rounds).
 - Sockets: `io` is created in server.ts; rooms are `patient-<id>`, `department-<name>`, `dispatch-room`, `unit-<id>`.
   Controllers emit events (vitals, incidents, appointments, dispatch, notifications) to those rooms.
-- File uploads: multer to `uploads/` (jpeg/png/pdf, 5MB). Uploaded files are patient data: never commit them.
+- File uploads: multer memory storage, saved in `Report.fileData` (jpeg/png/pdf, 5MB) and served by `GET /api/patients/reports/:reportId/file`. Older reports may still point to `/uploads/...` on disk. Uploaded files are patient data: never commit them.
 - Use the shared Prisma client from `src/config/db.ts`; do not instantiate new clients.
 - TypeScript: avoid `any`; type request bodies and use `Prisma` generated types.
 
@@ -100,7 +107,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## How the two sides connect
 
-- Base URL: `VITE_API_URL` + `/api/<resource>`. Resources: auth, patients, beds, wards, vitals, staff,
+- Base URL: `VITE_API_URL` + `/api/<resource>`. Resources: auth, patients (incl. `GET /patients/flow?days=1..30`, daily admissions/discharges in UTC days), beds, wards, vitals, staff,
   appointments, dispatch, incidents, notifications, settings.
 - CORS allowlist lives in `backend/src/server.ts` (`allowedOrigins`) and must include every frontend origin
   (localhost:5173, localhost:4173, Vercel domains). Credentials are enabled.
@@ -114,21 +121,21 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 - Backend tests live in `backend/tests/**` mirroring `src/`. Prisma and socket.io are mocked via
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
-- Frontend uses Vitest (few tests so far). Add Testing Library for components and Playwright for E2E.
+- Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. The mocked suite does NOT exercise the real backend.
+  The separate real-backend suite (`frontend/e2e-real`, `npm run test:e2e:real`, CI job `e2e-real` with a `services: postgres` container)
+  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, and the NotificationBell (badge, mark read, delete, realtime `new-notification`), with no mocks.
+  It uses its own seed (`backend/prisma/seed.e2e.ts`), never `seed.ts`, and refuses a database whose name lacks `e2e`/`test`.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 
 ## Known issues / priorities (keep this list current)
 
 Open:
-- `.github/workflows/ci-cd.yml` still has `continue-on-error: true` on the lint and build steps, so they never fail the pipeline.
-- No `prisma/migrations` folder yet (schema is applied with `prisma db push`).
-- Some `console.*` calls remain in the code (use a logger).
-- zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input).
-- Uploads live on Render's ephemeral disk (move to S3/Cloudinary). Frontend test coverage is minimal (Vitest only; no component or E2E tests).
-- i18n, PWA, Web Vitals and Docker are not implemented (README lists them under Roadmap).
+- `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
+- Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend has unit tests, a mocked-API Playwright suite and a real-backend suite (`npm run test:e2e:real`); broader page coverage is still welcome.
+- i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): the icons are generated placeholders and need real branding. Web Vitals (`docs/WEB_VITALS.md`) report only when `VITE_VITALS_ENDPOINT` is set.
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
-Fixed on main (do not reintroduce): `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
+Fixed on main (do not reintroduce): `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
 public signup ignores `role`/`hospitalId`; staff, shifts, reports and `/uploads` require auth; Socket.io
 requires a JWT (`socketAuth`); the token is no longer kept in `localStorage` (httpOnly cookie);
 `backend/uploads/` contents are untracked; both `package-lock.json` files are committed; README was

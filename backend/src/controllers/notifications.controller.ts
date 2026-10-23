@@ -1,12 +1,13 @@
 // backend/src/controllers/notifications.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
 import logger from '../config/logger';
+import type { Prisma } from '@prisma/client';
+import { notify } from '../services/notification.service';
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, `[Notifications] ${message}:`);
-  res.status(500).json({ success: false, message, error: error.message });
+  res.status(500).json({ success: false, message });
 };
 
 // GET /api/notifications
@@ -16,7 +17,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
     const { limit = '20', unreadOnly = 'false' } = req.query;
-    const where: any = { userId };
+    const where: Prisma.NotificationWhereInput = { userId };
     if (unreadOnly === 'true') where.read = false;
 
     const notifications = await prisma.notification.findMany({
@@ -30,7 +31,7 @@ export const getNotifications = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: notifications, unreadCount });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch notifications');
   }
 };
@@ -48,7 +49,7 @@ export const markAsRead = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, data: notification });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to mark as read');
   }
 };
@@ -65,7 +66,7 @@ export const markAllAsRead = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, message: 'All notifications marked as read' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to mark all as read');
   }
 };
@@ -82,25 +83,42 @@ export const deleteNotification = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, message: 'Notification deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to delete notification');
   }
 };
 
-// Internal: create notification (called from other controllers)
-export const createNotification = async (data: {
-  userId: string;
-  type: string;
-  title: string;
-  message: string;
-  link?: string;
-}) => {
+// Internal: kept for backwards compatibility; implemented in the notification service.
+export { createNotification } from '../services/notification.service';
+
+// POST /api/notifications/broadcast (ADMIN) - SYSTEM message to the whole hospital or to one role
+export const broadcastNotification = async (req: Request, res: Response) => {
   try {
-    const notification = await prisma.notification.create({ data });
-    io.to(`user-${data.userId}`).emit('new-notification', notification);
-    return notification;
-  } catch (error) {
-    logger.error({ err: error }, 'Failed to create notification:');
-    return null;
+    const { title, message, role, link } = req.body as {
+      title: string;
+      message: string;
+      role?: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER';
+      link?: string;
+    };
+    const adminId = req.user?.id;
+    if (!adminId) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const admin = await prisma.user.findUnique({ where: { id: adminId }, select: { hospitalId: true } });
+    if (!admin) return res.status(401).json({ success: false, message: 'Not authenticated' });
+
+    const created = await notify({
+      type: 'SYSTEM',
+      title,
+      message,
+      link,
+      recipients: {
+        hospitalId: admin.hospitalId,
+        roles: role ? [role] : ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER'],
+      },
+    });
+
+    res.status(201).json({ success: true, message: 'Broadcast sent', data: { recipients: created.length } });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to send broadcast');
   }
 };

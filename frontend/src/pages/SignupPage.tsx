@@ -1,10 +1,13 @@
 // pages/SignupPage.tsx
+import { logger } from '../utils/logger';
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiPost } from '../services/api';
 import { getErrorMessage } from '../types/api';
 
 export const SignupPage = () => {
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     name: '', 
     email: '', 
@@ -27,11 +30,11 @@ export const SignupPage = () => {
 
     try {
       await apiPost('/auth/signup', dataToSend);
-      alert('تم إنشاء الحساب بنجاح!');
+      alert(t('auth.signupSuccess'));
       navigate('/login');
     } catch (error: unknown) {
-      console.error("Signup error details:", error);
-      setError(getErrorMessage(error, '') || 'خطأ في التسجيل: تأكدي من البيانات');
+      logger.error("Signup error details:", error);
+      setError(getErrorMessage(error, '') || t('auth.signupError'));
     } finally {
       setLoading(false);
     }
@@ -40,7 +43,7 @@ export const SignupPage = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-clinic-bg p-4">
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-lg border border-slate-100">
-        <h1 className="text-2xl font-bold text-hospital-navy mb-6">Create Account</h1>
+        <h1 className="text-2xl font-bold text-hospital-navy mb-6">{t('auth.createAccount')}</h1>
 
         {error && (
           <div 
@@ -56,12 +59,12 @@ export const SignupPage = () => {
         <form onSubmit={handleSignup} className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="col-span-2">
             <label htmlFor="name" className="block text-sm font-medium text-slate-700 mb-1">
-              Full Name
+              {t('auth.fullName')}
             </label>
             <input 
               id="name"
               className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none transition" 
-              placeholder="Dr. John Smith" 
+              placeholder={t('auth.fullNamePlaceholder')} 
               value={formData.name}
               onChange={e => setFormData({...formData, name: e.target.value})} 
               required 
@@ -72,12 +75,12 @@ export const SignupPage = () => {
 
           <div className="col-span-2">
             <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-              Email Address
+              {t('auth.emailAddress')}
             </label>
             <input 
               id="email"
               className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none transition" 
-              placeholder="doctor@hospital.com" 
+              placeholder={t('auth.emailPlaceholder')} 
               type="email" 
               value={formData.email}
               onChange={e => setFormData({...formData, email: e.target.value})} 
@@ -89,12 +92,12 @@ export const SignupPage = () => {
 
           <div className="col-span-2">
             <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-              Password
+              {t('auth.password')}
             </label>
             <input 
               id="password"
               className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-medical-teal outline-none transition" 
-              placeholder="Create a strong password" 
+              placeholder={t('auth.passwordPlaceholder')} 
               type="password" 
               value={formData.password}
               onChange={e => setFormData({...formData, password: e.target.value})} 
@@ -106,7 +109,7 @@ export const SignupPage = () => {
 
           <div className="col-span-2">
             <label htmlFor="department" className="block text-sm font-medium text-slate-700 mb-1">
-              Department
+              {t('auth.department')}
             </label>
             <select 
               id="department"
@@ -114,29 +117,29 @@ export const SignupPage = () => {
               value={formData.department}
               onChange={e => setFormData({...formData, department: e.target.value})}
             >
-              <option value="Emergency">Emergency</option>
-              <option value="ICU">ICU</option>
-              <option value="Surgery">Surgery</option>
-              <option value="Pediatrics">Pediatrics</option>
-              <option value="Cardiology">Cardiology</option>
-              <option value="General">General</option>
+              <option value="Emergency">{t('departments.Emergency')}</option>
+              <option value="ICU">{t('departments.ICU')}</option>
+              <option value="Surgery">{t('departments.Surgery')}</option>
+              <option value="Pediatrics">{t('departments.Pediatrics')}</option>
+              <option value="Cardiology">{t('departments.Cardiology')}</option>
+              <option value="General">{t('departments.General')}</option>
             </select>
           </div>
 
           <button 
             type="submit" 
             disabled={loading}
-            className="col-span-2 bg-hospital-navy hover:bg-slate-800 text-white py-3 rounded-xl font-bold transition duration-200 disabled:opacity-50"
-            aria-label={loading ? 'Creating account, please wait' : 'Create account'}
+            className="col-span-2 bg-hospital-navy hover:bg-teal-700 text-white py-3 rounded-xl font-bold transition duration-200 disabled:opacity-50"
+            aria-label={loading ? t('auth.creatingAccountWait') : t('auth.createAccountLabel')}
             aria-busy={loading}
           >
-            {loading ? 'Creating Account...' : 'Sign Up'}
+            {loading ? t('auth.creatingAccount') : t('auth.signUp')}
           </button>
         </form>
 
         <p className="text-center text-slate-600 mt-6 text-sm">
-          Do you already have an account? 
-          <Link to="/login" className="text-teal-700 font-medium hover:underline"> Login</Link>
+          {t('auth.haveAccount')}{' '}
+          <Link to="/login" className="text-teal-700 font-medium hover:underline">{t('auth.login')}</Link>
         </p>
       </div>
     </div>

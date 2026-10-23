@@ -1,5 +1,7 @@
 // components/BedModal.tsx
+import { logger } from '../utils/logger';
 import { useEffect, useState, useRef, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
 import { apiGet, apiPost, apiPut } from '../services/api';
 import { getErrorMessage, type ApiResponse } from '../types/api';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
@@ -21,6 +23,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   onClose: () => void;
   onSuccess: () => void;
 }) => {
+  const { t } = useTranslation();
   const [bedNumber, setBedNumber] = useState(bed?.bedNumber || '');
   const [wardId, setWardId] = useState(bed?.wardId || '');
   const [status, setStatus] = useState<BedStatus>(bed?.status || 'AVAILABLE');
@@ -42,7 +45,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     const id = Math.random().toString(36).slice(2);
     setToasts(prev => [...prev, { id, message, type }]);
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts(prev => prev.filter(item => item.id !== id));
     }, 5000);
   }, []);
 
@@ -110,15 +113,15 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         : await apiPost('/beds', body);
 
       if (data.success) {
-        addToast(bed ? 'Bed updated successfully' : 'Bed created successfully', 'success');
+        addToast(bed ? t('beds.modal.updated') : t('beds.modal.created'), 'success');
         onSuccess();
         onClose();
       } else {
-        addToast(data.message || 'Failed to save bed', 'error');
+        addToast(data.message || t('beds.modal.saveFailed'), 'error');
       }
     } catch (error: unknown) {
-      console.error('Error saving bed:', error);
-      addToast(getErrorMessage(error, 'An unexpected error occurred'), 'error');
+      logger.error('Error saving bed:', error);
+      addToast(getErrorMessage(error, t('common.unexpectedError')), 'error');
     } finally {
       setSaving(false);
     }
@@ -128,15 +131,15 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   const selectedPatient = patients.find(p => p.id === selectedPatientId);
 
   const statusLabels: Record<BedStatus, string> = {
-    AVAILABLE: 'Available',
-    OCCUPIED: 'Occupied',
-    CLEANING: 'Cleaning',
-    MAINTENANCE: 'Maintenance',
+    AVAILABLE: t('beds.status.AVAILABLE'),
+    OCCUPIED: t('beds.status.OCCUPIED'),
+    CLEANING: t('beds.status.CLEANING'),
+    MAINTENANCE: t('beds.status.MAINTENANCE'),
   };
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="bed-modal-title"
@@ -145,17 +148,17 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
       }}
     >
       {/* Toast notifications */}
-      <div className="fixed top-4 right-4 z-[60] space-y-2" role="region" aria-label="Notifications">
-        {toasts.map(t => (
+      <div className="fixed top-4 end-4 z-[60] space-y-2" role="region" aria-label={t('common.notifications')}>
+        {toasts.map(toast => (
           <div
-            key={t.id}
+            key={toast.id}
             className={`px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
-              t.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
+              toast.type === 'error' ? 'bg-red-50 text-red-700 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'
             }`}
             role="alert"
             aria-live="polite"
           >
-            {t.message}
+            {toast.message}
           </div>
         ))}
       </div>
@@ -166,18 +169,18 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
         tabIndex={-1}
       >
         <h2 id="bed-modal-title" className="text-xl font-bold text-gray-900 mb-1">
-          {bed ? 'Edit Bed' : 'Add New Bed'}
+          {bed ? t('beds.modal.editTitle') : t('beds.modal.addTitle')}
         </h2>
         <p className="text-gray-500 text-sm mb-6">
-          {bed ? `Update bed ${bed.bedNumber}` : 'Create a new hospital bed'}
+          {bed ? t('beds.modal.editSubtitle', { number: bed.bedNumber }) : t('beds.modal.addSubtitle')}
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Bed Number */}
           <div>
             <label htmlFor="bed-number" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Bed Number <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> (required)</span>
+              {t('beds.modal.bedNumber')} <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <input
               id="bed-number"
@@ -185,7 +188,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               value={bedNumber}
               onChange={e => setBedNumber(e.target.value)}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-              placeholder="e.g. ICU-101"
+              placeholder={t('beds.modal.bedNumberPlaceholder')}
               required
               aria-required="true"
             />
@@ -194,8 +197,8 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           {/* Ward - Custom Dropdown */}
           <div className="relative">
             <label id="ward-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Ward / Department <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> (required)</span>
+              {t('beds.modal.ward')} <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <button
               ref={wardBtnRef}
@@ -209,10 +212,10 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 setShowPatientDropdown(false);
                 setShowStatusDropdown(false);
               }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
             >
               <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-400'}>
-                {selectedWard ? selectedWard.name : 'Select ward...'}
+                {selectedWard ? selectedWard.name : t('beds.modal.selectWard')}
               </span>
               <svg
                 className={`w-4 h-4 text-gray-400 transition ${showWardDropdown ? 'rotate-180' : ''}`}
@@ -232,7 +235,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 aria-labelledby="ward-label"
               >
                 {wards.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-400">No wards available</div>
+                  <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noWards')}</div>
                 ) : (
                   wards.map(w => (
                     <button
@@ -244,7 +247,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                         setWardId(w.id);
                         setShowWardDropdown(false);
                       }}
-                      className={`w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
+                      className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
                         wardId === w.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                       }`}
                     >
@@ -259,7 +262,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           {/* Patient - Custom Dropdown */}
           <div className="relative">
             <label id="patient-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Assign Patient (Optional)
+              {t('beds.modal.assignPatient')}
             </label>
             <button
               ref={patientBtnRef}
@@ -273,10 +276,10 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 setShowWardDropdown(false);
                 setShowStatusDropdown(false);
               }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-left focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
             >
               <span id="patient-value" className={selectedPatient ? 'text-gray-900' : 'text-gray-400'}>
-                {selectedPatient ? selectedPatient.name : '— Unassigned —'}
+                {selectedPatient ? selectedPatient.name : t('beds.modal.unassigned')}
               </span>
               <svg
                 className={`w-4 h-4 text-gray-400 transition ${showPatientDropdown ? 'rotate-180' : ''}`}
@@ -303,11 +306,11 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                     setSelectedPatientId('');
                     setShowPatientDropdown(false);
                   }}
-                  className={`w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
+                  className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
                     !selectedPatientId ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                   }`}
                 >
-                  — Unassigned —
+                  {t('beds.modal.unassigned')}
                 </button>
                 {patients.map(p => (
                   <button
@@ -319,7 +322,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                       setSelectedPatientId(p.id);
                       setShowPatientDropdown(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
+                    className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
                       selectedPatientId === p.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                     }`}
                   >
@@ -327,19 +330,19 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                   </button>
                 ))}
                 {patients.length === 0 && (
-                  <div className="px-3 py-2 text-sm text-gray-400">No unassigned patients</div>
+                  <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noPatients')}</div>
                 )}
               </div>
             )}
             <p className="text-xs text-gray-400 mt-1" id="patient-hint">
-              {selectedPatientId ? 'Status will be set to Occupied' : 'Status will be Available'}
+              {selectedPatientId ? t('beds.modal.willBeOccupied') : t('beds.modal.willBeAvailable')}
             </p>
           </div>
 
           {/* Status - Custom Dropdown */}
           <div className="relative">
             <label id="status-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              Status
+              {t('beds.modal.status')}
             </label>
             <button
               ref={statusBtnRef}
@@ -357,7 +360,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 }
               }}
               disabled={!!selectedPatientId}
-              className={`w-full border rounded-lg px-3 py-2.5 text-left outline-none text-sm flex justify-between items-center ${
+              className={`w-full border rounded-lg px-3 py-2.5 text-start outline-none text-sm flex justify-between items-center ${
                 selectedPatientId
                   ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
                   : 'border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
@@ -395,7 +398,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                       setStatus(s);
                       setShowStatusDropdown(false);
                     }}
-                    className={`w-full text-left px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
+                    className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
                       status === s ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
                     }`}
                   >
@@ -406,7 +409,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
             )}
             {selectedPatientId && (
               <p className="text-xs text-gray-400 mt-1" id="status-hint">
-                Status is auto-set when patient is assigned
+                {t('beds.modal.autoStatus')}
               </p>
             )}
           </div>
@@ -417,9 +420,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               type="button"
               onClick={onClose}
               className="flex-1 bg-gray-100 text-gray-700 py-2.5 rounded-lg hover:bg-gray-200 transition font-medium text-sm"
-              aria-label="Cancel and close modal"
+              aria-label={t('common.cancelAndClose')}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -427,7 +430,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               className="flex-1 bg-blue-600 text-white py-2.5 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 font-medium text-sm"
               aria-busy={saving}
             >
-              {saving ? 'Saving...' : bed ? 'Save Changes' : 'Add Bed'}
+              {saving ? t('common.saving') : bed ? t('beds.modal.save') : t('beds.add')}
             </button>
           </div>
         </form>

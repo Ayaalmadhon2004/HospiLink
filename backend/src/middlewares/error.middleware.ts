@@ -1,11 +1,24 @@
 import { Request, Response, NextFunction } from 'express';
 import logger from '../config/logger';
+import { captureServerError } from '../config/sentry';
 
-export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
+interface HttpError {
+  status?: number;
+  message?: string;
+  stack?: string;
+}
+
+export const errorHandler = (err: HttpError, req: Request, res: Response, next: NextFunction) => {
   logger.error({ err }, 'Unhandled error');
 
-  res.status(err.status || 500).json({
+  if (!err.status || err.status >= 500) captureServerError(err);
+
+  const status: number = err.status || 500;
+  const fallback = 'حدث خطأ غير متوقع في السيرفر';
+
+  // لا نكشف رسائل الأخطاء الداخلية للعميل (5xx)؛ رسائل 4xx آمنة
+  res.status(status).json({
     success: false,
-    message: err.message || 'حدث خطأ غير متوقع في السيرفر',
+    message: status >= 500 ? fallback : err.message || fallback,
   });
 };

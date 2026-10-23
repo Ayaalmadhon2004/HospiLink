@@ -76,3 +76,8 @@ export const listPatientsQuerySchema = z.object({
 export const availableBedsQuerySchema = z.object({
   department: z.string().trim().max(MAX_SHORT_TEXT).optional(),
 });
+
+// GET /api/patients/flow. days is coerced and capped so one request can't scan years of rows.
+export const patientFlowQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(30).optional(),
+});

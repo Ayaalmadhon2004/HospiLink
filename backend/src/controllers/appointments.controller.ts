@@ -2,11 +2,42 @@
 import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
+import { CLINICAL_ROOM } from '../middlewares/socket.auth';
 import logger from '../config/logger';
+import { notify } from '../services/notification.service';
+import type { Prisma } from '@prisma/client';
 
-const handleError = (res: Response, error: any, message: string) => {
+const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
-  res.status(500).json({ success: false, message, error: error.message });
+  res.status(500).json({ success: false, message });
+};
+
+const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }) =>
+  `${a.patient?.name ?? 'Patient'} on ${new Date(a.scheduledAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+
+// Appointment.doctorId points at Staff; the matching login (User) shares the same email.
+const notifyAppointmentDoctor = async (
+  appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
+  title: string,
+  actorId?: string
+) => {
+  try {
+    const message = describeAppointment(appointment);
+    const doctorStaffId = appointment.doctorId;
+    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { email: true } });
+    if (!staff) return;
+    const user = await prisma.user.findUnique({ where: { email: staff.email }, select: { id: true } });
+    if (!user) return;
+    await notify({
+      type: 'APPOINTMENT',
+      title,
+      message,
+      link: '/appointments',
+      recipients: { userIds: [user.id], excludeUserId: actorId, scopeUserId: actorId },
+    });
+  } catch (error) {
+    logger.error({ err: error }, 'Appointment notification failed');
+  }
 };
 
 // ─── GET /api/appointments ─────────────────────────────────────────────
@@ -14,7 +45,7 @@ export const getAppointments = async (req: Request, res: Response) => {
   try {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
-    const where: any = {};
+    const where: Prisma.AppointmentWhereInput = {};
 
     if (date) {
       const d = new Date(date as string);
@@ -38,7 +69,7 @@ export const getAppointments = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: appointments.length, data: appointments });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch appointments');
   }
 };
@@ -64,7 +95,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
     });
 
     // Group by hour for timeline view
-    const schedule = appointments.reduce((acc: any, apt: any) => {
+    const schedule = appointments.reduce<Record<string, typeof appointments>>((acc, apt) => {
       const hour = new Date(apt.scheduledAt).getHours();
       const timeKey = `${hour.toString().padStart(2, '0')}:00`;
       if (!acc[timeKey]) acc[timeKey] = [];
@@ -73,7 +104,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
     }, {});
 
     res.status(200).json({ success: true, data: { appointments, schedule } });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch today schedule');
   }
 };
@@ -97,7 +128,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: appointments.length, data: appointments });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch upcoming appointments');
   }
 };
@@ -120,7 +151,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch appointment');
   }
 };
@@ -235,10 +266,12 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.emit('appointment-created', appointment);
+    io.to(CLINICAL_ROOM).emit('appointment-created', appointment);
+
+    await notifyAppointmentDoctor(appointment, 'New appointment', req.user?.id);
 
     res.status(201).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to create appointment');
   }
 };
@@ -262,10 +295,15 @@ export const updateAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.emit('appointment-updated', appointment);
+    io.to(CLINICAL_ROOM).emit('appointment-updated', appointment);
+
+    // Only schedule-relevant changes are worth a notification.
+    if (['scheduledAt', 'status', 'doctorId', 'room'].some((k) => k in updateData)) {
+      await notifyAppointmentDoctor(appointment, 'Appointment changed', req.user?.id);
+    }
 
     res.status(200).json({ success: true, data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to update appointment');
   }
 };
@@ -280,10 +318,12 @@ export const deleteAppointment = async (req: Request, res: Response) => {
       data: { status: 'CANCELLED' },
     });
 
-    io.emit('appointment-cancelled', { id });
+    io.to(CLINICAL_ROOM).emit('appointment-cancelled', { id });
+
+    await notifyAppointmentDoctor(appointment, 'Appointment cancelled', req.user?.id);
 
     res.status(200).json({ success: true, message: 'Appointment cancelled', data: appointment });
-  } catch (error: any) {
+  } catch (error: unknown) {
     handleError(res, error, 'Failed to cancel appointment');
   }
 };

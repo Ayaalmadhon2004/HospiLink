@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { uploadReport } from '../services/patientService';
 import { Upload, X, FileText, Image } from 'lucide-react';
@@ -10,6 +11,7 @@ interface UploadReportModalProps {
 }
 
 export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportModalProps) => {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -56,7 +58,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50"
       role="dialog"
       aria-modal="true"
       aria-labelledby="upload-modal-title"
@@ -67,12 +69,12 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
       <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 id="upload-modal-title" className="text-xl font-bold text-hospital-navy">
-            Upload Report
+            {t('patientDetail.uploadReport')}
           </h2>
           <button
             onClick={onClose}
             className="text-clinic-text/50 hover:text-clinic-text p-1 rounded-lg hover:bg-slate-100 transition"
-            aria-label="Close upload modal"
+            aria-label={t('patientDetail.closeUpload')}
             type="button"
           >
             <X size={20} aria-hidden="true" />
@@ -85,7 +87,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             role="alert"
             aria-live="assertive"
           >
-            {mutation.error?.message || 'Upload failed'}
+            {mutation.error?.message || t('uploadReport.failed')}
           </div>
         )}
 
@@ -100,7 +102,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
           }}
           role="button"
           tabIndex={0}
-          aria-label="Click to select a file to upload"
+          aria-label={t('uploadReport.dropLabel')}
           className="border-2 border-dashed border-slate-200 rounded-xl p-8 text-center cursor-pointer hover:border-medical-teal transition"
         >
           <input
@@ -109,13 +111,13 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             accept=".pdf,.jpg,.jpeg,.png"
             onChange={handleFileSelect}
             className="hidden"
-            aria-label="Select report file"
+            aria-label={t('uploadReport.inputLabel')}
           />
 
           {preview ? (
             <img
               src={preview}
-              alt={`Preview of ${selectedFile?.name || 'selected file'}`}
+              alt={t('uploadReport.preview', { name: selectedFile?.name || t('uploadReport.selectedFile') })}
               className="max-h-40 mx-auto rounded-lg"
               loading="lazy"
               decoding="async"
@@ -125,10 +127,10 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             <div className="flex flex-col items-center gap-2">
               {getFileIcon()}
               <p className="text-clinic-text/70">
-                {selectedFile ? selectedFile.name : 'Click to select PDF or Image'}
+                {selectedFile ? selectedFile.name : t('uploadReport.select')}
               </p>
               <p className="text-clinic-text/40 text-sm">
-                PDF, JPG, PNG up to 10MB
+                {t('uploadReport.help')}
               </p>
             </div>
           )}
@@ -140,7 +142,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             <div className="flex justify-between items-center">
               <span className="text-sm text-clinic-text truncate">{selectedFile.name}</span>
               <span className="text-xs text-clinic-text/50">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                {t('patientDetail.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
               </span>
             </div>
           </div>
@@ -154,7 +156,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             disabled={mutation.isPending}
             type="button"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={handleUpload}
@@ -164,7 +166,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
             type="button"
           >
             <Upload size={18} aria-hidden="true" />
-            {mutation.isPending ? 'Uploading...' : 'Upload Report'}
+            {mutation.isPending ? t('patientDetail.uploading') : t('patientDetail.uploadReport')}
           </button>
         </div>
       </div>

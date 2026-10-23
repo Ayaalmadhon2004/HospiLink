@@ -3,6 +3,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
+import { notify } from '../services/notification.service';
+import type { Prisma } from '@prisma/client';
 
 const METRIC_KEYS = [
   'heartRate',
@@ -16,6 +18,9 @@ type MetricKey = (typeof METRIC_KEYS)[number];
 type MetricValues = Partial<Record<MetricKey, number | null>>;
 
 // undefined/null/'' => null (missing); numeric value/string => finite number; anything else => undefined (invalid).
+// `protect` always sets req.user on routed requests; the fallback only covers a call without an authenticated user.
+const SYSTEM_RECORDER = 'system';
+
 const parseMetric = (v: unknown): number | null | undefined => {
   if (v === undefined || v === null) return null;
   if (typeof v === 'string') {
@@ -64,7 +69,8 @@ export const createVital = async (req: Request, res: Response) => {
         spO2: values.spO2,
         temperature: values.temperature,
         respiratoryRate: values.respiratoryRate,
-      } as any,
+        recordedBy: req.user?.id ?? SYSTEM_RECORDER,
+      },
     });
 
     io.to(`patient-${newVital.patientId}`).emit('new-vital', newVital);
@@ -82,7 +88,7 @@ const checkCriticalVitals = async (
   vitals: MetricValues
 ): Promise<{ isCritical: boolean; alertType: string | null }> => {
   try {
-    const thresholds = await (prisma as any).vitalThresholds.findMany({
+    const thresholds = await prisma.vitalThresholds.findMany({
       where: { department, alertEnabled: true },
     });
 
@@ -121,6 +127,25 @@ const checkCriticalVitals = async (
   }
 };
 
+// Critical vitals go to the assigned doctor plus doctors/nurses of the patient's department.
+const notifyCriticalVitals = (
+  patient: { id: string; name?: string | null; department: string; doctorId?: string | null },
+  alertType: string | null,
+  actorId?: string
+) =>
+  notify({
+    type: 'VITALS',
+    title: 'Critical vitals alert',
+    message: `${patient.name ?? 'Patient'} (${patient.department}): ${alertType ?? 'critical reading'}`,
+    link: `/patients/${patient.id}`,
+    recipients: {
+      roles: ['DOCTOR', 'NURSE'],
+      department: patient.department,
+      userIds: patient.doctorId ? [patient.doctorId] : [],
+      scopeUserId: actorId,
+    },
+  });
+
 // POST /api/vitals - Record new vitals
 export const recordVitals = async (req: Request, res: Response) => {
   try {
@@ -130,7 +155,7 @@ export const recordVitals = async (req: Request, res: Response) => {
 
     const patient = await prisma.patient.findUnique({
       where: { id: patientId as string },
-      select: { department: true },
+      select: { id: true, name: true, department: true, doctorId: true },
     });
 
     if (!patient) {
@@ -139,7 +164,7 @@ export const recordVitals = async (req: Request, res: Response) => {
 
     const { isCritical, alertType } = await checkCriticalVitals(patient.department, values);
 
-    const vitals = await (prisma as any).patientVitals.create({
+    const vitals = await prisma.patientVitals.create({
       data: {
         patientId: patientId as string,
         heartRate: values.heartRate,
@@ -148,24 +173,26 @@ export const recordVitals = async (req: Request, res: Response) => {
         spO2: values.spO2,
         temperature: values.temperature,
         respiratoryRate: values.respiratoryRate,
-        recordedBy: (req.user as any)?.userId || 'system',
+        recordedBy: req.user?.id ?? SYSTEM_RECORDER,
         notes,
         isCritical,
         alertType,
-      } as any,
+      },
     });
 
     // ✅ Emit للـ room تبع المريض
     io.to(`patient-${patientId}`).emit('new-vital', vitals);
+
+    if (isCritical) await notifyCriticalVitals(patient, alertType, req.user?.id);
 
     res.status(201).json({
       success: true,
       data: vitals,
       alert: isCritical ? { type: alertType, message: 'Critical vital detected!' } : null,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Record vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to record vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to record vitals' });
   }
 };
 
@@ -175,11 +202,11 @@ export const getVitals = async (req: Request, res: Response) => {
     const patientId = typeof req.query.patientId === 'string' ? req.query.patientId : undefined;
     const critical = req.query.critical;
 
-    const where: any = {};
+    const where: Prisma.PatientVitalsWhereInput = {};
     if (patientId) where.patientId = patientId;
     if (critical === 'true') where.isCritical = true;
 
-    const vitals = await (prisma as any).patientVitals.findMany({
+    const vitals = await prisma.patientVitals.findMany({
       where,
       include: {
         patient: {
@@ -191,9 +218,9 @@ export const getVitals = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: vitals.length, data: vitals });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vitals' });
   }
 };
 
@@ -202,10 +229,10 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
   try {
     const department = req.query.department as string;
 
-    const where: any = { isCritical: true };
+    const where: Prisma.PatientVitalsWhereInput = { isCritical: true };
     if (department) where.patient = { department };
 
-    const alerts = await (prisma as any).patientVitals.findMany({
+    const alerts = await prisma.patientVitals.findMany({
       where,
       include: {
         patient: {
@@ -217,9 +244,9 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
     });
 
     res.status(200).json({ success: true, count: alerts.length, data: alerts });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get alerts error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch alerts', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch alerts' });
   }
 };
 
@@ -227,7 +254,7 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
 export const getVitalsById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const vitals = await (prisma as any).patientVitals.findUnique({
+    const vitals = await prisma.patientVitals.findUnique({
       where: { id },
       include: {
         patient: {
@@ -241,9 +268,9 @@ export const getVitalsById = async (req: Request, res: Response) => {
     }
 
     res.status(200).json({ success: true, data: vitals });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Get vitals by id error:');
-    res.status(500).json({ success: false, message: 'Failed to fetch vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to fetch vitals' });
   }
 };
 
@@ -257,7 +284,7 @@ export const updateVitals = async (req: Request, res: Response) => {
     const updateData: Record<string, unknown> = { ...values };
     if ('notes' in body) updateData.notes = body.notes;
 
-    const currentVitals = await (prisma as any).patientVitals.findUnique({
+    const currentVitals = await prisma.patientVitals.findUnique({
       where: { id },
       include: { patient: true },
     });
@@ -277,7 +304,7 @@ export const updateVitals = async (req: Request, res: Response) => {
       newVitalsData
     );
 
-    const updated = await (prisma as any).patientVitals.update({
+    const updated = await prisma.patientVitals.update({
       where: { id },
       data: {
         ...updateData,
@@ -286,10 +313,15 @@ export const updateVitals = async (req: Request, res: Response) => {
       },
     });
 
+    // Only alert when the reading BECOMES critical (not on every edit of an already critical one).
+    if (isCritical && !currentVitals.isCritical) {
+      await notifyCriticalVitals(currentVitals.patient, alertType, req.user?.id);
+    }
+
     res.status(200).json({ success: true, data: updated });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Update vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to update vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to update vitals' });
   }
 };
 
@@ -297,11 +329,11 @@ export const updateVitals = async (req: Request, res: Response) => {
 export const deleteVitals = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    await (prisma as any).patientVitals.delete({ where: { id } });
+    await prisma.patientVitals.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error({ err: error }, 'Delete vitals error:');
-    res.status(500).json({ success: false, message: 'Failed to delete vitals', error: error.message });
+    res.status(500).json({ success: false, message: 'Failed to delete vitals' });
   }
 };

@@ -20,12 +20,15 @@ jest.mock('../../src/controllers/patient.controller', () => {
     admitPatient: echo(201),
     uploadReport: echo(201),
     getRecentPatients: echo(),
+    getCriticalPatientCount: echo(),
+    getPatientFlow: echo(),
     getPatients: echo(),
     getPatientById: echo(),
     updatePatient: echo(),
     dischargePatient: echo(),
     getPatientReports: echo(),
     getAvailableBeds: echo(),
+    getReportFile: echo(),
   };
 });
 
@@ -107,5 +110,19 @@ describe('patient routes validation', () => {
     const ok = await request(app).post(`/patients/${U1}/reports`).field('anything', 'x');
     expect(ok.status).toBe(201);
     expect(ok.body.params).toEqual({ id: U1 });
+  });
+});
+
+describe('GET /patients/reports/:reportId/file', () => {
+  it('يرفض reportId مش UUID', async () => {
+    const res = await request(app).get('/patients/reports/not-a-uuid/file');
+    expect(res.status).toBe(400);
+    expect(controller.getReportFile).not.toHaveBeenCalled();
+  });
+
+  it('يمرر الطلب للكونترولر لما الـ id صحيح', async () => {
+    const res = await request(app).get(`/patients/reports/${U1}/file`);
+    expect(res.status).toBe(200);
+    expect(controller.getReportFile).toHaveBeenCalledTimes(1);
   });
 });

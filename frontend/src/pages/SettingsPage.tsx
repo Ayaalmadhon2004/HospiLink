@@ -1,44 +1,178 @@
 // frontend/src/pages/SettingsPage.tsx
-import { useState } from 'react';
-import useSettings, { type DisplaySettings } from '../hooks/useSettings';
-import { Bell, Shield, Monitor, User, Loader2, Check } from 'lucide-react';
+import { useId, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import useSettings, { type DisplaySettings, type ProfileSettings } from '../hooks/useSettings';
+import { Bell, Shield, Monitor, User, Loader2 } from 'lucide-react';
+import { getTimezoneOptions } from '../utils/datetime';
+
+const FIELD_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4';
+const INPUT_CLASS =
+  'w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 bg-white focus:ring-2 focus:ring-teal-500 outline-none';
+const READONLY_CLASS = 'w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-600';
 
 const Toggle: React.FC<{
   enabled: boolean;
   onChange: () => void;
   label: string;
-}> = ({ enabled, onChange, label }) => (
+  disabled?: boolean;
+}> = ({ enabled, onChange, label, disabled = false }) => (
   <button
+    type="button"
     onClick={onChange}
-    className={`relative w-12 h-7 rounded-full transition-colors ${
-      enabled ? 'bg-teal-500' : 'bg-gray-300'
-    }`}
+    disabled={disabled}
+    className={`relative shrink-0 w-12 h-7 rounded-full transition-colors focus-visible:ring-2 focus-visible:ring-teal-500 focus-visible:ring-offset-2 outline-none ${
+      enabled ? 'bg-teal-600' : 'bg-gray-300'
+    } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
     role="switch"
     aria-checked={enabled}
     aria-label={label}
   >
     <span
-      className={`absolute top-1 left-1 w-5 h-5 bg-white rounded-full transition-transform ${
-        enabled ? 'translate-x-5' : 'translate-x-0'
+      className={`absolute top-1 start-1 w-5 h-5 bg-white rounded-full transition-transform ${
+        enabled ? 'translate-x-5 rtl:-translate-x-5' : 'translate-x-0'
       }`}
     />
   </button>
 );
 
-const SettingsPage: React.FC = () => {
-  const { settings, loading: settingsLoading, updateProfile, updateNotifications, updateSecurity, updateDisplay } = useSettings();
-  const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState('');
-  const [profileEdit, setProfileEdit] = useState({ name: '', department: '', shift: '' });
+const SettingRow: React.FC<{
+  title: string;
+  description: string;
+  badge?: string;
+  first?: boolean;
+  children: React.ReactNode;
+}> = ({ title, description, badge, first = false, children }) => (
+  <div className={`${first ? '' : 'border-t border-gray-100 pt-6'} flex items-center justify-between gap-4`}>
+    <div className="min-w-0">
+      <h3 className="font-medium text-gray-800 flex flex-wrap items-center gap-2">
+        {title}
+        {badge && (
+          <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">{badge}</span>
+        )}
+      </h3>
+      <p className="text-sm text-gray-600">{description}</p>
+    </div>
+    {children}
+  </div>
+);
 
-  const loading = settingsLoading;
+const SectionHeader: React.FC<{ icon: React.ReactNode; title: string }> = ({ icon, title }) => (
+  <div className="flex items-center gap-3 mb-6">
+    {icon}
+    <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+  </div>
+);
+
+const Field: React.FC<{ label: string; htmlFor: string; children: React.ReactNode }> = ({ label, htmlFor, children }) => (
+  <div>
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-gray-700 mb-2">
+      {label}
+    </label>
+    {children}
+  </div>
+);
+
+type EditableProfile = Pick<ProfileSettings, 'name' | 'department' | 'shift'>;
+
+const ProfileForm: React.FC<{
+  profile: ProfileSettings;
+  onSave: (data: EditableProfile) => Promise<{ success: boolean }>;
+}> = ({ profile, onSave }) => {
+  const { t } = useTranslation();
+  const uid = useId();
+  const [form, setForm] = useState<EditableProfile>({
+    name: profile.name,
+    department: profile.department,
+    shift: profile.shift,
+  });
+  const [saving, setSaving] = useState(false);
+
+  const trimmed: EditableProfile = {
+    name: form.name.trim(),
+    department: form.department.trim(),
+    shift: form.shift.trim(),
+  };
+  const valid = Object.values(trimmed).every((v) => v.length > 0);
+  const changed = (Object.keys(trimmed) as (keyof EditableProfile)[]).some((k) => trimmed[k] !== profile[k]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!valid || !changed) return;
+    setSaving(true);
+    await onSave(trimmed);
+    setSaving(false);
+  };
+
+  const bind = (key: keyof EditableProfile) => ({
+    id: `${uid}-${key}`,
+    value: form[key],
+    required: true,
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => setForm((prev) => ({ ...prev, [key]: e.target.value })),
+    className: INPUT_CLASS,
+  });
+
+  return (
+    <form onSubmit={handleSubmit} className={FIELD_GRID}>
+      <Field label={t('settings.profile.fullName')} htmlFor={`${uid}-name`}>
+        <input type="text" maxLength={100} autoComplete="name" {...bind('name')} />
+      </Field>
+      <Field label={t('settings.profile.role')} htmlFor={`${uid}-role`}>
+        <input id={`${uid}-role`} type="text" value={profile.role} disabled className={READONLY_CLASS} />
+      </Field>
+      <Field label={t('settings.profile.email')} htmlFor={`${uid}-email`}>
+        <input id={`${uid}-email`} type="email" value={profile.email} disabled className={READONLY_CLASS} />
+      </Field>
+      <Field label={t('settings.profile.department')} htmlFor={`${uid}-department`}>
+        <input type="text" maxLength={100} {...bind('department')} />
+      </Field>
+      <Field label={t('settings.profile.shift')} htmlFor={`${uid}-shift`}>
+        <input type="text" maxLength={50} {...bind('shift')} />
+      </Field>
+      <div className="flex items-end">
+        <button
+          type="submit"
+          disabled={saving || !valid || !changed}
+          className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition"
+        >
+          {saving ? t('common.saving') : t('settings.profile.save')}
+        </button>
+      </div>
+    </form>
+  );
+};
+
+const NOTIFICATION_KEYS = [
+  'criticalVitalsAlerts',
+  'incidentEscalations',
+  'shiftReminders',
+  'dispatchAlerts',
+  'appointmentReminders',
+] as const;
+
+const SettingsPage: React.FC = () => {
+  const { t } = useTranslation();
+  const uid = useId();
+  const {
+    settings,
+    loading,
+    updateProfile,
+    updateNotifications,
+    updateSecurity,
+    updateDisplay,
+  } = useSettings();
+
+  const timezones = useMemo(() => {
+    const zones = getTimezoneOptions();
+    const current = settings?.display.timezone;
+    return current && !zones.includes(current) ? [current, ...zones] : zones;
+  }, [settings?.display.timezone]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="flex items-center gap-3 text-gray-400">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span>Loading settings...</span>
+        <div className="flex items-center gap-3 text-gray-500" role="status">
+          <Loader2 className="w-5 h-5 animate-spin" aria-hidden="true" />
+          <span>{t('settings.loading')}</span>
         </div>
       </div>
     );
@@ -46,265 +180,131 @@ const SettingsPage: React.FC = () => {
 
   if (!settings) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
-          Failed to load settings. Please refresh the page.
+      <div className="p-4 md:p-8">
+        <div className="bg-red-50 text-red-700 p-4 rounded-lg" role="alert">
+          {t('settings.loadError')}
         </div>
       </div>
     );
   }
 
-  const handleToggle = async (
+  // Optimistic update + success/error toasts are handled by SettingsProvider.
+  const flip = (
     key: string,
-    currentValue: boolean,
+    current: boolean,
     updateFn: (data: Record<string, boolean>) => Promise<{ success: boolean }>
-  ) => {
-    setSaving(true);
-    const result = await updateFn({ [key]: !currentValue });
-    setSaving(false);
-    if (result.success) {
-      setSaveMessage('Saved successfully');
-      setTimeout(() => setSaveMessage(''), 3000);
-    }
-  };
-
-  const handleProfileSave = async () => {
-    setSaving(true);
-    const result = await updateProfile({
-      name: profileEdit.name || settings.profile.name,
-      department: profileEdit.department || settings.profile.department,
-      shift: profileEdit.shift || settings.profile.shift,
-    });
-    setSaving(false);
-    if (result.success) {
-      setSaveMessage('Profile updated');
-      setProfileEdit({ name: '', department: '', shift: '' });
-      setTimeout(() => setSaveMessage(''), 3000);
-    }
-  };
+  ) => void updateFn({ [key]: !current });
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-800 mb-6">Settings</h1>
+    <div className="p-4 md:p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold text-gray-800 mb-6">{t('settings.title')}</h1>
 
-      {saveMessage && (
-        <div className="mb-4 p-3 bg-green-100 text-green-700 rounded-lg flex items-center gap-2" role="alert">
-          <Check className="w-4 h-4" />
-          {saveMessage}
-        </div>
-      )}
+      <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+        <SectionHeader icon={<User className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.profile.title')} />
+        {/* key: re-seed the form when the saved profile changes */}
+        <ProfileForm
+          key={`${settings.profile.name}|${settings.profile.department}|${settings.profile.shift}`}
+          profile={settings.profile}
+          onSave={updateProfile}
+        />
+      </section>
 
-      {/* Profile Section - EDITABLE */}
-      <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <User className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Profile</h2>
-        </div>
-        <div className="grid grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Full name</label>
-            <input
-              type="text"
-              defaultValue={settings.profile.name}
-              onChange={(e) => setProfileEdit(prev => ({ ...prev, name: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
-            <input
-              type="text"
-              value={settings.profile.role}
-              disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
-            <input
-              type="email"
-              value={settings.profile.email}
-              disabled
-              className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-gray-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
-            <input
-              type="text"
-              defaultValue={settings.profile.department}
-              onChange={(e) => setProfileEdit(prev => ({ ...prev, department: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Shift</label>
-            <input
-              type="text"
-              defaultValue={settings.profile.shift}
-              onChange={(e) => setProfileEdit(prev => ({ ...prev, shift: e.target.value }))}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg text-gray-800 focus:ring-2 focus:ring-teal-500 outline-none"
-            />
-          </div>
-          <div className="flex items-end">
-            <button
-              onClick={handleProfileSave}
-              disabled={saving}
-              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 disabled:opacity-50 transition"
+      <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+        <SectionHeader icon={<Bell className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.notifications.title')} />
+        <div className="space-y-6">
+          {NOTIFICATION_KEYS.map((key, i) => (
+            <SettingRow
+              key={key}
+              first={i === 0}
+              title={t(`settings.notifications.${key}.title`)}
+              description={t(`settings.notifications.${key}.description`)}
             >
-              {saving ? 'Saving...' : 'Save Profile'}
-            </button>
-          </div>
+              <Toggle
+                enabled={settings.notifications[key]}
+                onChange={() => flip(key, settings.notifications[key], updateNotifications)}
+                label={t(`settings.notifications.${key}.toggle`)}
+              />
+            </SettingRow>
+          ))}
         </div>
       </section>
 
-      {/* Notifications Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Bell className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Notifications</h2>
-        </div>
+      <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+        <SectionHeader icon={<Shield className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.security.title')} />
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Critical vitals alerts</h3>
-              <p className="text-sm text-gray-500">Push alerts when a patient enters a critical range.</p>
-            </div>
-            <Toggle
-              enabled={settings.notifications.criticalVitalsAlerts}
-              onChange={() => handleToggle('criticalVitalsAlerts', settings.notifications.criticalVitalsAlerts, updateNotifications)}
-              label="Toggle critical vitals alerts"
-            />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Incident escalations</h3>
-              <p className="text-sm text-gray-500">Notify when an incident upgrades to Code Orange or higher.</p>
-            </div>
-            <Toggle
-              enabled={settings.notifications.incidentEscalations}
-              onChange={() => handleToggle('incidentEscalations', settings.notifications.incidentEscalations, updateNotifications)}
-              label="Toggle incident escalation notifications"
-            />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Shift reminders</h3>
-              <p className="text-sm text-gray-500">Remind assigned staff 30 minutes before shift starts.</p>
-            </div>
-            <Toggle
-              enabled={settings.notifications.shiftReminders}
-              onChange={() => handleToggle('shiftReminders', settings.notifications.shiftReminders, updateNotifications)}
-              label="Toggle shift reminders"
-            />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Dispatch alerts</h3>
-              <p className="text-sm text-gray-500">Notify on new dispatch assignments.</p>
-            </div>
-            <Toggle
-              enabled={settings.notifications.dispatchAlerts}
-              onChange={() => handleToggle('dispatchAlerts', settings.notifications.dispatchAlerts, updateNotifications)}
-              label="Toggle dispatch alerts"
-            />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Appointment reminders</h3>
-              <p className="text-sm text-gray-500">Notify patients and staff of upcoming appointments.</p>
-            </div>
-            <Toggle
-              enabled={settings.notifications.appointmentReminders}
-              onChange={() => handleToggle('appointmentReminders', settings.notifications.appointmentReminders, updateNotifications)}
-              label="Toggle appointment reminders"
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* Security & Display Section */}
-      <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Shield className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Security & Display</h2>
-        </div>
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Two-factor authentication</h3>
-              <p className="text-sm text-gray-500">Require a verification code on new device sign-ins.</p>
-            </div>
-            <Toggle
-              enabled={settings.security.twoFactorAuth}
-              onChange={() => handleToggle('twoFactorAuth', settings.security.twoFactorAuth, updateSecurity)}
-              label="Toggle two-factor authentication"
-            />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Auto-lock idle sessions</h3>
-              <p className="text-sm text-gray-500">Lock the dashboard after 10 minutes of inactivity.</p>
-            </div>
+          {/* Two-factor auth is not implemented yet: shown off and locked so it gives no false sense of security. */}
+          <SettingRow
+            first
+            title={t('settings.security.twoFactorAuth.title')}
+            description={t('settings.security.twoFactorAuth.description')}
+            badge={t('settings.security.twoFactorAuth.comingSoon')}
+          >
+            <Toggle enabled={false} disabled onChange={() => undefined} label={t('settings.security.twoFactorAuth.toggle')} />
+          </SettingRow>
+          <SettingRow
+            title={t('settings.security.autoLockIdleSessions.title')}
+            description={t('settings.security.autoLockIdleSessions.description')}
+          >
             <Toggle
               enabled={settings.security.autoLockIdleSessions}
-              onChange={() => handleToggle('autoLockIdleSessions', settings.security.autoLockIdleSessions, updateSecurity)}
-              label="Toggle auto-lock idle sessions"
+              onChange={() => flip('autoLockIdleSessions', settings.security.autoLockIdleSessions, updateSecurity)}
+              label={t('settings.security.autoLockIdleSessions.toggle')}
             />
-          </div>
-          <div className="border-t pt-6 flex items-center justify-between">
-            <div>
-              <h3 className="font-medium text-gray-800">Compact density</h3>
-              <p className="text-sm text-gray-500">Reduce spacing to fit more information on screen.</p>
-            </div>
+          </SettingRow>
+          <SettingRow
+            title={t('settings.security.compactDensity.title')}
+            description={t('settings.security.compactDensity.description')}
+          >
             <Toggle
               enabled={settings.security.compactDensity}
-              onChange={() => handleToggle('compactDensity', settings.security.compactDensity, updateSecurity)}
-              label="Toggle compact density"
+              onChange={() => flip('compactDensity', settings.security.compactDensity, updateSecurity)}
+              label={t('settings.security.compactDensity.toggle')}
             />
-          </div>
+          </SettingRow>
         </div>
       </section>
 
-      {/* Display Preferences */}
-      <section className="bg-white rounded-xl shadow-sm p-6 mb-6">
-        <div className="flex items-center gap-3 mb-6">
-          <Monitor className="w-5 h-5 text-teal-600" />
-          <h2 className="text-lg font-semibold text-gray-800">Display</h2>
-        </div>
-        <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
+      <section className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
+        <SectionHeader icon={<Monitor className="w-5 h-5 text-teal-600" aria-hidden="true" />} title={t('settings.display.title')} />
+        <div className={FIELD_GRID}>
+          <Field label={t('settings.display.theme')} htmlFor={`${uid}-theme`}>
             <select
+              id={`${uid}-theme`}
               value={settings.display.theme}
-              onChange={(e) => updateDisplay({ theme: e.target.value as DisplaySettings['theme'] })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
+              onChange={(e) => void updateDisplay({ theme: e.target.value as DisplaySettings['theme'] })}
+              className={INPUT_CLASS}
             >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
+              <option value="light">{t('settings.display.light')}</option>
+              <option value="dark">{t('settings.display.dark')}</option>
+              <option value="system">{t('settings.display.system')}</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
+          </Field>
+          <Field label={t('settings.display.language')} htmlFor={`${uid}-language`}>
+            {/* The provider applies the language (i18n, lang/dir) from the saved setting. */}
             <select
+              id={`${uid}-language`}
               value={settings.display.language}
-              onChange={(e) => updateDisplay({ language: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white"
+              onChange={(e) => void updateDisplay({ language: e.target.value })}
+              className={INPUT_CLASS}
             >
               <option value="en">English</option>
-              <option value="ar">Arabic</option>
+              <option value="ar">العربية</option>
             </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Timezone</label>
-            <input
-              type="text"
+          </Field>
+          <Field label={t('settings.display.timezone')} htmlFor={`${uid}-timezone`}>
+            <select
+              id={`${uid}-timezone`}
               value={settings.display.timezone}
-              onChange={(e) => updateDisplay({ timezone: e.target.value })}
-              className="w-full px-4 py-2 border border-gray-200 rounded-lg"
-            />
-          </div>
+              onChange={(e) => void updateDisplay({ timezone: e.target.value })}
+              className={INPUT_CLASS}
+            >
+              {timezones.map((tz) => (
+                <option key={tz} value={tz}>
+                  {tz}
+                </option>
+              ))}
+            </select>
+          </Field>
         </div>
       </section>
     </div>

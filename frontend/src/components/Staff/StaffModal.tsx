@@ -1,4 +1,5 @@
 // components/Staff/StaffModal.tsx
+import { useTranslation } from 'react-i18next';
 import { FormModal } from '../Form/FormModal';
 import { createStaff, updateStaff } from '../../services/staffService';
 import {
@@ -14,6 +15,7 @@ interface StaffModalProps {
 }
 
 export const StaffModal = ({ isOpen, onClose, onSuccess, initialData }: StaffModalProps) => {
+  const { t } = useTranslation();
   const mode = initialData?.id ? 'edit' : 'create';
 
   const handleSubmit = async (values: StaffFormValues) => {
@@ -36,13 +38,13 @@ export const StaffModal = ({ isOpen, onClose, onSuccess, initialData }: StaffMod
     <FormModal<StaffFormValues>
       isOpen={isOpen}
       onClose={onClose}
-      title="Staff Member"
-      subtitle={mode === 'edit' ? 'Update staff details' : 'Add a new staff member'}
+      title={t('staff.modal.title')}
+      subtitle={mode === 'edit' ? t('staff.modal.editSubtitle') : t('staff.modal.createSubtitle')}
       fields={staffFields}
       initialValues={initialData}
       onSubmit={handleSubmit}
-      submitLabel={mode === 'edit' ? 'Save Changes' : 'Add Staff'}
-      submittingLabel={mode === 'edit' ? 'Saving...' : 'Adding...'}
+      submitLabel={mode === 'edit' ? t('staff.modal.save') : t('staff.modal.add')}
+      submittingLabel={mode === 'edit' ? t('common.saving') : t('staff.modal.adding')}
       mode={mode}
     />
   );

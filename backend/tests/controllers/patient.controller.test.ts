@@ -2,12 +2,17 @@ import { prismaMock } from '../mocks/prisma';
 import { mockRequest, mockResponse } from '../mocks/http';
 import {
   getRecentPatients,
+  getCriticalPatientCount,
+  getPatientFlow,
   admitPatient,
   getPatientById,
   getPatients,
   getAvailableBeds,
   updatePatient,
   dischargePatient,
+  uploadReport,
+  getReportFile,
+  getPatientReports,
 } from '../../src/controllers/patient.controller';
 
 describe('patient.controller', () => {
@@ -38,6 +43,75 @@ describe('patient.controller', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ success: true, count: 2, data: patients })
       );
+    });
+  });
+
+  describe('getCriticalPatientCount', () => {
+    it('returns the number of CRITICAL patients', async () => {
+      prismaMock.patient.count.mockResolvedValue(4);
+      const res = mockResponse();
+
+      await getCriticalPatientCount(mockRequest(), res);
+
+      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL' } });
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ success: true, data: { count: 4 } });
+    });
+
+    it('returns 500 without leaking the error message', async () => {
+      prismaMock.patient.count.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+
+      await getCriticalPatientCount(mockRequest(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
+    });
+  });
+
+  describe('getPatientFlow', () => {
+    afterEach(() => jest.useRealTimers());
+
+    it('buckets admissions and discharges per UTC day, oldest first', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-21T10:00:00Z'));
+      prismaMock.patient.findMany.mockResolvedValue([
+        { admissionDate: new Date('2026-10-21T01:00:00Z'), dischargeDate: null },
+        { admissionDate: new Date('2026-10-20T23:00:00Z'), dischargeDate: new Date('2026-10-21T09:00:00Z') },
+        { admissionDate: new Date('2026-09-01T00:00:00Z'), dischargeDate: new Date('2026-10-19T12:00:00Z') },
+      ]);
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest({ query: { days: '3' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        data: [
+          { date: '2026-10-19', admissions: 0, discharges: 1 },
+          { date: '2026-10-20', admissions: 1, discharges: 0 },
+          { date: '2026-10-21', admissions: 1, discharges: 1 },
+        ],
+      });
+    });
+
+    it('defaults to 7 days', async () => {
+      prismaMock.patient.findMany.mockResolvedValue([]);
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest(), res);
+
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.data).toHaveLength(7);
+    });
+
+    it('returns 500 without leaking the error message', async () => {
+      prismaMock.patient.findMany.mockRejectedValue(new Error('db secret'));
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest(), res);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(JSON.stringify((res.json as jest.Mock).mock.calls[0][0])).not.toContain('db secret');
     });
   });
 
@@ -84,10 +158,8 @@ describe('patient.controller', () => {
 
       await admitPatient(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('السرير غير موجود') })
-      );
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'السرير غير موجود' });
     });
 
     it('يرفض إدخال المريض لو السرير مش متاح', async () => {
@@ -103,10 +175,8 @@ describe('patient.controller', () => {
 
       await admitPatient(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(500);
-      expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('غير متاح') })
-      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'السرير غير متاح حالياً' });
     });
 
     it('يدخل مريض جديد بنجاح ويحجز السرير (يحوله OCCUPIED)', async () => {
@@ -118,6 +188,7 @@ describe('patient.controller', () => {
 
       prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
       prismaMock.patient.count.mockResolvedValue(10);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
       prismaMock.bed.findUnique.mockResolvedValue({ id: 'bed-x', status: 'AVAILABLE' } as any);
       prismaMock.patient.create.mockResolvedValue({ id: 'new-patient', patientCode: 'PT-2051' } as any);
       prismaMock.bed.update.mockResolvedValue({} as any);
@@ -157,6 +228,61 @@ describe('patient.controller', () => {
       expect(prismaMock.bed.findUnique).not.toHaveBeenCalled();
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+  });
+
+  describe('admitPatient patientCode', () => {
+    const admitReq = () =>
+      mockRequest({
+        user: { id: 'u1' } as any,
+        body: { name: 'Ali', age: '40', gender: 'MALE', department: 'ER', diagnosis: 'Flu' },
+      });
+
+    beforeEach(() => {
+      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1', name: 'Dr. A' } as any);
+    });
+
+    it('يبدأ بعد أعلى كود موجود لما العدد أقل منه (seed)', async () => {
+      prismaMock.patient.count.mockResolvedValue(8);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: 'PT-2051' } } as any);
+      prismaMock.patient.create.mockResolvedValue({ id: 'p' } as any);
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientCode: 'PT-2052' }) })
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('يعيد المحاولة بالكود التالي لما يصير تعارض P2002 على patientCode', async () => {
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
+      prismaMock.patient.create
+        .mockRejectedValueOnce({ code: 'P2002', meta: { target: ['patientCode'] } })
+        .mockResolvedValueOnce({ id: 'p' } as any);
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledTimes(2);
+      expect(prismaMock.patient.create).toHaveBeenLastCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientCode: 'PT-2042' }) })
+      );
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('يرجع 500 بعد استنفاد المحاولات ولا يسرّب الخطأ', async () => {
+      prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
+      prismaMock.patient.create.mockRejectedValue({ code: 'P2002', meta: { target: ['patientCode'] } });
+      const res = mockResponse();
+
+      await admitPatient(admitReq(), res);
+
+      expect(prismaMock.patient.create).toHaveBeenCalledTimes(10);
+      expect(res.status).toHaveBeenCalledWith(500);
     });
   });
 
@@ -365,6 +491,63 @@ describe('patient.controller', () => {
 
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('report files stored in the database', () => {
+    it('uploadReport يحفظ الملف بالداتابيز ولا يرجع fileData بالرد', async () => {
+      prismaMock.patient.findUnique.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.report.create.mockImplementation(async ({ data }: any) => ({ ...data, createdAt: new Date() }));
+      const req = mockRequest({
+        params: { id: 'p1' },
+        user: { id: 'u1', email: 'a@a.com', role: 'DOCTOR' },
+        file: { originalname: 'xray.pdf', mimetype: 'application/pdf', buffer: Buffer.from('%PDF') },
+      } as any);
+      const res = mockResponse();
+
+      await uploadReport(req, res);
+
+      const data = prismaMock.report.create.mock.calls[0][0].data as any;
+      expect(data.uploadedBy).toBe('u1'); // who uploaded it, from req.user.id
+      expect(data.fileData).toBeInstanceOf(Uint8Array);
+      expect(data.fileUrl).toBe(`/api/patients/reports/${data.id}/file`);
+      expect(res.status).toHaveBeenCalledWith(201);
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.data.fileData).toBeUndefined();
+    });
+
+    it('uploadReport يرجع 400 بدون ملف', async () => {
+      const res = mockResponse();
+      await uploadReport(mockRequest({ params: { id: 'p1' } } as any), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it('getPatientReports ما بيجيب fileData', async () => {
+      prismaMock.report.findMany.mockResolvedValue([] as any);
+      await getPatientReports(mockRequest({ params: { id: 'p1' } } as any), mockResponse());
+      expect(prismaMock.report.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ omit: { fileData: true } })
+      );
+    });
+
+    it('getReportFile يرجع 404 لو الملف مش موجود', async () => {
+      prismaMock.report.findUnique.mockResolvedValue(null);
+      const res = mockResponse();
+      await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('getReportFile يرجع الملف بنوعه الأصلي', async () => {
+      prismaMock.report.findUnique.mockResolvedValue({
+        id: 'r1', fileType: 'application/pdf', fileData: new Uint8Array([1, 2, 3]),
+      } as any);
+      const res = mockResponse();
+      (res as any).setHeader = jest.fn();
+      (res as any).send = jest.fn();
+      await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
+      expect((res as any).setHeader).toHaveBeenCalledWith('Content-Type', 'application/pdf');
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect((res as any).send).toHaveBeenCalled();
     });
   });
 });

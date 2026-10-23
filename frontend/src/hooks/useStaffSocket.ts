@@ -1,4 +1,5 @@
 // frontend/src/hooks/useStaffSocket.ts
+import { logger } from '../utils/logger';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { Shift } from '../types/staff';
@@ -19,7 +20,6 @@ export const useStaffSocket = (department?: string) => {
     });
 
     socket.on('connect', () => {
-      console.log('Connected to staff stream');
       setIsConnected(true);
       socket.emit('join-department', department);
     });
@@ -29,7 +29,7 @@ export const useStaffSocket = (department?: string) => {
     });
 
     socket.on('connect_error', (err) => {
-      console.warn('Staff socket error:', err.message);
+      logger.warn('Staff socket error:', err.message);
       setIsConnected(false);
     });
 

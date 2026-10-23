@@ -1,5 +1,6 @@
 
-import { AlertTriangle} from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmDeleteDialogProps {
   isOpen: boolean;
@@ -15,15 +16,16 @@ export const ConfirmDeleteDialog = ({
   isOpen,
   title,
   name,
-  itemType = 'item',
+  itemType,
   onCancel,
   onConfirm,
   isLoading = false,
 }: ConfirmDeleteDialogProps) => {
+  const { t } = useTranslation();
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 bg-hospital-navy/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
       <div 
         className="bg-white rounded-2xl shadow-2xl border border-gray-100 p-6 w-full max-w-sm animate-in zoom-in-95 duration-200"
         role="alertdialog"
@@ -40,14 +42,13 @@ export const ConfirmDeleteDialog = ({
               id="confirm-delete-title" 
               className="font-semibold text-gray-900 text-base"
             >
-              {title || `Delete ${name}?`}
+              {title || t('common.deleteNameQuestion', { name })}
             </h3>
             <p 
               id="confirm-delete-desc" 
               className="text-gray-500 text-sm mt-1.5 leading-relaxed"
             >
-              This {itemType} will be permanently removed from the system. 
-              This action cannot be undone.
+              {t('common.deleteWarning', { itemType: itemType ?? t('common.item') })}
             </p>
           </div>
         </div>
@@ -57,7 +58,7 @@ export const ConfirmDeleteDialog = ({
             disabled={isLoading}
             className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-50 hover:bg-gray-100 rounded-xl transition disabled:opacity-50"
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             onClick={onConfirm}
@@ -67,7 +68,7 @@ export const ConfirmDeleteDialog = ({
             {isLoading && (
               <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             )}
-            {isLoading ? 'Deleting...' : 'Delete'}
+            {isLoading ? t('common.deleting') : t('common.delete')}
           </button>
         </div>
       </div>

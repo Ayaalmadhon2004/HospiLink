@@ -2,6 +2,7 @@
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface PrivateRouteProps {
 export const PrivateRoute = ({ children }: PrivateRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
+  const { t } = useTranslation();
 
   // لو لسه بيحمل بيانات المستخدم — اعرضي loading
   if (loading) {
@@ -17,7 +19,7 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="flex flex-col items-center gap-3">
           <Activity className="text-teal-500 animate-pulse" size={40} />
-          <p className="text-gray-600 text-sm">Loading your session...</p>
+          <p className="text-gray-600 text-sm">{t('auth.loadingSession')}</p>
         </div>
       </div>
     );

@@ -1,5 +1,6 @@
 // components/AdmitPatientModal.tsx
 import { useEffect, useReducer, useMemo, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Bed, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { admitPatient, getAvailableBeds } from '../../services/patientService';
 import { extractList, getResponseData } from '../../types/api';
@@ -143,6 +144,7 @@ function modalReducer(state: ModalState, action: ModalAction): ModalState {
 
 // ─── Component ────────────────────────────────────────────────────
 export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalProps) => {
+  const { t } = useTranslation();
   const [state, dispatch] = useReducer(modalReducer, initialState);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -184,7 +186,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
         if (!controller.signal.aborted) {
             dispatch({
             type: 'FETCH_BEDS_ERROR',
-            error: getResponseData(err)?.error || 'Failed to load available beds',
+            error: getResponseData(err)?.error || t('patients.admitModal.bedsLoadError'),
           });
         }
       }
@@ -192,7 +194,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
 
     fetchBeds();
     return () => controller.abort();
-  }, [isOpen, state.formData.department]);
+  }, [isOpen, state.formData.department, t]);
 
   // ─── Reset form when modal closes ─────────────────────────────────
   useEffect(() => {
@@ -225,12 +227,12 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
   // ─── Memoized beds grouping ──────────────────────────────────────
   const bedsByWard = useMemo(() => {
     return state.availableBeds.reduce<Record<string, Bed[]>>((acc, bed) => {
-      const wardName = bed.ward?.name || bed.wardName || 'General Ward';
+      const wardName = bed.ward?.name || bed.wardName || t('patients.admitModal.generalWard');
       if (!acc[wardName]) acc[wardName] = [];
       acc[wardName].push(bed);
       return acc;
     }, {});
-  }, [state.availableBeds]);
+  }, [state.availableBeds, t]);
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,20 +240,20 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
 
     // Validation
     if (!state.formData.name.trim()) {
-      dispatch({ type: 'SUBMIT_ERROR', error: 'Patient name is required' });
+      dispatch({ type: 'SUBMIT_ERROR', error: t('patients.admitModal.nameRequired') });
       return;
     }
     const ageNum = Number(state.formData.age);
     if (!state.formData.age || isNaN(ageNum) || ageNum < 0 || ageNum > 150) {
-      dispatch({ type: 'SUBMIT_ERROR', error: 'Valid age (0-150) is required' });
+      dispatch({ type: 'SUBMIT_ERROR', error: t('patients.admitModal.ageRequired') });
       return;
     }
     if (!state.formData.department) {
-      dispatch({ type: 'SUBMIT_ERROR', error: 'Department is required' });
+      dispatch({ type: 'SUBMIT_ERROR', error: t('patients.admitModal.departmentRequired') });
       return;
     }
     if (!state.formData.diagnosis.trim()) {
-      dispatch({ type: 'SUBMIT_ERROR', error: 'Diagnosis is required' });
+      dispatch({ type: 'SUBMIT_ERROR', error: t('patients.admitModal.diagnosisRequired') });
       return;
     }
 
@@ -276,17 +278,17 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
       const backendError = getResponseData(err);
       dispatch({
         type: 'SUBMIT_ERROR',
-        error: backendError?.message || backendError?.error || 'Failed to admit patient',
+        error: backendError?.message || backendError?.error || t('patients.admitModal.admitError'),
         details: backendError?.fullError || backendError?.error || '',
       });
     }
-  }, [state.formData, onAdd]);
+  }, [state.formData, onAdd, t]);
 
   if (!isOpen) return null;
 
   return (
     <div 
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="admit-modal-title"
@@ -300,13 +302,13 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
       >
         <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <h2 id="admit-modal-title" className="text-xl font-bold text-hospital-navy">
-            Admit New Patient
+            {t('patients.admitModal.title')}
           </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition focus:outline-none focus:ring-2 focus:ring-medical-teal"
             disabled={state.submitting}
-            aria-label="Close modal"
+            aria-label={t('common.closeModal')}
             type="button"
           >
             <X size={20} className="text-clinic-text/50" />
@@ -325,7 +327,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
                 <span className="font-medium">{state.error}</span>
               </div>
               {state.errorDetails && (
-                <p className="text-xs text-red-400 ml-6">{state.errorDetails}</p>
+                <p className="text-xs text-red-400 ms-6">{state.errorDetails}</p>
               )}
             </div>
           )}
@@ -337,15 +339,15 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               aria-live="polite"
             >
               <CheckCircle2 size={16} aria-hidden="true" />
-              Patient admitted successfully!
+              {t('patients.admitModal.success')}
             </div>
           )}
 
           {/* Name */}
           <div>
             <label htmlFor="patient-name" className="block text-sm font-medium text-clinic-text mb-1">
-              Full Name <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> (required)</span>
+              {t('patients.admitModal.fullName')} <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <input
               ref={firstInputRef}
@@ -353,7 +355,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               type="text"
               value={state.formData.name}
               onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="Enter patient name"
+              placeholder={t('patients.admitModal.namePlaceholder')}
               className="w-full border border-slate-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-medical-teal focus:border-medical-teal outline-none transition"
               disabled={state.submitting}
               aria-required="true"
@@ -366,8 +368,8 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label htmlFor="patient-age" className="block text-sm font-medium text-clinic-text mb-1">
-                Age <span className="text-red-500" aria-hidden="true">*</span>
-                <span className="sr-only"> (required)</span>
+                {t('patients.admitModal.age')} <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only"> ({t('common.required')})</span>
               </label>
               <input
                 id="patient-age"
@@ -376,7 +378,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
                 max="150"
                 value={state.formData.age}
                 onChange={(e) => handleChange('age', e.target.value)}
-                placeholder="Years"
+                placeholder={t('patients.admitModal.agePlaceholder')}
                 className="w-full border border-slate-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-medical-teal focus:border-medical-teal outline-none transition"
                 disabled={state.submitting}
                 aria-required="true"
@@ -385,8 +387,8 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
             </div>
             <div>
               <label htmlFor="patient-gender" className="block text-sm font-medium text-clinic-text mb-1">
-                Gender <span className="text-red-500" aria-hidden="true">*</span>
-                <span className="sr-only"> (required)</span>
+                {t('patients.admitModal.gender')} <span className="text-red-500" aria-hidden="true">*</span>
+                <span className="sr-only"> ({t('common.required')})</span>
               </label>
               <select
                 id="patient-gender"
@@ -397,7 +399,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
                 aria-required="true"
               >
                 {GENDERS.map(g => (
-                  <option key={g} value={g}>{g.charAt(0) + g.slice(1).toLowerCase()}</option>
+                  <option key={g} value={g}>{t(`gender.${g}`)}</option>
                 ))}
               </select>
             </div>
@@ -406,8 +408,8 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
           {/* Department */}
           <div>
             <label htmlFor="patient-department" className="block text-sm font-medium text-clinic-text mb-1">
-              Department <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> (required)</span>
+              {t('patients.admitModal.department')} <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <select
               id="patient-department"
@@ -418,9 +420,9 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               aria-required="true"
               aria-invalid={!!state.error && !state.formData.department}
             >
-              <option value="">Select department</option>
+              <option value="">{t('patients.admitModal.selectDepartment')}</option>
               {DEPARTMENTS.map(d => (
-                <option key={d} value={d}>{d}</option>
+                <option key={d} value={d}>{t(`departments.${d}`, { defaultValue: d })}</option>
               ))}
             </select>
           </div>
@@ -428,15 +430,15 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
           {/* Diagnosis */}
           <div>
             <label htmlFor="patient-diagnosis" className="block text-sm font-medium text-clinic-text mb-1">
-              Diagnosis <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> (required)</span>
+              {t('patients.admitModal.diagnosis')} <span className="text-red-500" aria-hidden="true">*</span>
+              <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <input
               id="patient-diagnosis"
               type="text"
               value={state.formData.diagnosis}
               onChange={(e) => handleChange('diagnosis', e.target.value)}
-              placeholder="Enter diagnosis"
+              placeholder={t('patients.admitModal.diagnosisPlaceholder')}
               className="w-full border border-slate-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-medical-teal focus:border-medical-teal outline-none transition"
               disabled={state.submitting}
               aria-required="true"
@@ -448,13 +450,13 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
           <fieldset>
             <legend className="block text-sm font-medium text-clinic-text mb-2 flex items-center gap-2">
               <Bed size={16} className="text-medical-teal" aria-hidden="true" />
-              Assign Bed (Optional)
+              {t('patients.admitModal.assignBed')}
             </legend>
 
             {state.bedsLoading ? (
               <div className="flex items-center gap-2 text-sm text-clinic-text/50 py-3" role="status">
                 <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                Loading available beds...
+                {t('patients.admitModal.loadingBeds')}
               </div>
             ) : state.bedsError ? (
               <div 
@@ -466,14 +468,13 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               </div>
             ) : state.availableBeds.length === 0 ? (
               <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-clinic-text/50">
-                No available beds found
-                {state.formData.department && ' for this department'}
+                {state.formData.department ? t('patients.admitModal.noBedsForDepartment') : t('patients.admitModal.noBeds')}
               </div>
             ) : (
               <div 
                 className="border border-slate-200 rounded-xl overflow-hidden max-h-48 overflow-y-auto"
                 role="radiogroup"
-                aria-label="Available beds"
+                aria-label={t('patients.admitModal.availableBeds')}
               >
                 {Object.entries(bedsByWard).map(([wardName, beds]) => (
                   <div key={wardName}>
@@ -496,14 +497,14 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
                             onChange={(e) => handleChange('bedId', e.target.value)}
                             className="w-4 h-4 text-medical-teal focus:ring-medical-teal"
                             disabled={state.submitting}
-                            aria-label={`Bed ${bed.bedNumber} in ${wardName}`}
+                            aria-label={t('patients.admitModal.bedInWard', { bed: bed.bedNumber, ward: wardName })}
                           />
                           <div className="flex-1">
                             <span className="text-sm font-medium text-clinic-text">
-                              Bed {bed.bedNumber}
+                              {t('patients.admitModal.bed', { bed: bed.bedNumber })}
                             </span>
-                            <span className="text-xs text-green-600 ml-2 bg-green-50 px-2 py-0.5 rounded-full">
-                              Available
+                            <span className="text-xs text-green-600 ms-2 bg-green-50 px-2 py-0.5 rounded-full">
+                              {t('patients.admitModal.available')}
                             </span>
                           </div>
                         </label>
@@ -520,7 +521,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
                 onClick={() => dispatch({ type: 'CLEAR_BED' })}
                 className="text-xs text-clinic-text/50 hover:text-red-500 mt-1 transition focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-1"
               >
-                Clear selection
+                {t('patients.admitModal.clearSelection')}
               </button>
             )}
           </fieldset>
@@ -533,7 +534,7 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               className="flex-1 bg-slate-100 text-clinic-text px-4 py-2.5 rounded-xl hover:bg-slate-200 transition font-medium focus:outline-none focus:ring-2 focus:ring-slate-400"
               disabled={state.submitting}
             >
-              Cancel
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
@@ -544,10 +545,10 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               {state.submitting ? (
                 <>
                   <Loader2 size={16} className="animate-spin" aria-hidden="true" />
-                  Admitting...
+                  {t('patients.admitModal.admitting')}
                 </>
               ) : (
-                'Admit Patient'
+                t('patients.admit')
               )}
             </button>
           </div>

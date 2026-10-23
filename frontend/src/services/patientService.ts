@@ -1,6 +1,7 @@
 // services/patientService.ts
 import { apiFetch, apiGet, apiPost, apiPut } from './api';
 import { toQueryString, type ApiResponse, type Pagination, type QueryParams } from '../types/api';
+import type { PatientFlowDay } from '../utils/patientFlow';
 import type { Patient, PatientDetail, PatientReport, RecentPatient } from '../types/patient';
 
 export const getPatients = async (params?: QueryParams) => {
@@ -9,6 +10,10 @@ export const getPatients = async (params?: QueryParams) => {
 
 export const getRecentPatients = async () => {
   return await apiGet<ApiResponse<RecentPatient[]>>('/patients/recent');
+};
+
+export const getPatientFlow = async (days = 7) => {
+  return await apiGet<ApiResponse<PatientFlowDay[]>>(`/patients/flow${toQueryString({ days })}`);
 };
 
 export const getPatientById = async (id: string) => {
@@ -30,10 +35,16 @@ export const dischargePatient = async (id: string) => {
 export const uploadReport = async (file: File, patientId: string) => {
   const formData = new FormData();
   formData.append('reportFile', file);
-  return await apiFetch(`/patients/${patientId}/reports`, {
+  const res = await apiFetch(`/patients/${patientId}/reports`, {
     method: 'POST',
     body: formData,
   });
+  if (!res.ok) {
+    // apiFetch never throws; surface the failure so the UI does not report a false success.
+    const data = (await res.json()) as { message?: string; error?: string };
+    throw new Error(data.message ?? data.error ?? res.statusText);
+  }
+  return res;
 };
 
 export const getPatientReports = async (patientId: string) => {

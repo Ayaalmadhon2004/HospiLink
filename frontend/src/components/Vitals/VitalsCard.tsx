@@ -1,6 +1,9 @@
 import { Heart, Wind, Thermometer, Droplets, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { formatTime } from '../../utils/datetime';
 
 interface VitalReading {
+  id: string;
   label: string;
   value: number | string | null;
   unit: string;
@@ -30,25 +33,29 @@ export const VitalsCard = ({
   recordedAt,
   isCritical,
 }: VitalsCardProps) => {
+  const { t } = useTranslation();
   const vitals: VitalReading[] = [
     {
-      label: 'Heart Rate',
+      id: 'heartRate',
+      label: t('vitals.heartRate'),
       value: heartRate ?? null,
-      unit: 'bpm',
+      unit: t('vitals.units.bpm'),
       icon: <Heart size={20} aria-hidden="true" />,
       color: 'text-red-500',
       isCritical: heartRate ? heartRate < 60 || heartRate > 100 : false,
     },
     {
-      label: 'Blood Pressure',
+      id: 'bloodPressure',
+      label: t('vitals.bloodPressure'),
       value: systolicBP && diastolicBP ? `${systolicBP}/${diastolicBP}` : null,
-      unit: 'mmHg',
+      unit: t('vitals.units.mmHg'),
       icon: <Activity size={20} aria-hidden="true" />,
       color: 'text-blue-500',
       isCritical: systolicBP ? systolicBP < 90 || systolicBP > 140 : false,
     },
     {
-      label: 'SpO₂',
+      id: 'spO2',
+      label: t('vitals.spO2'),
       value: spO2 ?? null,
       unit: '%',
       icon: <Droplets size={20} aria-hidden="true" />,
@@ -56,7 +63,8 @@ export const VitalsCard = ({
       isCritical: spO2 ? spO2 < 95 : false,
     },
     {
-      label: 'Temperature',
+      id: 'temperature',
+      label: t('vitals.temperature'),
       value: temperature ?? null,
       unit: '°C',
       icon: <Thermometer size={20} aria-hidden="true" />,
@@ -64,9 +72,10 @@ export const VitalsCard = ({
       isCritical: temperature ? temperature < 36.1 || temperature > 37.2 : false,
     },
     {
-      label: 'Respiratory Rate',
+      id: 'respiratoryRate',
+      label: t('vitals.respiratoryRate'),
       value: respiratoryRate ?? null,
-      unit: '/min',
+      unit: t('vitals.units.perMin'),
       icon: <Wind size={20} aria-hidden="true" />,
       color: 'text-green-500',
       isCritical: respiratoryRate ? respiratoryRate < 12 || respiratoryRate > 20 : false,
@@ -76,10 +85,10 @@ export const VitalsCard = ({
   return (
     <section
       className={`bg-white rounded-2xl shadow-sm border p-6 ${isCritical ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'}`}
-      aria-label="Current vital signs"
+      aria-label={t('vitals.currentSigns')}
     >
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-bold text-hospital-navy">Current Vitals</h3>
+        <h3 className="text-lg font-bold text-hospital-navy">{t('vitals.currentVitals')}</h3>
         <div className="flex items-center gap-2">
           {isCritical && (
             <span
@@ -87,7 +96,7 @@ export const VitalsCard = ({
               role="alert"
               aria-live="assertive"
             >
-              ⚠️ CRITICAL
+              ⚠️ {t('vitals.critical')}
             </span>
           )}
           {recordedAt && (
@@ -95,19 +104,24 @@ export const VitalsCard = ({
               className="text-clinic-text/40 text-sm"
               dateTime={recordedAt}
             >
-              {new Date(recordedAt).toLocaleTimeString()}
+              {formatTime(recordedAt, { timeStyle: 'medium' })}
             </time>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4" role="list" aria-label="Vital readings">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4" role="list" aria-label={t('vitals.readings')}>
         {vitals.map((vital) => (
           <div
-            key={vital.label}
+            key={vital.id}
             className={`text-center p-4 rounded-xl transition-all ${vital.isCritical ? 'bg-red-50 ring-1 ring-red-200' : 'bg-slate-50'}`}
             role="listitem"
-            aria-label={`${vital.label}: ${vital.value !== null ? vital.value : 'no data'} ${vital.unit}${vital.isCritical ? ', critical value' : ''}`}
+            aria-label={t('vitals.readingLabel', {
+              label: vital.label,
+              value: vital.value !== null ? vital.value : t('vitals.noData'),
+              unit: vital.unit,
+              critical: vital.isCritical ? t('vitals.criticalValue') : '',
+            })}
           >
             <div className={`${vital.color} mb-2 flex justify-center`} aria-hidden="true">
               {vital.icon}
@@ -116,7 +130,7 @@ export const VitalsCard = ({
               {vital.value !== null ? vital.value : '—'}
             </div>
             <div className="text-xs text-clinic-text/50 mt-1">{vital.label}</div>
-            <div className="text-xs text-clinic-text/50">{vital.unit}</div>
+            <div dir="auto" className="text-xs text-clinic-text/50">{vital.unit}</div>
           </div>
         ))}
       </div>

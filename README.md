@@ -49,20 +49,13 @@ Everything below exists in the code today.
 
 ## Roadmap / planned
 
-These were listed in earlier versions of this README but are **not implemented**. Verified against the code: there is no i18n library, no web manifest or service worker, no `web-vitals` package, and no Dockerfile or docker-compose file in the repository.
+Done since the first roadmap: Arabic / English (RTL) on every page (`docs/I18N.md`), PWA support with an app-shell precache only (`docs/PWA.md`), and opt-in Web Vitals reporting (`docs/WEB_VITALS.md`). The rest below is **not implemented**.
 
-- Arabic / English bilingual UI (i18n, RTL). The UI is English only.
-- Progressive Web App support (manifest, service worker, offline mode).
-- Web Vitals / performance monitoring.
-- Docker images and docker-compose for the full stack.
 - Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.
 - Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
 - Automated patient queue management.
 - Logistics and resource-utilisation reporting.
-- Working CI/CD: `ci-cd.yml` sits at the repo root, but GitHub only runs workflows from `.github/workflows/`, and it references a Dockerfile that does not exist.
-- Frontend tests, wider zod validation (the auth schema is wired in; the patient schema exists but is not yet used by the controller), and a logger instead of `console.*`.
-- Move uploaded reports to object storage (Render's disk is ephemeral).
-- Deliver `new-notification` socket events (see [Real-time events](#real-time-events)).
+- Move legacy file-based report uploads (`/uploads/...`, on Render's ephemeral disk) off disk. New reports are stored in the database (`Report.fileData`).
 
 ## Tech stack
 
@@ -128,8 +121,10 @@ HospiLink/
 │   └── vite.config.ts
 ├── docs/
 │   ├── images/                  # README screenshots
-│   └── vitals/DATA_FLOW.md
-├── ci-cd.yml                    # Draft pipeline (not active, see Roadmap)
+│   ├── vitals/DATA_FLOW.md
+│   ├── DOCKER.md  E2E_REAL.md  I18N.md
+│   └── MIGRATIONS.md  PWA.md  WEB_VITALS.md
+├── .github/workflows/ci-cd.yml  # CI/CD pipeline
 └── CLAUDE.md                    # Contributor guidelines
 ```
 
@@ -151,7 +146,7 @@ npx prisma db seed          # optional demo data (runs tsx prisma/seed.ts, see p
 npm run dev                 # http://localhost:5000
 ```
 
-The repository does not yet contain a `prisma/migrations` folder, so `db push` is the way to create the schema. Once migrations are added, use `npx prisma migrate dev` (development) and `npx prisma migrate deploy` (production).
+`prisma/migrations` contains a baseline migration and `report_file_data`. For a new empty database use `npx prisma migrate deploy` (or `migrate dev` in development); `db push` also works. An existing production database created with `db push` must first be marked with `migrate resolve --applied` (see `docs/MIGRATIONS.md`).
 
 Environment variables (`backend/.env`, never commit it):
 
@@ -162,6 +157,7 @@ Environment variables (`backend/.env`, never commit it):
 | `PORT` | no | Defaults to `5000` |
 | `HOSPITAL_ID` | no | Hospital that public signups join. Defaults to the first hospital in the database. |
 | `NODE_ENV` | no | `production` disables dev logging |
+| `SENTRY_DSN` | no | Enables error reporting to Sentry (no PII is sent) |
 
 Backend scripts: `npm run dev` (tsx watch), `npm run build` (tsc to `dist/`), `npm start` (run `dist/server.js`), `npm test`, `npm run test:watch`, `npm run test:coverage`.
 
@@ -227,7 +223,7 @@ Rooms: `patient-<id>` (client emits `join-room`; ADMIN/DOCTOR/NURSE only), `depa
 | `unit-status-update` | `dispatch-room`, `department-<name>` | Unit status change |
 | `new-call`, `critical-alert`, `call-assigned` | `dispatch-room` | Dispatch calls |
 | `unit-assigned` | `unit-<id>` | Unit assigned to a call |
-| `new-notification` | `user-<id>` | Notification created. No handler joins the `user-<id>` room yet, so this is not delivered. |
+| `new-notification` | `user-<id>` | Notification created. Sockets join their `user-<id>` room in `socketAuth`. |
 
 Client to server: `unit-location-update` (dispatch units).
 
@@ -239,13 +235,16 @@ npm test                # jest; Prisma and Socket.io are mocked, no database nee
 npm run test:coverage
 ```
 
-Tests live in `backend/tests/` (controllers, middlewares, validators). The frontend has no automated tests yet; before pushing run `npm run build && npm run lint` in `frontend/`.
+Tests live in `backend/tests/` (controllers, middlewares, validators). The frontend has Vitest tests (`npm test` in `frontend/`); before pushing also run `npm run build && npm run lint` there.
+
+Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the browser) and `npm run test:e2e:real` (real Express API + a throwaway PostgreSQL database; see [docs/E2E_REAL.md](docs/E2E_REAL.md)).
 
 ## Deployment
 
 - **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
-- **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so uploaded reports are lost on redeploy until object storage is added.
+- **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so legacy file-based report uploads are lost on redeploy; new reports are stored in the database.
 - **Database: Neon** PostgreSQL.
+- **Docker (local full stack):** `docker compose --env-file .env.docker up --build`; see [docs/DOCKER.md](docs/DOCKER.md).
 
 Auth cookies use `sameSite: none` so the Vercel frontend and the Render API (different sites) can share the session over HTTPS.
 
@@ -255,7 +254,7 @@ Auth cookies use `sameSite: none` so the Vercel frontend and the Render API (dif
 - `JWT_SECRET` is mandatory; there is no fallback value.
 - Passwords are hashed with bcryptjs (12 rounds). Auth routes are limited to 20 requests per 15 minutes per IP, the whole API to 200 per minute.
 - `helmet` sets security headers and a Content-Security-Policy; CORS is an explicit origin allowlist with credentials.
-- Auth request bodies are validated with zod; signup ignores any client-supplied `role` or `hospitalId`.
+- Request bodies, params and queries are validated with zod on every resource route; signup ignores any client-supplied `role` or `hospitalId`.
 - Roles are loaded from the database on every request, not trusted from the token.
 - Uploads are restricted by type and size, served only to authenticated users with `nosniff`, and are not tracked in git.
 - Socket.io connections require a valid JWT, and joining patient rooms is role-restricted.

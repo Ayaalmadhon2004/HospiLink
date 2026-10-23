@@ -27,20 +27,128 @@
   --color-teal-900: #0b3c34;
   --color-teal-950: #06241f;
 
-  /* Brand: deep clinical green (emerald-900 / emerald-950 for the sidebar). */
+  /* Cool slate neutrals (50-700); 800-950 are green-tinted ink, never black. */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #24362f;
+  --color-gray-900: #0f291e;
+  --color-gray-950: #0a1f17;
+
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #24362f;
+  --color-slate-900: #0f291e;
+  --color-slate-950: #0a1f17;
+
+  /* Brand: deep clinical green (emerald-900; sidebar is emerald-950). */
   --color-hospital-navy: #064e3b;
-  --color-brand-sidebar: #022c22;
   --color-medical-teal: #2a9a80;
   --color-clinic-bg: #f8fafc;
   --color-clinic-text: #0f291e;
+
+  /* Semantic tokens (values come from :root / :root[data-theme="dark"] below). */
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-hover: var(--sidebar-hover);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+}
+
+/* Light (default). */
+:root {
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9;
+  --sidebar: #022c22;
+  --sidebar-hover: #064e3b;
+  --ink: #0f291e;
+  --ink-muted: #475569;
+  --line: #e2e8f0;
+  --accent: #2a9a80;
+}
+
+/* Dark: deep green-teal, never black. Applied only when data-theme="dark". */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #0c1f1b;
+    --surface: #12302a;
+    --surface-muted: #174038;
+    --sidebar: #0a2a24;
+    --sidebar-hover: #14463c;
+    --ink: #e6f2ee;
+    --ink-muted: #a9c2bb;
+    --line: #24503f;
+    --accent: #4ab59a;
+    --color-clinic-bg: #0c1f1b;
+    --color-clinic-text: #e6f2ee;
+  /* Invert the neutral scale so existing gray/slate utilities follow the theme. */
+  --color-gray-50: #12302a; --color-slate-50: #12302a;
+  --color-gray-100: #174038; --color-slate-100: #174038;
+  --color-gray-200: #24503f; --color-slate-200: #24503f;
+  --color-gray-300: #326352; --color-slate-300: #326352;
+  --color-gray-400: #7f9d94; --color-slate-400: #7f9d94;
+  --color-gray-500: #96b0a8; --color-slate-500: #96b0a8;
+  --color-gray-600: #b4cac4; --color-slate-600: #b4cac4;
+  --color-gray-700: #cde0da; --color-slate-700: #cde0da;
+  --color-gray-800: #e0eeea; --color-slate-800: #e0eeea;
+  --color-gray-900: #e6f2ee; --color-slate-900: #e6f2ee;
+  --color-gray-950: #f0f8f5; --color-slate-950: #f0f8f5;
+}
+:root[data-theme="dark"] .bg-white { background-color: var(--surface); }
+:root[data-theme="dark"] body { background-color: var(--bg); color: var(--ink); }
+
+/* Follow the OS only when data-theme="system" (never overrides light/dark). */
+@media (prefers-color-scheme: dark) {
+  :root[data-theme="system"] {
+    color-scheme: dark;
+    --bg: #0c1f1b;
+    --surface: #12302a;
+    --surface-muted: #174038;
+    --sidebar: #0a2a24;
+    --sidebar-hover: #14463c;
+    --ink: #e6f2ee;
+    --ink-muted: #a9c2bb;
+    --line: #24503f;
+    --accent: #4ab59a;
+    --color-clinic-bg: #0c1f1b;
+    --color-clinic-text: #e6f2ee;
+    --color-gray-50: #12302a; --color-slate-50: #12302a;
+    --color-gray-100: #174038; --color-slate-100: #174038;
+    --color-gray-200: #24503f; --color-slate-200: #24503f;
+    --color-gray-300: #326352; --color-slate-300: #326352;
+    --color-gray-400: #7f9d94; --color-slate-400: #7f9d94;
+    --color-gray-500: #96b0a8; --color-slate-500: #96b0a8;
+    --color-gray-600: #b4cac4; --color-slate-600: #b4cac4;
+    --color-gray-700: #cde0da; --color-slate-700: #cde0da;
+    --color-gray-800: #e0eeea; --color-slate-800: #e0eeea;
+    --color-gray-900: #e6f2ee; --color-slate-900: #e6f2ee;
+    --color-gray-950: #f0f8f5; --color-slate-950: #f0f8f5;
+  }
+  :root[data-theme="system"] .bg-white { background-color: var(--surface); }
+  :root[data-theme="system"] body { background-color: var(--bg); color: var(--ink); }
 }
 
 @layer base {
-  /* Tailwind 4 defaults borders to currentColor; keep panels on a subtle slate hairline. */
+  /* Tailwind 4 defaults borders to currentColor; keep panels on a subtle hairline. */
   *,
   ::before,
   ::after {
-    border-color: var(--color-slate-200);
+    border-color: var(--line);
   }
 
   body {
@@ -53,4 +161,9 @@
   h3 {
     @apply tracking-tight;
   }
+}
+
+/* Compact density (Settings > compact): Tailwind spacing/typography are rem-based, so scaling the root shrinks the UI. */
+:root[data-density='compact'] {
+  font-size: 14px;
 }

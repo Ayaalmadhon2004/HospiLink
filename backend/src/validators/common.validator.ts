@@ -4,6 +4,7 @@ import { z } from 'zod';
 // All ids in prisma/schema.prisma use @default(uuid()).
 export const idSchema = z.string().trim().min(1, 'id is required').uuid('id must be a valid UUID');
 export const idParams = z.object({ id: idSchema });
+export const reportIdParams = z.object({ reportId: idSchema });
 
 export const nonEmpty = (label: string, max = 255) =>
   z.string().trim().min(1, `${label} is required`).max(max, `${label} is too long`);

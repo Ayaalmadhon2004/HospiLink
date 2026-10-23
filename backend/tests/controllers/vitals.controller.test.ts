@@ -34,6 +34,7 @@ describe('vitals.controller', () => {
 
       const dataArg = (prismaMock.patientVitals.create.mock.calls[0][0] as any).data;
       expect(dataArg.heartRate).toBe(80); // لازم يترحول لرقم
+      expect(dataArg.recordedBy).toBe('system'); // required by the schema; no authenticated user on this request
       expect(mockRoomEmit).toHaveBeenCalledWith('patient-p1', 'new-vital', expect.objectContaining({ id: 'v1' }));
       expect(res.status).toHaveBeenCalledWith(201);
     });
@@ -75,6 +76,7 @@ describe('vitals.controller', () => {
       const dataArg = (prismaMock.patientVitals.create.mock.calls[0][0] as any).data;
       expect(dataArg.isCritical).toBe(true);
       expect(dataArg.alertType).toBe('HEART_RATE_HIGH');
+      expect(dataArg.recordedBy).toBe('u1'); // the nurse who recorded it, from req.user.id
 
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
       expect(jsonArg.alert).toEqual({ type: 'HEART_RATE_HIGH', message: 'Critical vital detected!' });

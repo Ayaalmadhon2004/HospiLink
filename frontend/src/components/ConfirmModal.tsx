@@ -1,5 +1,6 @@
 // components/ConfirmModal.tsx
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { X, Loader2, AlertTriangle } from 'lucide-react';
 import type { ConfirmModalProps } from './Form/types';
 
@@ -9,11 +10,12 @@ export const ConfirmModal = ({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirm',
-  confirmingLabel = 'Confirming...',
-  cancelLabel = 'Cancel',
+  confirmLabel,
+  confirmingLabel,
+  cancelLabel,
   tone = 'danger',
 }: ConfirmModalProps) => {
+  const { t } = useTranslation();
   const [confirming, setConfirming] = useState(false);
 
   if (!isOpen) return null;
@@ -21,7 +23,7 @@ export const ConfirmModal = ({
   const toneColors = {
     danger: 'bg-red-600 hover:bg-red-700 focus:ring-red-500',
     primary: 'bg-hospital-navy hover:bg-hospital-navy/90 focus:ring-hospital-navy',
-    neutral: 'bg-slate-700 hover:bg-slate-800 focus:ring-slate-500',
+    neutral: 'bg-teal-700 hover:bg-teal-800 focus:ring-teal-500',
   };
 
   const handleConfirm = async () => {
@@ -38,7 +40,7 @@ export const ConfirmModal = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
       role="dialog"
       aria-modal="true"
       onClick={(e) => {
@@ -61,6 +63,7 @@ export const ConfirmModal = ({
             onClick={onClose}
             className="p-1 hover:bg-slate-100 rounded-lg transition"
             disabled={confirming}
+            aria-label={t('common.close')}
           >
             <X size={18} className="text-clinic-text/40" />
           </button>
@@ -73,7 +76,7 @@ export const ConfirmModal = ({
             className="flex-1 bg-slate-100 text-clinic-text px-4 py-2.5 rounded-xl hover:bg-slate-200 transition font-medium"
             disabled={confirming}
           >
-            {cancelLabel}
+            {cancelLabel ?? t('common.cancel')}
           </button>
           <button
             type="button"
@@ -84,10 +87,10 @@ export const ConfirmModal = ({
             {confirming ? (
               <>
                 <Loader2 size={16} className="animate-spin" />
-                {confirmingLabel}
+                {confirmingLabel ?? t('common.confirming')}
               </>
             ) : (
-              confirmLabel
+              (confirmLabel ?? t('common.confirm'))
             )}
           </button>
         </div>
