@@ -42,7 +42,29 @@ model User {
   hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   settings   UserSettings?
   notifications Notification[]
+  emailVerifiedAt   DateTime?
+  // Tokens issued before this instant are rejected (password change/reset revokes sessions).
+  passwordChangedAt DateTime?
+  authTokens        AuthToken[]
+}
 
+enum AuthTokenType {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+// Single-use emailed tokens. Only the sha256 of the token is stored.
+model AuthToken {
+  id        String        @id @default(uuid())
+  userId    String
+  type      AuthTokenType
+  tokenHash String        @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
 }
 
 model UserSettings {

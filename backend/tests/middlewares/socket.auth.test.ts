@@ -38,6 +38,18 @@ describe('socketAuth', () => {
     expect(socket.data.user).toEqual({ id: 'u1', role: 'ADMIN', hospitalId: 'h1' });
   });
 
+  it('rejects a token issued before the last password change', async () => {
+    const old = jwt.sign({ userId: 'u1', iat: Math.floor(Date.now() / 1000) - 3600 }, JWT_SECRET);
+    prismaMock.user.findUnique.mockResolvedValue({
+      id: 'u1', role: 'ADMIN', hospitalId: 'h1', accountStatus: 'ACTIVE', passwordChangedAt: new Date(),
+    } as any);
+    const socket = makeSocket({ auth: { token: old } });
+    const next = jest.fn();
+    await socketAuth(socket, next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(socket.data.user).toBeUndefined();
+  });
+
   it.each(['PENDING', 'DISABLED'])('rejects %s accounts', async (accountStatus) => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', role: 'NURSE', hospitalId: 'h1', accountStatus } as any);
     const socket = makeSocket({ auth: { token: validToken() } });

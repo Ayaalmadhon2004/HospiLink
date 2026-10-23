@@ -1,6 +1,8 @@
 # Auth hardening plan: cookies, remember me, password reset / email verification, 2FA
 
-Status: **proposal**. The diffs below are written against `main` as read on 2026-10-23. They are not applied, compiled or tested yet.
+Status: PR 1 (cookies), PR 2 (remember me) and PR 3 (password reset / email verification) are implemented on `claude/friendly-johnson-hvwb1m`; PR 4 (2FA) is still a proposal. The PR 3 section below may differ slightly from the code (the code is authoritative).
+
+Original status: **proposal**. The diffs below are written against `main` as read on 2026-10-23. They are not applied, compiled or tested yet.
 Each PR must run `npm test` (backend) and `npm run build && npm run lint && npm test` (frontend) before merge.
 
 ## What the code does today (verified)

@@ -65,6 +65,9 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `JWT_SECRET`    required, long random string; the app must not start without it
 - `PORT`          default 5000
 - `NODE_ENV`      `production` disables dev logging
+- `COOKIE_DOMAIN` optional; shared parent domain (e.g. `.example.com`) switches the auth cookie to SameSite=Lax (default: SameSite=None)
+- `APP_URL`, `SMTP_URL`, `MAIL_FROM`  frontend URL used in emailed links and the SMTP transport for password reset / email verification
+                 (without `SMTP_URL` mails are only logged in dev, never sent)
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
 Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
@@ -75,6 +78,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Every route except login/signup/health must use `protect`; restrict with
   `authorize('ADMIN', 'DOCTOR', ...)`. Roles come from the DB (`protect` reloads the user), never from the token body.
 - Roles: ADMIN, DOCTOR, NURSE, DISPATCHER (see `Role` enum in schema.prisma).
+- Password reset / email verification: `POST /api/auth/{forgot-password,reset-password,verify-email,resend-verification}`; single-use hashed tokens in `AuthToken`
+  (`services/authTokens.ts`), links carry the token in the URL fragment. New signups must verify their email before login (403 `EMAIL_NOT_VERIFIED`); admin-invited
+  users and pre-existing users are verified. `User.passwordChangedAt` revokes older tokens in `protect` and `socketAuth`.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

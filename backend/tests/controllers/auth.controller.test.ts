@@ -245,7 +245,7 @@ describe('auth.controller', () => {
       const req = mockRequest({ body: { email: 'a@a.com', password: 'correct-password', rememberMe } });
       const res = mockResponse();
       prismaMock.user.findUnique.mockResolvedValue({
-        id: 'u1', email: 'a@a.com', password: hashed, role: 'DOCTOR', accountStatus: 'ACTIVE', hospital: null,
+        id: 'u1', email: 'a@a.com', password: hashed, role: 'DOCTOR', accountStatus: 'ACTIVE', emailVerifiedAt: new Date(), hospital: null,
       } as any);
 
       await login(req, res);
@@ -278,6 +278,7 @@ describe('auth.controller', () => {
         role: 'DOCTOR',
         name: 'Dr. A',
         accountStatus: 'ACTIVE',
+        emailVerifiedAt: new Date(),
         hospital: { id: 'h1', name: 'HospiLink General', location: 'Nablus' },
       } as any);
 
@@ -377,7 +378,7 @@ describe('auth.controller', () => {
 
       expect(prismaMock.user.update).toHaveBeenCalledWith({
         where: { id: 'u1' },
-        data: { password: expect.any(String) },
+        data: { password: expect.any(String), passwordChangedAt: expect.any(Date) },
       });
       const newHashed = (prismaMock.user.update.mock.calls[0][0] as any).data.password;
       expect(await bcrypt.compare('newpass123', newHashed)).toBe(true);

@@ -65,3 +65,15 @@ export const isAuthenticated = async () => {
     return false;
   }
 };
+
+// ============================================
+// PASSWORD RESET / EMAIL VERIFICATION
+// ============================================
+export const forgotPassword = (email: string) => apiPost('/auth/forgot-password', { email });
+
+export const resetPassword = (token: string, password: string) =>
+  apiPost('/auth/reset-password', { token, password });
+
+export const verifyEmail = (token: string) => apiPost('/auth/verify-email', { token });
+
+export const resendVerification = (email: string) => apiPost('/auth/resend-verification', { email });

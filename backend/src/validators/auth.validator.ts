@@ -22,6 +22,18 @@ export const loginSchema = z.object({
   rememberMe: z.boolean().optional().default(false),
 });
 
+const tokenField = z.string().min(20, 'Invalid token').max(200, 'Invalid token');
+const newPasswordField = z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password is too long');
+
+export const forgotPasswordSchema = z.object({ email: z.string().trim().toLowerCase().email('Invalid email address') });
+export const resendVerificationSchema = forgotPasswordSchema;
+export const resetPasswordSchema = z.object({ token: tokenField, password: newPasswordField });
+export const verifyEmailSchema = z.object({ token: tokenField });
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1, 'Current password is required').max(128),
+  newPassword: newPasswordField,
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 

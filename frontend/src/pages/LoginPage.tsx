@@ -1,7 +1,7 @@
 // frontend/src/pages/Auth/LoginPage.tsx
 import { useState, type FormEvent } from 'react';
 import { Activity } from 'lucide-react';
-import { login } from '../services/authService';
+import { login, resendVerification } from '../services/authService';
 import { getErrorMessage } from '../types/api';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -16,10 +16,14 @@ export const LoginPage = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [needsVerification, setNeedsVerification] = useState(false);
+  const [resent, setResent] = useState(false);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+    setNeedsVerification(false);
+    setResent(false);
     setLoading(true);
 
     try {
@@ -34,10 +38,25 @@ export const LoginPage = () => {
         setError(data.message || t('auth.loginFailed'));
       }
     } catch (err: unknown) {
-      setError(getErrorMessage(err, '') || t('auth.loginFailedCheck'));
+      if ((err as { code?: string }).code === 'EMAIL_NOT_VERIFIED') {
+        setNeedsVerification(true);
+        setError(t('auth.emailNotVerified'));
+      } else {
+        setError(getErrorMessage(err, '') || t('auth.loginFailedCheck'));
+      }
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleResend = async () => {
+    try {
+      await resendVerification(formData.email);
+    } catch {
+      // The endpoint always answers 200; a network failure just leaves the button available.
+      return;
+    }
+    setResent(true);
   };
 
   return (
@@ -59,15 +78,27 @@ export const LoginPage = () => {
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm px-4 py-3 rounded-lg mb-4">
             {error}
+            {needsVerification && (
+              <div className="mt-2">
+                {resent ? (
+                  <span role="status">{t('auth.verificationResent')}</span>
+                ) : (
+                  <button type="button" onClick={handleResend} className="underline font-medium">
+                    {t('auth.resendVerification')}
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         )}
 
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">
               {t('auth.email')}
             </label>
             <input
+              id="login-email"
               type="email"
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -78,10 +109,11 @@ export const LoginPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">
               {t('auth.password')}
             </label>
             <input
+              id="login-password"
               type="password"
               value={formData.password}
               onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -102,6 +134,9 @@ export const LoginPage = () => {
               />
               <span className="text-sm text-gray-600">{t('auth.rememberMe')}</span>
             </label>
+            <Link to="/forgot-password" className="text-sm text-teal-700 font-medium hover:underline">
+              {t('auth.forgotPassword')}
+            </Link>
           </div>
 
           <button
