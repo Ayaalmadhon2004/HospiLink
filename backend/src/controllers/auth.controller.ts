@@ -6,6 +6,7 @@ import prisma from '../config/db';
 import { JWT_SECRET, JWT_EXPIRES_IN } from '../config/jwt';
 import { registerSchema, loginSchema, formatZodError } from '../validators/auth.validator';
 import logger from '../config/logger';
+import { authCookieOptions, clearCookieOptions } from '../config/cookies';
 
 // Public signup creates a PENDING account with the lowest-privilege role as a placeholder
 // (the Prisma Role enum has no STAFF value). The account cannot log in or call any protected
@@ -165,12 +166,7 @@ export const login = async (req: Request, res: Response) => {
       role: user.role,
     });
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 30 * 24 * 60 * 60 * 1000,
-    });
+    res.cookie('token', token, authCookieOptions(30 * 24 * 60 * 60 * 1000));
 
     const { password: _, ...userWithoutPassword } = user;
 
@@ -194,11 +190,7 @@ export const login = async (req: Request, res: Response) => {
 // ============================================
 export const logout = async (req: Request, res: Response) => {
   try {
-    res.clearCookie('token', {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-    });
+    res.clearCookie('token', clearCookieOptions());
 
     res.status(200).json({
       success: true,

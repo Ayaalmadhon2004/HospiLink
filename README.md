@@ -245,7 +245,7 @@ Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the
 - **Database: Neon** PostgreSQL.
 - **Docker (local full stack):** `docker compose --env-file .env.docker up --build`; see [docs/DOCKER.md](docs/DOCKER.md).
 
-Auth cookies use `sameSite: none` so the Vercel frontend and the Render API (different sites) can share the session over HTTPS.
+Auth cookies default to `sameSite: none` (Vercel and Render are different sites, so the cookie is third-party and browsers may block it). To fix that, serve the frontend and API from sibling subdomains of one custom domain (e.g. `app.example.com` / `api.example.com`) and set `COOKIE_DOMAIN=.example.com` on the backend: the cookie then becomes `sameSite: lax` with that domain. Also set `CORS_ORIGINS` to the app origin and `VITE_API_URL` to the API URL.
 
 ## Security notes
 

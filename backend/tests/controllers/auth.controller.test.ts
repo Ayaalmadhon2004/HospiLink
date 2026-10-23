@@ -257,6 +257,7 @@ describe('auth.controller', () => {
       expect(res.status).toHaveBeenCalledWith(200);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
       expect(jsonArg.success).toBe(true);
+      expect(res.cookie).toHaveBeenCalledWith('token', expect.any(String), expect.objectContaining({ httpOnly: true, sameSite: 'none' }));
       expect(jsonArg.user.password).toBeUndefined();
       expect(jsonArg.user.email).toBe('a@a.com');
 
