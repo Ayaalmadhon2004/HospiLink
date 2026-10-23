@@ -144,6 +144,9 @@ export const PatientsPage = () => {
   const handlePatientAdded = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['patients'] });
     setIsModalOpen(false);
+    // Clear filters so the newly admitted patient is visible
+    setSearchInput('');
+    setStatusFilter('All');
     setPage(1);
   }, [queryClient]);
 
@@ -222,7 +225,8 @@ export const PatientsPage = () => {
             aria-hidden="true" 
           />
           <input
-            type="text"
+            type="search"
+            name="patient-search"
             placeholder={t('patients.searchPlaceholder')}
             value={searchInput}
             onChange={(e) => handleSearchChange(e.target.value)}

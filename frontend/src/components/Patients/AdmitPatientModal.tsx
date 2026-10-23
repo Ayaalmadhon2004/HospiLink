@@ -361,7 +361,8 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
               aria-required="true"
               aria-invalid={!!state.error && !state.formData.name.trim()}
               aria-describedby={state.error && !state.formData.name.trim() ? 'form-error' : undefined}
-              autoComplete="name"
+              name="patient-name"
+              autoComplete="off"
             />
           </div>
 
