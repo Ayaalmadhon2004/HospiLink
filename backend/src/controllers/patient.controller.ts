@@ -7,7 +7,7 @@ import { BedRuleError, claimBed, releaseBed } from '../services/bedAssignment';
 import { randomUUID } from 'crypto';
 import type { Bed, PatientStatus, Prisma } from '@prisma/client';
 
-type BedWithWard = Bed & { ward?: { id: string; name: string } | null };
+type BedWithWard = Bed & { ward: { id: string; name: string } };
 
 const PATIENT_CODE_BASE = 2040;
 const MAX_CODE_ATTEMPTS = 10;
@@ -34,10 +34,6 @@ const nextPatientNumber = async (): Promise<number> => {
 // ============================================
 export const getRecentPatients = async (req: Request, res: Response) => {
   try {
-    if (!prisma) {
-      throw new Error("Prisma client is not initialized");
-    }
-
     const recentPatients = await prisma.patient.findMany({
       where: { hospitalId: hospitalIdOf(req) },
       take: 5,
@@ -390,48 +386,24 @@ export const getPatients = async (req: Request, res: Response) => {
 // ============================================
 export const getAvailableBeds = async (req: Request, res: Response) => {
   try {
-    const { department } = req.query;
-    const hospitalId = hospitalIdOf(req);
-    let beds: Bed[] = [];
-    
-    try {
-      beds = await prisma.bed.findMany({ where: { status: 'AVAILABLE', hospitalId }, orderBy: { bedNumber: 'asc' } });
-    } catch (err: unknown) {
-      logger.error({ err }, 'Get available beds error:');
-      return res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
-    }
+    const { department } = req.query as { department?: string };
+    // Wards are the only department-like grouping on a bed, so `department` matches the ward name.
+    const beds: BedWithWard[] = await prisma.bed.findMany({
+      where: {
+        status: 'AVAILABLE',
+        hospitalId: hospitalIdOf(req),
+        ...(department ? { ward: { name: { equals: department, mode: 'insensitive' } } } : {}),
+      },
+      include: { ward: { select: { id: true, name: true } } },
+      orderBy: { bedNumber: 'asc' },
+    });
 
-    let bedsWithWard: BedWithWard[] = [];
-    
-    try {
-      const testQuery = await prisma.bed.findFirst({ where: { hospitalId }, include: { ward: true } });
-      if (testQuery) {
-        bedsWithWard = await prisma.bed.findMany({
-          where: { status: 'AVAILABLE', hospitalId },
-          include: {
-            ward: {
-              select: { id: true, name: true }
-            }
-          },
-          orderBy: { bedNumber: 'asc' }
-        });
-      }
-    } catch (wardErr: unknown) {
-      bedsWithWard = beds.map(bed => ({
-        ...bed, ward: { id: bed.wardId || 'unknown', name: 'General Ward' }
-      }));
-    }
-
-    const finalBeds: BedWithWard[] = bedsWithWard.length > 0 ? bedsWithWard : beds;
-
-    const groupedByWard = finalBeds.reduce<Record<string, BedWithWard[]>>((acc, bed) => {
-      const wardName = bed.ward?.name || 'General Ward';
-      if (!acc[wardName]) acc[wardName] = [];
-      acc[wardName].push(bed);
+    const groupedByWard = beds.reduce<Record<string, BedWithWard[]>>((acc, bed) => {
+      (acc[bed.ward.name] ??= []).push(bed);
       return acc;
     }, {});
 
-    res.status(200).json({ success: true, count: finalBeds.length, data: finalBeds, groupedByWard });
+    res.status(200).json({ success: true, count: beds.length, data: beds, groupedByWard });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get available beds error:');
     res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });

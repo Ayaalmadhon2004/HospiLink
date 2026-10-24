@@ -17,7 +17,7 @@ describe('admitPatientSchema', () => {
   });
 
   it('accepts a payload without a bed and with optional ids', () => {
-    const { bedId, ...noBed } = uiPayload;
+    const { bedId: _bedId, ...noBed } = uiPayload;
     expect(admitPatientSchema.safeParse(noBed).success).toBe(true);
     expect(admitPatientSchema.parse({ ...noBed, doctorId: U2 })).toMatchObject({ doctorId: U2 });
     // hospitalId is never accepted from the client: it is stripped

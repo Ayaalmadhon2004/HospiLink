@@ -6,7 +6,8 @@ import rateLimit from 'express-rate-limit';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import prisma from './config/db';
-import { Server, Socket } from 'socket.io';
+import { Socket } from 'socket.io';
+import { initIO } from './utils/socket';
 import http from 'http';
 import path from 'path';
 
@@ -90,7 +91,7 @@ const apiLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-const io = new Server(server, {
+const io = initIO(server, {
   cors: {
     origin: allowedOrigins,
     credentials: true,
@@ -235,5 +236,3 @@ const shutdown = createShutdown({
 });
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 process.on('SIGINT', () => void shutdown('SIGINT'));
-
-export { io };

@@ -1,7 +1,7 @@
 import { prismaMock } from '../mocks/prisma';
 import '../mocks/io';
 import { mockRequest, mockResponse } from '../mocks/http';
-import { getAllWards, getWardById } from '../../src/controllers/ward.controller';
+import { getAllWards } from '../../src/controllers/ward.controller';
 import { getAllBeds, getBedById, deleteBed } from '../../src/controllers/bed.controller';
 import { getStaff } from '../../src/controllers/staff.controller';
 import { getVitals, getCriticalAlerts } from '../../src/controllers/vitals.controller';
@@ -20,7 +20,6 @@ type Handler = (req: any, res: any) => Promise<unknown>;
 // [name, handler, "model.method" that fails, request overrides]
 const cases: Array<[string, Handler, string, Record<string, unknown>]> = [
   ['getAllWards', getAllWards, 'ward.findMany', {}],
-  ['getWardById', getWardById, 'ward.findFirst', { params: { id: 'w1' } }],
   ['getAllBeds', getAllBeds, 'bed.findMany', {}],
   ['getBedById', getBedById, 'bed.findFirst', { params: { id: 'b1' } }],
   ['deleteBed', deleteBed, 'bed.findFirst', { params: { id: 'b1' } }],

@@ -6,7 +6,7 @@
 // It NEVER throws: failures are logged and an empty array is returned.
 import type { Prisma } from '@prisma/client';
 import prisma from '../config/db';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 
 export type NotificationType = 'VITALS' | 'INCIDENT' | 'DISPATCH' | 'APPOINTMENT' | 'SHIFT' | 'SYSTEM';
@@ -111,7 +111,7 @@ export const notify = async (input: NotifyInput) => {
         data: targetIds.map((userId) => ({ userId, type, title, message, link: input.link ?? null })),
       })) ?? [];
 
-    created.forEach((n) => io.to(`user-${n.userId}`).emit('new-notification', n));
+    created.forEach((n) => getIO().to(`user-${n.userId}`).emit('new-notification', n));
     return created;
   } catch (error) {
     logger.error({ err: error }, '[Notifications] notify failed:');
@@ -129,7 +129,7 @@ export const createNotification = async (data: {
 }) => {
   try {
     const notification = await prisma.notification.create({ data });
-    io.to(`user-${data.userId}`).emit('new-notification', notification);
+    getIO().to(`user-${data.userId}`).emit('new-notification', notification);
     return notification;
   } catch (error) {
     logger.error({ err: error }, 'Failed to create notification:');

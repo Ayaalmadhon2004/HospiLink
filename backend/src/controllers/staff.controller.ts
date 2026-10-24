@@ -1,11 +1,11 @@
 // backend/src/controllers/staff.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, departmentRoom } from '../utils/tenant';
 import { dayRange, hospitalTimezone } from '../utils/time';
-import { linkStaffToUserByEmail, randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
+import { randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
 import type { Prisma, Role } from '@prisma/client';
 
 type TimelineEntry = {
@@ -263,7 +263,7 @@ export const createShift = async (req: Request, res: Response) => {
     });
 
     // Emit real-time update
-    io.to(departmentRoom(hospitalId, department)).emit('shift-update', shift);
+    getIO().to(departmentRoom(hospitalId, department)).emit('shift-update', shift);
 
     res.status(201).json({ success: true, data: shift });
   } catch (error: unknown) {
@@ -293,7 +293,7 @@ export const updateShift = async (req: Request, res: Response) => {
       include: { staff: { select: { name: true, role: true, avatar: true } } },
     });
 
-    io.to(departmentRoom(hospitalId, shift.department)).emit('shift-update', shift);
+    getIO().to(departmentRoom(hospitalId, shift.department)).emit('shift-update', shift);
 
     res.status(200).json({ success: true, data: shift });
   } catch (error: unknown) {
@@ -315,7 +315,7 @@ export const deleteShift = async (req: Request, res: Response) => {
       include: { staff: { select: { name: true, role: true } } },
     });
 
-    io.to(departmentRoom(hospitalId, shift.department)).emit('shift-delete', { id });
+    getIO().to(departmentRoom(hospitalId, shift.department)).emit('shift-delete', { id });
 
     res.status(200).json({ success: true, message: 'Shift deleted' });
   } catch (error: unknown) {

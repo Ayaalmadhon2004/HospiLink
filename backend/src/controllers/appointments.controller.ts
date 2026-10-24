@@ -1,7 +1,7 @@
 // backend/src/controllers/appointments.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { dayRange, hospitalTimezone, hourKey, formatLocal } from '../utils/time';
@@ -230,7 +230,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-created', appointment);
+    getIO().to(clinicalRoom(hospitalIdOf(req))).emit('appointment-created', appointment);
 
     await notifyAppointmentDoctor(appointment, 'New appointment', hospitalIdOf(req), req.user?.id);
 
@@ -291,7 +291,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
       },
     });
 
-    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-updated', appointment);
+    getIO().to(clinicalRoom(hospitalIdOf(req))).emit('appointment-updated', appointment);
 
     // Only schedule-relevant changes are worth a notification.
     if (['scheduledAt', 'status', 'doctorId', 'room'].some((k) => k in updateData)) {
@@ -323,7 +323,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
       data: { status: 'CANCELLED' },
     });
 
-    io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-cancelled', { id });
+    getIO().to(clinicalRoom(hospitalIdOf(req))).emit('appointment-cancelled', { id });
 
     await notifyAppointmentDoctor(appointment, 'Appointment cancelled', hospitalIdOf(req), req.user?.id);
 

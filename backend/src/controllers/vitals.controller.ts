@@ -1,7 +1,7 @@
 // backend/src/controllers/vitals.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { loadEffectiveThresholds, evaluateReading } from '../services/vitalThresholds';
@@ -57,39 +57,6 @@ const parseLimit = (raw: unknown, def = 50, max = 200): number => {
   return Number.isSafeInteger(n) && n > 0 ? Math.min(n, max) : def;
 };
 
-export const createVital = async (req: Request, res: Response) => {
-  try {
-    const { patientId } = req.body;
-    const { values, invalid } = parseMetrics(req.body);
-    if (invalid.length) return invalidMetricsResponse(res, invalid);
-
-    const owned = await prisma.patient.findFirst({
-      where: { id: patientId as string, hospitalId: hospitalIdOf(req) },
-      select: { id: true },
-    });
-    if (!owned) return res.status(404).json({ success: false, message: 'Patient not found' });
-
-    const newVital = await prisma.patientVitals.create({
-      data: {
-        patientId: patientId as string,
-        heartRate: values.heartRate,
-        systolicBP: values.systolicBP,
-        spO2: values.spO2,
-        temperature: values.temperature,
-        respiratoryRate: values.respiratoryRate,
-        recordedBy: req.user?.id ?? SYSTEM_RECORDER,
-      },
-    });
-
-    io.to(`patient-${newVital.patientId}`).emit('new-vital', newVital);
-
-    res.status(201).json({ success: true, data: newVital });
-  } catch (error) {
-    logger.error({ err: error }, 'Create vital error:');
-    res.status(500).json({ success: false, message: 'فشل حفظ البيانات' });
-  }
-};
-
 // Judges a reading against the thresholds of the patient's department (own rows + built-in defaults).
 const checkCriticalVitals = async (
   hospitalId: string,
@@ -108,8 +75,8 @@ const escalatePatient = async (patient: { id: string; hospitalId: string }, aler
     });
     if (count === 0) return false;
     const payload = { patientId: patient.id, status: 'CRITICAL', reason: alertType, timestamp: new Date() };
-    io.to(`patient-${patient.id}`).emit('patient-status-changed', payload);
-    io.to(clinicalRoom(patient.hospitalId)).emit('patient-status-changed', payload);
+    getIO().to(`patient-${patient.id}`).emit('patient-status-changed', payload);
+    getIO().to(clinicalRoom(patient.hospitalId)).emit('patient-status-changed', payload);
     return true;
   } catch (err) {
     // The reading is already saved and the alert goes out: do not fail the request, but make the failure visible.
@@ -173,7 +140,7 @@ export const recordVitals = async (req: Request, res: Response) => {
     });
 
     // ✅ Emit للـ room تبع المريض
-    io.to(`patient-${patientId}`).emit('new-vital', vitals);
+    getIO().to(`patient-${patientId}`).emit('new-vital', vitals);
 
     let patientStatus: string | null = null;
     if (isCritical) {

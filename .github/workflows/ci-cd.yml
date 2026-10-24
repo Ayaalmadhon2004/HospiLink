@@ -42,7 +42,8 @@ jobs:
           # prisma.config.ts requires DATABASE_URL; a dummy value is enough for generate
           DATABASE_URL: postgresql://user:pass@localhost:5432/db
 
-      # The backend has no lint script, so there is no lint step here.
+      - name: Lint
+        run: npm run lint
 
       - name: Build (TypeScript)
         run: npm run build

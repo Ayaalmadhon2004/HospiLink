@@ -41,7 +41,8 @@ Backend (`cd backend`):
 - `npx prisma generate`    needs `DATABASE_URL` set (prisma.config.ts reads it)
 - `npm run dev`            tsx watch on src/server.ts (port 5000 by default)
 - `npm run build`          `tsc` -> dist/;  `npm start` runs dist/server.js
-- `npm test`               jest (283 tests, no DB needed: Prisma is mocked)
+- `npm run lint`           eslint + typescript-eslint (`no-explicit-any` is an error in src; CI runs it)
+- `npm test`               jest (no DB needed: Prisma is mocked)
 - `npm run test:coverage`  current coverage ~88% statements
 
 Frontend (`cd frontend`):
@@ -119,7 +120,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Errors: throw/forward to `errorHandler` where possible; do not leak `error.message` of internal errors to clients.
 - Auth: JWT (24h) accepted via `Authorization: Bearer` or httpOnly cookie `token`.
   Passwords hashed with bcryptjs (12 rounds).
-- Sockets: `io` is created in server.ts; rooms are `patient-<id>`, `department-<name>`, `dispatch-room`, `unit-<id>`.
+- Sockets: `io` is created once in server.ts via `initIO()`; controllers/services use `getIO()` from `utils/socket.ts` (never import from server.ts; tests mock `utils/socket` through `tests/mocks/io.ts`); rooms are `patient-<id>`, `department-<name>`, `dispatch-room`, `unit-<id>`.
   Controllers emit events (vitals, incidents, appointments, dispatch, notifications) to those rooms.
 - File uploads: multer memory storage, saved in `Report.fileData` (jpeg/png/pdf, 5MB) and served by `GET /api/patients/reports/:reportId/file`. Older reports may still point to `/uploads/...` on disk. Uploaded files are patient data: never commit them.
 - Use the shared Prisma client from `src/config/db.ts`; do not instantiate new clients.

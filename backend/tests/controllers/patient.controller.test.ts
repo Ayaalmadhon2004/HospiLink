@@ -430,18 +430,43 @@ describe('patient.controller', () => {
         { id: 'b2', status: 'AVAILABLE', ward: { id: 'w1', name: 'ICU' } },
         { id: 'b3', status: 'AVAILABLE', ward: { id: 'w2', name: 'ER' } },
       ];
-      prismaMock.bed.findMany.mockResolvedValueOnce(beds as any); // أول استدعاء بدون ward
-      prismaMock.bed.findFirst.mockResolvedValueOnce(beds[0] as any);
-      prismaMock.bed.findMany.mockResolvedValueOnce(beds as any); // ثاني استدعاء مع ward
+      prismaMock.bed.findMany.mockResolvedValueOnce(beds as any);
 
       const req = mockRequest({ query: {} });
       const res = mockResponse();
 
       await getAvailableBeds(req, res);
 
+      expect(prismaMock.bed.findMany).toHaveBeenCalledTimes(1);
       const jsonArg = (res.json as jest.Mock).mock.calls[0][0];
+      expect(jsonArg.count).toBe(3);
       expect(jsonArg.groupedByWard.ICU).toHaveLength(2);
       expect(jsonArg.groupedByWard.ER).toHaveLength(1);
+    });
+
+    it('يفلتر حسب department (اسم الـ ward) داخل نفس المستشفى', async () => {
+      prismaMock.bed.findMany.mockResolvedValueOnce([] as any);
+
+      await getAvailableBeds(mockRequest({ query: { department: 'ICU' } }), mockResponse());
+
+      expect(prismaMock.bed.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            status: 'AVAILABLE',
+            hospitalId: 'hosp-1',
+            ward: { name: { equals: 'ICU', mode: 'insensitive' } },
+          },
+        })
+      );
+    });
+
+    it('بدون department ما يضيف فلتر ward', async () => {
+      prismaMock.bed.findMany.mockResolvedValueOnce([] as any);
+
+      await getAvailableBeds(mockRequest({ query: {} }), mockResponse());
+
+      const where = (prismaMock.bed.findMany.mock.calls[0][0] as any).where;
+      expect(where).toEqual({ status: 'AVAILABLE', hospitalId: 'hosp-1' });
     });
   });
 

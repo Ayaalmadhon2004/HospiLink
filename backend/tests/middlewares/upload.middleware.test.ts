@@ -18,7 +18,6 @@ jest.mock('multer', () => {
 
 describe('upload.middleware', () => {
   beforeAll(() => {
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
     require('../../src/middlewares/upload.middleware');
   });
 
