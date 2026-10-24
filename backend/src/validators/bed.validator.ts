@@ -1,6 +1,6 @@
 // backend/src/validators/bed.validator.ts
 import { z } from 'zod';
-import { idSchema, nonEmpty } from './common.validator';
+import { idSchema, nonEmpty, pageQueryShape } from './common.validator';
 
 export const bedStatusEnum = z.enum(['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE']);
 
@@ -18,3 +18,5 @@ export const updateBedSchema = z.object({
   status: bedStatusEnum.optional(),
   patientId: z.union([idSchema, z.literal(''), z.null()]).optional(),
 });
+
+export const bedListQuerySchema = z.object({ ...pageQueryShape });

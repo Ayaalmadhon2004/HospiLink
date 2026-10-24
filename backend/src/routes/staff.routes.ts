@@ -17,14 +17,14 @@ import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { idParams } from '../validators/common.validator';
-import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema, shiftQuerySchema, shiftTimelineQuerySchema } from '../validators/staff.validator';
+import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema, staffListQuerySchema, shiftQuerySchema, shiftTimelineQuerySchema } from '../validators/staff.validator';
 
 const router = Router();
 
 // ─── Staff Routes ──────────────────────────────────────────────────────
 
 // GET /api/staff - List all staff
-router.get('/', protect, getStaff);
+router.get('/', protect, validate({ query: staffListQuerySchema }), getStaff);
 
 // POST /api/staff - Create staff (ADMIN only)
 router.post('/', protect, authorize('ADMIN'), validate({ body: createStaffSchema }), logActivity('CREATE_STAFF'), createStaff);
