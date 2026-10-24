@@ -91,6 +91,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   (the API returns `hasLogin`).
 - Appointments: a doctor cannot have overlapping non-cancelled appointments (`services/appointmentConflicts.ts`, each with its own `duration`, also checked on update) and a DB exclusion constraint closes the race.
   An appointment always references an existing patient (`patientId`/`patientCode`); it never creates patients.
+- Dispatch lifecycle: the unit <-> call link changes ONLY through `POST /dispatch/calls/:id/assign`, `/complete` and `/cancel` (the last two close the call and release the unit in one transaction;
+  `PUT /dispatch/units/:id/status` never takes a `callId` and refuses AVAILABLE/OFF_DUTY for a unit that is on a call; EN_ROUTE/ON_SCENE are mirrored on the call). `DispatchCall.assignedUnitId` is history only (not unique).
+  Units: `POST/PUT/DELETE /dispatch/units` (delete = ADMIN, refused while on a call). Socket `unit-location-update` (DISPATCHER/ADMIN) is broadcast as `unit-location` to the dispatch and unit rooms.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

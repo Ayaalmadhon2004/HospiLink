@@ -752,7 +752,11 @@
       "updated": "{{unit}} updated",
       "assign": "Assign to call",
       "noPending": "No pending calls",
-      "assigned": "{{unit}} assigned"
+      "assigned": "{{unit}} assigned",
+      "completeCall": "Complete call",
+      "cancelCall": "Cancel call",
+      "completed": "{{unit}}: call completed, unit available",
+      "cancelled": "{{unit}}: call cancelled, unit available"
     },
     "alarms": {
       "critical": "Critical mission",

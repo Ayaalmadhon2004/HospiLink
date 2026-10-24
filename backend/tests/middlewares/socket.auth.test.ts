@@ -83,8 +83,16 @@ describe('dispatch socket handlers', () => {
       join: jest.fn(),
       leave: jest.fn(),
     };
+    // socket.to(a).to(b).emit(...) -> recorded in `rooms` / `emitted`
+    const rooms: string[] = [];
+    const emitted: Array<{ event: string; payload: any }> = [];
+    const chain: any = {
+      to: jest.fn((room: string) => { rooms.push(room); return chain; }),
+      emit: jest.fn((event: string, payload: any) => { emitted.push({ event, payload }); }),
+    };
+    socket.to = chain.to;
     attachDispatchEvents(socket);
-    return { socket, handlers };
+    return { socket, handlers, rooms, emitted };
   };
 
   it('hasRole false without user', () => {
@@ -122,6 +130,38 @@ describe('dispatch socket handlers', () => {
     await handlers['unit-location-update']({ unitId: 'u1', lat: NaN, lng: 2 });
     await handlers['unit-location-update'](null);
     expect(prismaMock.dispatchUnit.updateMany).toHaveBeenCalledTimes(1);
+  });
+
+  it('broadcasts the new position to the dispatch room and the unit room (tracking), not to other hospitals', async () => {
+    const { handlers, rooms, emitted } = setup('DISPATCHER');
+    prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 1 } as any);
+
+    await handlers['unit-location-update']({ unitId: 'u1', lat: 31.9, lng: 35.9, status: 'EN_ROUTE' });
+
+    expect(rooms).toEqual(['h-h1:dispatch-room', 'h-h1:unit-u1']);
+    expect(emitted).toEqual([
+      { event: 'unit-location', payload: expect.objectContaining({ unitId: 'u1', lat: 31.9, lng: 35.9, status: 'EN_ROUTE' }) },
+    ]);
+  });
+
+  it('does not broadcast when no unit of this hospital was updated', async () => {
+    const { handlers, emitted } = setup('DISPATCHER');
+    prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 0 } as any);
+    await handlers['unit-location-update']({ unitId: 'foreign', lat: 1, lng: 2 });
+    expect(emitted).toEqual([]);
+  });
+
+  it('a location ping can never free a unit: AVAILABLE / OFF_DUTY / unknown statuses are ignored', async () => {
+    const { handlers } = setup('DISPATCHER');
+    prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 1 } as any);
+    for (const status of ['AVAILABLE', 'OFF_DUTY', 'HACKED', 5]) {
+      await handlers['unit-location-update']({ unitId: 'u1', lat: 1, lng: 2, status });
+    }
+    expect(prismaMock.dispatchUnit.updateMany).not.toHaveBeenCalled();
+    await handlers['unit-location-update']({ unitId: 'u1', lat: 1, lng: 2, status: 'ON_SCENE' });
+    expect(prismaMock.dispatchUnit.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ status: 'ON_SCENE' }) })
+    );
   });
 
   it('track-unit validates unitId type and hospital ownership', async () => {

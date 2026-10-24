@@ -326,7 +326,8 @@ model DispatchCall {
   priority       Priority      @default(MEDIUM)
   status         CallStatus    @default(PENDING)
   notes          String?
-  assignedUnitId String?       @unique
+  // History of which unit handled the call. Not unique: a unit handles many calls over time (the live link is DispatchUnit.currentCallId).
+  assignedUnitId String?
   hospitalId     String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -334,6 +335,7 @@ model DispatchCall {
   hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@index([hospitalId])
+  @@index([assignedUnitId])
 }
 
 enum AccountStatus {

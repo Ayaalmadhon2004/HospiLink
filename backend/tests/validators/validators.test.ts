@@ -4,7 +4,7 @@ import { createBedSchema, updateBedSchema } from '../../src/validators/bed.valid
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
 import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
 import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
-import { createCallSchema, assignUnitSchema, updateUnitStatusSchema } from '../../src/validators/dispatch.validator';
+import { createCallSchema, assignUnitSchema, updateUnitStatusSchema, createUnitSchema, updateUnitSchema } from '../../src/validators/dispatch.validator';
 import { notificationsQuerySchema } from '../../src/validators/notification.validator';
 import { updateDisplaySettingsSchema, updateProfileSchema, updateSecuritySettingsSchema } from '../../src/validators/settings.validator';
 
@@ -160,5 +160,22 @@ describe('staff login link', () => {
     expect(staffLoginSchema.safeParse({ userId: null }).success).toBe(true);
     expect(staffLoginSchema.safeParse({ userId: 'abc' }).success).toBe(false);
     expect(staffLoginSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('dispatch unit lifecycle', () => {
+  it('updateUnitStatus strips callId: the call link only changes through assign/complete/cancel', () => {
+    const r = updateUnitStatusSchema.parse({ status: 'EN_ROUTE', callId: U1 });
+    expect(r).toEqual({ status: 'EN_ROUTE' });
+  });
+  it('createUnit needs a code and a valid type; crew and department are optional', () => {
+    expect(createUnitSchema.safeParse({ unitCode: 'AMB-9', unitType: 'AMBULANCE' }).success).toBe(true);
+    expect(createUnitSchema.safeParse({ unitCode: 'AMB-9', unitType: 'AMBULANCE', crew: ['A', 'B'], department: 'ER' }).success).toBe(true);
+    expect(createUnitSchema.safeParse({ unitCode: '', unitType: 'AMBULANCE' }).success).toBe(false);
+    expect(createUnitSchema.safeParse({ unitCode: 'X', unitType: 'TANK' }).success).toBe(false);
+    expect(createUnitSchema.parse({ unitCode: 'X', unitType: 'POLICE', hospitalId: 'h', status: 'OFF_DUTY', currentCallId: U1 })).toEqual({ unitCode: 'X', unitType: 'POLICE' });
+  });
+  it('updateUnit accepts partial identity fields only (no status, no call)', () => {
+    expect(updateUnitSchema.parse({ unitCode: 'N', status: 'OFF_DUTY', currentCallId: U1 })).toEqual({ unitCode: 'N' });
   });
 });

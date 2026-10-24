@@ -5,14 +5,19 @@ import {
   getActiveUnits,
   getCalls,
   updateUnitStatus,
+  createUnit,
+  updateUnit,
+  deleteUnit,
   createCall,
   assignUnitToCall,
+  completeCall,
+  cancelCall,
 } from '../controllers/dispatch.controller';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { idParams } from '../validators/common.validator';
-import { updateUnitStatusSchema, createCallSchema, assignUnitSchema, listCallsQuery } from '../validators/dispatch.validator';
+import { updateUnitStatusSchema, createUnitSchema, updateUnitSchema, createCallSchema, assignUnitSchema, listCallsQuery } from '../validators/dispatch.validator';
 
 const router = Router();
 
@@ -23,7 +28,12 @@ router.get('/calls', protect, validate({ query: listCallsQuery }), getCalls);
 
 // Dispatchers و Admins فقط يقدروا يعدلوا
 router.put('/units/:id/status', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams, body: updateUnitStatusSchema }), logActivity('UPDATE_UNIT_STATUS'), updateUnitStatus);
+router.post('/units', protect, authorize('ADMIN', 'DISPATCHER'), validate({ body: createUnitSchema }), logActivity('CREATE_UNIT'), createUnit);
+router.put('/units/:id', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams, body: updateUnitSchema }), logActivity('UPDATE_UNIT'), updateUnit);
+router.delete('/units/:id', protect, authorize('ADMIN'), validate({ params: idParams }), logActivity('DELETE_UNIT'), deleteUnit);
 router.post('/calls', protect, authorize('ADMIN', 'DISPATCHER', 'DOCTOR'), validate({ body: createCallSchema }), logActivity('CREATE_CALL'), createCall);
 router.post('/calls/:id/assign', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams, body: assignUnitSchema }), logActivity('ASSIGN_CALL'), assignUnitToCall);
+router.post('/calls/:id/complete', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams }), logActivity('COMPLETE_CALL'), completeCall);
+router.post('/calls/:id/cancel', protect, authorize('ADMIN', 'DISPATCHER'), validate({ params: idParams }), logActivity('CANCEL_CALL'), cancelCall);
 
 export default router;

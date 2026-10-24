@@ -780,7 +780,11 @@
       "updated": "تم تحديث {{unit}}",
       "assign": "تعيين لبلاغ",
       "noPending": "لا توجد بلاغات معلّقة",
-      "assigned": "تم تعيين {{unit}}"
+      "assigned": "تم تعيين {{unit}}",
+      "completeCall": "إنهاء النداء",
+      "cancelCall": "إلغاء النداء",
+      "completed": "{{unit}}: اكتمل النداء والوحدة متاحة",
+      "cancelled": "{{unit}}: أُلغي النداء والوحدة متاحة"
     },
     "alarms": {
       "critical": "مهمة حرجة",
