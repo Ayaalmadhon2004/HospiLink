@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import type { ShiftType } from '@prisma/client';
 import prisma from '../config/db';
 import logger from '../config/logger';
+import { hospitalIdOf } from '../utils/tenant';
 
 const handleError = (res: Response, error: unknown, message: string, statusCode: number = 500) => {
   logger.error({ err: error }, `[Settings Error] ${message}:`);
@@ -44,7 +45,7 @@ export const getUserSettings = async (req: Request, res: Response) => {
     const hospital = req.user?.hospitalId
       ? await prisma.hospital.findUnique({
           where: { id: req.user.hospitalId },
-          select: { name: true, code: req.user.role === 'ADMIN' },
+          select: { name: true, timezone: true, code: req.user.role === 'ADMIN' },
         })
       : null;
 
@@ -203,5 +204,20 @@ export const updateDisplay = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: settings });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to update display settings');
+  }
+};
+
+// PUT /api/settings/hospital (ADMIN) - hospital time zone
+export const updateHospital = async (req: Request, res: Response) => {
+  try {
+    const hospitalId = hospitalIdOf(req);
+    const hospital = await prisma.hospital.update({
+      where: { id: hospitalId },
+      data: { timezone: req.body.timezone },
+      select: { name: true, timezone: true },
+    });
+    res.status(200).json({ success: true, data: hospital });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to update hospital settings');
   }
 };

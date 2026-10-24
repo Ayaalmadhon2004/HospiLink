@@ -50,3 +50,8 @@ export const updateDisplaySettingsSchema = z.object({
     .refine(isValidTimeZone, { message: 'Invalid IANA time zone' })
     .optional(),
 });
+
+// Hospital-wide clock: "today" ranges and times in notifications follow this zone.
+export const updateHospitalSettingsSchema = z.object({
+  timezone: z.string().trim().min(1).max(64).refine(isValidTimeZone, { message: 'Invalid IANA time zone' }),
+});

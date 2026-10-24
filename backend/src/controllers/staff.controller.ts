@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
 import { hospitalIdOf, departmentRoom } from '../utils/tenant';
+import { dayRange, hospitalTimezone } from '../utils/time';
 import { linkStaffToUserByEmail, randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
 import type { Prisma, Role } from '@prisma/client';
 
@@ -326,15 +327,13 @@ export const deleteShift = async (req: Request, res: Response) => {
 export const getShiftTimeline = async (req: Request, res: Response) => {
   try {
     const { date } = req.query;
-    const targetDate = date ? new Date(date as string) : new Date();
-    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+    const { start, end } = dayRange(await hospitalTimezone(hospitalIdOf(req)), date as string | undefined);
 
     const shifts = await prisma.shift.findMany({
       where: {
         staff: { hospitalId: hospitalIdOf(req) },
-        startTime: { gte: startOfDay },
-        endTime: { lte: endOfDay },
+        startTime: { gte: start },
+        endTime: { lte: end },
       },
       include: {
         staff: { select: { name: true, role: true, department: true, avatar: true } },
