@@ -553,16 +553,13 @@
     "modal": {
       "selectDoctorError": "يرجى اختيار الطبيب",
       "selectDateError": "يرجى اختيار التاريخ والوقت",
-      "patientNameError": "يرجى إدخال اسم المريض",
       "updated": "تم تحديث الموعد بنجاح",
       "created": "تم إنشاء الموعد بنجاح",
       "saveFailed": "تعذّر حفظ الموعد",
       "editTitle": "تعديل الموعد",
       "patient": "المريض",
-      "patientPlaceholder": "ابحث عن مريض مسجّل أو اكتب اسماً جديداً...",
+      "patientPlaceholder": "ابحث عن مريض بالاسم أو الرمز...",
       "searching": "جارٍ البحث...",
-      "willCreateColon": "سيتم إنشاء مريض جديد: «{{name}}»",
-      "willCreate": "سيتم إنشاء مريض جديد «{{name}}»",
       "selected": "المحدد: <strong>{{name}}</strong>",
       "change": "تغيير",
       "doctor": "الطبيب",
@@ -576,7 +573,10 @@
       "notes": "ملاحظات",
       "notesPlaceholder": "ملاحظات إضافية...",
       "update": "تحديث",
-      "create": "إنشاء"
+      "create": "إنشاء",
+      "selectPatientError": "اختر مريضاً مسجّلاً من القائمة",
+      "noPatientFound": "لا يوجد مريض مطابق. قم بإدخال المريض أولاً.",
+      "admitPatientLink": "الذهاب إلى المرضى"
     }
   },
   "incidents": {

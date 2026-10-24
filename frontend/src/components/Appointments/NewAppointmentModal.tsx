@@ -1,6 +1,7 @@
 // frontend/src/components/Appointments/NewAppointmentModal.tsx
 import { useState, useEffect } from 'react';
 import { useTranslation, Trans } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { X, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
 import { createAppointment, updateAppointment} from '../../services/appointmentsService';
 import { apiGet } from '../../services/api';
@@ -80,8 +81,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   notes?: string;
   duration?: number;
   patientId?: string;
-  patientName?: string;
-  patientCode?: string;
 }
 
   // ─── Fetch Patients for Search ─────────────────────
@@ -196,8 +195,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         setLoading(false);
         return;
       }
-      if (!patientSearch.trim()) {
-        toast.error(t('appointments.modal.patientNameError'));
+      if (!selectedPatient?.id) {
+        toast.error(t('appointments.modal.selectPatientError'));
         setLoading(false);
         return;
       }
@@ -213,16 +212,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         duration: Number(duration) || 30,
       };
 
-      // ✅ KEY FIX: Send patientId if selected from dropdown
-      if (selectedPatient?.id) {
-        data.patientId = selectedPatient.id;
-        data.patientName = selectedPatient.name;
-        data.patientCode = selectedPatient.patientCode;
-      } else {
-        // New patient
-        data.patientName = patientSearch.trim();
-        data.patientCode = `PT-${Date.now()}`;
-      }
+      // Appointments only attach to an existing patient (admit new patients from the Patients page).
+      data.patientId = selectedPatient.id;
 
 
       if (isEditing) {
@@ -278,9 +269,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
               onQueryChange={handlePatientInputChange}
               loading={fetchingPatients}
               emptyMessage={
-                patientSearch.length >= 2 && !selectedPatient
-                  ? t('appointments.modal.willCreateColon', { name: patientSearch })
-                  : undefined
+                patientSearch.length >= 2 && !selectedPatient ? t('appointments.modal.noPatientFound') : undefined
               }
               placeholder={t('appointments.modal.patientPlaceholder')}
             />
@@ -304,11 +293,12 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
               </div>
             )}
 
-            {/* New Patient Hint */}
+            {/* Unknown patient: point at the real admit flow instead of inventing a record */}
             {!selectedPatient && patientSearch.length >= 2 && patients.length === 0 && !fetchingPatients && (
-              <p className="mt-1 text-xs text-amber-600">
-                <UserPlus size={12} className="inline me-1" />
-                {t('appointments.modal.willCreate', { name: patientSearch })}
+              <p className="mt-1 text-xs text-amber-700">
+                <UserPlus size={12} className="inline me-1" aria-hidden="true" />
+                {t('appointments.modal.noPatientFound')}{' '}
+                <Link to="/patients" className="underline font-medium">{t('appointments.modal.admitPatientLink')}</Link>
               </p>
             )}
           </div>

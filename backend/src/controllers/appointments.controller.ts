@@ -166,8 +166,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
   try {
     const {
-      patientId,        // ✅ NEW: Existing patient ID from dropdown
-      patientName,
+      patientId,
       patientCode,
       doctorId,
       scheduledAt,
@@ -188,49 +187,17 @@ export const createAppointment = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
 
-    // ✅ PRIORITY 1: Use existing patient by ID (from dropdown)
-    let patient = null;
-    
-    if (patientId) {
-      patient = await prisma.patient.findFirst({
-        where: { id: patientId, hospitalId },
-      });
-      if (patient) {
-        logger.debug({ patientId: patient.id }, "Found existing patient by ID");
-      }
+    // The patient must already exist in this hospital (found by id first, then by code).
+    // Appointments never create patients: that needs real medical data, see POST /api/patients.
+    // Defence in depth (the validator already requires one): an undefined filter would match ANY patient.
+    if (!patientId && !patientCode) {
+      return res.status(400).json({ success: false, message: 'patientId or patientCode is required' });
     }
-
-    // ✅ PRIORITY 2: Find by patientCode
-    if (!patient && patientCode) {
-      patient = await prisma.patient.findFirst({
-        where: { patientCode, hospitalId },
-      });
-      if (patient) {
-        logger.debug({ patientId: patient.id }, "Found existing patient by code");
-      }
-    }
-
-    // ✅ PRIORITY 3: Create new patient ONLY if not found
+    const patient = patientId
+      ? await prisma.patient.findFirst({ where: { id: patientId, hospitalId } })
+      : await prisma.patient.findFirst({ where: { patientCode, hospitalId } });
     if (!patient) {
-      if (!patientName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Patient name is required when creating a new patient',
-        });
-      }
-
-      patient = await prisma.patient.create({
-        data: {
-          name: patientName,
-          patientCode: patientCode || `PT-${Date.now()}`,
-          department: department || 'General',
-          age: 0,
-          gender: 'MALE',
-          diagnosis: 'Pending',
-          hospitalId,
-        },
-      });
-      logger.debug({ patientId: patient.id }, "Created new patient");
+      return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
     // Overlap with the doctor's other appointments, each with its own duration.

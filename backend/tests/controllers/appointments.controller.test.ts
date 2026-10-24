@@ -92,7 +92,7 @@ describe('appointments.controller', () => {
       await createAppointment(req, res);
 
       expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-p', hospitalId: 'hosp-1' } });
-      expect(res.status).toHaveBeenCalledWith(400); // no patientName -> cannot create
+      expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
@@ -117,42 +117,49 @@ describe('appointments.controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
-    it('يرفض إنشاء مريض جديد لو ما تم تمرير patientName', async () => {
+    it('يرفض بـ 400 لو ما في patientId ولا patientCode (ما بيدوّر على أي مريض)', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
-      prismaMock.patient.findFirst.mockResolvedValue(null);
 
-      const req = mockRequest({
-        body: { doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' },
-      });
       const res = mockResponse();
-
-      await createAppointment(req, res);
+      await createAppointment(mockRequest({ body: { doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }), res);
 
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.patient.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
-    it('ينشئ مريض جديد لو ما في patientId ولا patientCode لكن في patientName', async () => {
+    it('بيلاقي المريض بالـ patientCode ضمن نفس المستشفى', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
-      prismaMock.patient.create.mockResolvedValue({ id: 'new-p', name: 'Sara' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p9', name: 'Sara' } as any);
       prismaMock.appointment.findMany.mockResolvedValue([]);
-      prismaMock.appointment.create.mockResolvedValue({ id: 'apt-2' } as any);
+      prismaMock.appointment.create.mockResolvedValue({ id: 'apt-3' } as any);
 
-      const req = mockRequest({
-        body: {
-          patientName: 'Sara',
-          doctorId: 'doc-1',
-          scheduledAt: '2026-08-01T10:00:00Z',
-        },
-      });
       const res = mockResponse();
+      await createAppointment(
+        mockRequest({ body: { patientCode: 'PT-7', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
 
-      await createAppointment(req, res);
-
-      expect(prismaMock.patient.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ name: 'Sara', hospitalId: 'hosp-1' }) })
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { patientCode: 'PT-7', hospitalId: 'hosp-1' } });
+      expect(prismaMock.appointment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientId: 'p9' }) })
       );
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('ما بينشئ مريض أبداً: patientName لوحده (مريض غير موجود) = 404', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue(null);
+
+      const res = mockResponse();
+      await createAppointment(
+        mockRequest({ body: { patientName: 'Sara', patientCode: 'PT-99', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
+      expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
     it('يرفض بـ 409 لو في تعارض بمواعيد نفس الدكتور', async () => {

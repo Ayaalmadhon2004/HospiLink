@@ -22,14 +22,21 @@ describe('common', () => {
 describe('appointments', () => {
   const base = { doctorId: U1, scheduledAt: '2026-10-20T09:00:00.000Z', type: 'CONSULTATION' };
   it('accepts the payload the UI sends and strips unknown keys', () => {
-    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientName: 'Ann', patientCode: 'PT-1', department: 'ER', duration: 30, evil: 1 });
+    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientCode: 'PT-1', department: 'ER', duration: 30, evil: 1 });
     expect(r).not.toHaveProperty('evil');
     expect(r.duration).toBe(30);
   });
+  it('strips patientName (appointments never create patients) and requires patientId or patientCode', () => {
+    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientName: 'Ann' });
+    expect(r).not.toHaveProperty('patientName');
+    expect(createAppointmentSchema.safeParse({ ...base, patientCode: 'PT-1' }).success).toBe(true);
+    expect(createAppointmentSchema.safeParse({ ...base }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientName: 'Ann' }).success).toBe(false);
+  });
   it('rejects bad doctorId, date and duration', () => {
-    expect(createAppointmentSchema.safeParse({ ...base, doctorId: 'x' }).success).toBe(false);
-    expect(createAppointmentSchema.safeParse({ ...base, scheduledAt: 'nope' }).success).toBe(false);
-    expect(createAppointmentSchema.safeParse({ ...base, duration: 0 }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, doctorId: 'x' }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, scheduledAt: 'nope' }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, duration: 0 }).success).toBe(false);
     expect(createAppointmentSchema.safeParse({ doctorId: U1 }).success).toBe(false);
   });
   it('update strips patientName/patientCode (not columns)', () => {

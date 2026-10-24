@@ -545,16 +545,13 @@
     "modal": {
       "selectDoctorError": "Please select a doctor",
       "selectDateError": "Please select a date and time",
-      "patientNameError": "Please enter a patient name",
       "updated": "Appointment updated successfully",
       "created": "Appointment created successfully",
       "saveFailed": "Failed to save appointment",
       "editTitle": "Edit Appointment",
       "patient": "Patient",
-      "patientPlaceholder": "Search existing patient or type new name...",
+      "patientPlaceholder": "Search patient by name or code...",
       "searching": "Searching...",
-      "willCreateColon": "Will create new patient: \"{{name}}\"",
-      "willCreate": "Will create new patient \"{{name}}\"",
       "selected": "Selected: <strong>{{name}}</strong>",
       "change": "Change",
       "doctor": "Doctor",
@@ -568,7 +565,10 @@
       "notes": "Notes",
       "notesPlaceholder": "Additional notes...",
       "update": "Update",
-      "create": "Create"
+      "create": "Create",
+      "selectPatientError": "Select an existing patient from the list",
+      "noPatientFound": "No matching patient. Admit the patient first.",
+      "admitPatientLink": "Go to Patients"
     }
   },
   "incidents": {
