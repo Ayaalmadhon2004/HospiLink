@@ -1,17 +1,10 @@
 // frontend/src/services/vitalsService.ts
-import { apiGet, apiPost } from './api';   // ← بدل axios، استخدم الـ instance المشترك
+import { apiGet, apiPost } from './api';
+import type { ApiResponse } from '../types/api';
+import type { RecordVitalsInput, VitalAlert, Vitals } from '../types/vitals';
 
-export const recordVitals = async (data: {
-  patientId: string;
-  heartRate?: number;
-  systolicBP?: number;
-  diastolicBP?: number;
-  spO2?: number;
-  temperature?: number;
-  respiratoryRate?: number;
-  notes?: string;
-}) => {
-  return apiPost('/vitals', data);
+export const recordVitals = async (data: RecordVitalsInput) => {
+  return apiPost<ApiResponse<Vitals>>('/vitals', data);
 };
 
 export const getVitals = async (params?: {
@@ -19,13 +12,13 @@ export const getVitals = async (params?: {
   critical?: boolean;
   limit?: number;
 }) => {
-  return apiGet('/vitals', params);
+  return apiGet<ApiResponse<Vitals[]>>('/vitals', params);
 };
 
 export const getCriticalAlerts = async () => {
-  return apiGet('/vitals/alerts');
+  return apiGet<ApiResponse<VitalAlert[]>>('/vitals/alerts');
 };
 
 export const getVitalsById = async (id: string) => {
-  return apiGet(`/vitals/${id}`);
+  return apiGet<ApiResponse<Vitals>>(`/vitals/${id}`);
 };

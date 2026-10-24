@@ -1,5 +1,4 @@
 // frontend/src/components/Vitals/VitalsChart.tsx
-import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   LineChart,
@@ -11,18 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { formatTime } from '../../utils/datetime';
-
-interface VitalRecord {
-  id: string;
-  recordedAt: string;
-  heartRate: number | null;
-  systolicBP: number | null;
-  diastolicBP: number | null;
-  spO2: number | null;
-  temperature: number | null;
-  respiratoryRate: number | null;
-  isCritical: boolean;
-}
+import type { VitalRecord } from '../../types/vitals';
 
 interface VitalsChartProps {
   history: VitalRecord[];
@@ -49,27 +37,22 @@ const getValue = (record: VitalRecord, key: string): number | null => {
 // ─── Helper: Format time ────────────────────────────────────────────────
 
 export const VitalsChart = ({ history, vitalType, color, label }: VitalsChartProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   // ✅ Defensive: ensure history is a valid array
   const safeHistory = ensureArray<VitalRecord>(history);
 
   // ✅ Build chart data safely
-  const data = useMemo(() => {
-    if (safeHistory.length === 0) return [];
-
-    return safeHistory
-      .filter((v): v is VitalRecord & { recordedAt: string } => {
-        if (!v || typeof v !== 'object') return false;
-        const val = getValue(v, vitalType as string);
-        return val !== null && v.recordedAt != null;
-      })
-      .map((v) => ({
-        time: formatTime(v.recordedAt),
-        value: getValue(v, vitalType as string) ?? 0,
-      }))
-      .reverse(); // oldest first for the chart
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- language/timezone change the formatted labels
-  }, [safeHistory, vitalType, i18n.language]);
+  const data = safeHistory
+    .filter((v): v is VitalRecord & { recordedAt: string } => {
+      if (!v || typeof v !== 'object') return false;
+      const val = getValue(v, vitalType as string);
+      return val !== null && v.recordedAt != null;
+    })
+    .map((v) => ({
+      time: formatTime(v.recordedAt),
+      value: getValue(v, vitalType as string) ?? 0,
+    }))
+    .reverse(); // oldest first for the chart
 
   // ✅ Empty state
   if (data.length === 0) {
