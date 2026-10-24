@@ -8,7 +8,7 @@ interface HttpError {
   stack?: string;
 }
 
-export const errorHandler = (err: HttpError, req: Request, res: Response, next: NextFunction) => {
+export const errorHandler = (err: HttpError, req: Request, res: Response, _next: NextFunction) => {
   logger.error({ err }, 'Unhandled error');
 
   if (!err.status || err.status >= 500) captureServerError(err);
