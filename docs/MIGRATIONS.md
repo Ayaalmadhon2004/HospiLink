@@ -45,3 +45,10 @@ Setup, once, in GitHub: Settings -> Environments -> `production` -> add the secr
 - If the migration fails, the job stops and the deploy hook is not triggered.
 - Migrations should be additive (add a column, then ship the code that uses it) because the old code keeps serving while the new one builds. Destructive changes need a two-step release.
 - Never use `db push` against production.
+
+## Appointment overlap constraint (`20261026000000_appointment_overlap`)
+
+Adds `CREATE EXTENSION btree_gist` and an exclusion constraint so a doctor cannot have two overlapping non-cancelled appointments
+(checked with each appointment's own `duration`). The API checks first (409), the constraint closes the race between concurrent requests.
+**Run the overlap query written at the top of the migration file against production first**: the migration fails if overlapping appointments
+already exist (cancel or reschedule them, then deploy). Tested on PostgreSQL 16; creating the extension needs a role that may do so (Neon allows it).

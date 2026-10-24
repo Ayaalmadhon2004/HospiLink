@@ -5,7 +5,11 @@ import { io } from '../server';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
+import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
 import type { Prisma } from '@prisma/client';
+
+const CONFLICT_MESSAGE = 'Doctor has a conflicting appointment at this time';
+const DEFAULT_DURATION = 30;
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
@@ -229,28 +233,15 @@ export const createAppointment = async (req: Request, res: Response) => {
       logger.debug({ patientId: patient.id }, "Created new patient");
     }
 
-    // ✅ Check for conflicts
+    // Overlap with the doctor's other appointments, each with its own duration.
     const appointmentStart = new Date(scheduledAt);
-    const appointmentEnd = new Date(appointmentStart.getTime() + (duration || 30) * 60000);
-
-    const conflict = await prisma.appointment.findFirst({
-      where: {
-        doctorId,
-        status: { not: 'CANCELLED' },
-        scheduledAt: { lt: appointmentEnd },
-        AND: {
-          scheduledAt: {
-            gt: new Date(appointmentStart.getTime() - (duration || 30) * 60000),
-          },
-        },
-      },
+    const conflict = await findDoctorConflict({
+      doctorId,
+      start: appointmentStart,
+      durationMin: duration || DEFAULT_DURATION,
     });
-
     if (conflict) {
-      return res.status(409).json({
-        success: false,
-        message: 'Doctor has a conflicting appointment at this time',
-      });
+      return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     }
 
     const appointment = await prisma.appointment.create({
@@ -263,7 +254,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         department,
         room,
         notes,
-        duration: duration || 30,
+        duration: duration || DEFAULT_DURATION,
       },
       include: {
         patient: { select: { id: true, name: true, patientCode: true } },
@@ -277,6 +268,8 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: appointment });
   } catch (error: unknown) {
+    // Lost a race against a concurrent booking: the database exclusion constraint caught it.
+    if (isOverlapViolation(error)) return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     handleError(res, error, 'Failed to create appointment');
   }
 };
@@ -290,7 +283,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     const existing = await prisma.appointment.findFirst({
       where: { id, patient: { hospitalId } },
-      select: { id: true },
+      select: { id: true, doctorId: true, scheduledAt: true, duration: true, status: true },
     });
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
@@ -304,6 +297,21 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     if (updateData.scheduledAt) {
       updateData.scheduledAt = new Date(updateData.scheduledAt);
+    }
+
+    // Re-check overlaps whenever the slot changes (time, doctor, length) or a cancelled appointment is revived.
+    const effectiveStatus = updateData.status ?? existing.status;
+    const slotChanged = ['scheduledAt', 'doctorId', 'duration', 'status'].some((k) => k in updateData);
+    if (slotChanged && effectiveStatus !== 'CANCELLED') {
+      const conflict = await findDoctorConflict({
+        doctorId: updateData.doctorId ?? existing.doctorId,
+        start: updateData.scheduledAt ?? existing.scheduledAt,
+        durationMin: updateData.duration ?? existing.duration,
+        excludeId: id,
+      });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
+      }
     }
 
     const appointment = await prisma.appointment.update({
@@ -324,6 +332,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: appointment });
   } catch (error: unknown) {
+    if (isOverlapViolation(error)) return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     handleError(res, error, 'Failed to update appointment');
   }
 };

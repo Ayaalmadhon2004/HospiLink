@@ -114,7 +114,7 @@ describe('notification events', () => {
     it('create notifies the doctor (Staff -> User by email)', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
-      prismaMock.appointment.findFirst.mockResolvedValue(null);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
       prismaMock.appointment.create.mockResolvedValue(apt as any);
       await createAppointment(
         mockRequest({ user: actor, body: { patientId: 'p1', doctorId: 's1', scheduledAt: '2026-10-22T09:00:00Z', type: 'X', department: 'ER' } }),
@@ -127,7 +127,10 @@ describe('notification events', () => {
     });
 
     it('update notifies on schedule changes but not on notes-only edits', async () => {
-      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'a1' } as any);
+      prismaMock.appointment.findFirst.mockResolvedValue({
+        id: 'a1', doctorId: 's1', scheduledAt: new Date('2026-10-22T09:00:00Z'), duration: 30, status: 'SCHEDULED',
+      } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
       prismaMock.appointment.update.mockResolvedValue(apt as any);
       await updateAppointment(mockRequest({ user: actor, params: { id: 'a1' }, body: { notes: 'hi' } }), mockResponse());
       expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
