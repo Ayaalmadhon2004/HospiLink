@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET } from '../config/jwt';  // ← ✅ Unified secret
+import { fail } from '../utils/apiResponse';
 
 declare global {
   namespace Express {
@@ -34,7 +35,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
   }
 
   if (!token) {
-    return res.status(401).json({ error: 'Unauthorized — no token provided' });
+    return fail(res, 401, 'UNAUTHORIZED', 'Unauthorized — no token provided');
   }
 
   try {
@@ -42,7 +43,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     // 2FA challenge tokens (and anything else without a userId) are not sessions.
     if (typeof decoded.userId !== 'string' || decoded.purpose) {
-      return res.status(401).json({ error: 'Invalid or expired token' });
+      return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired token');
     }  // ← ✅ Unified secret
 
     const user = await prisma.user.findUnique({
@@ -51,24 +52,19 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     });
 
     if (!user) {
-      return res.status(401).json({ error: 'User not found' });
+      return fail(res, 401, 'UNAUTHORIZED', 'User not found');
     }
 
     // Self-registered accounts stay locked out of every protected route until an ADMIN approves them.
     if (user.accountStatus !== 'ACTIVE') {
       const pending = user.accountStatus === 'PENDING';
       const message = pending ? 'Account pending admin approval' : 'Account is disabled';
-      return res.status(403).json({
-        success: false,
-        error: message,
-        message,
-        code: pending ? 'ACCOUNT_PENDING' : 'ACCOUNT_DISABLED',
-      });
+      return fail(res, 403, pending ? 'ACCOUNT_PENDING' : 'ACCOUNT_DISABLED', message);
     }
 
     // Tokens issued before the last password change/reset are dead.
     if (user.passwordChangedAt && (decoded.iat ?? 0) < Math.floor(user.passwordChangedAt.getTime() / 1000)) {
-      return res.status(401).json({ error: 'Session expired, please sign in again' });
+      return fail(res, 401, 'UNAUTHORIZED', 'Session expired, please sign in again');
     }
 
     // hospitalId comes from the DB row, never from the token or the request: it is the tenant for every query.
@@ -81,7 +77,7 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
 
     next();
   } catch (error) {
-    return res.status(401).json({ error: 'Invalid or expired token' });
+    return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired token');
   }
 };
 
@@ -94,11 +90,7 @@ export const authorize = (...roles: string[]) => {
     const userRole = req.user?.role;
 
     if (!userRole || !roles.includes(userRole)) {
-      return res.status(403).json({
-        error: 'You do not have permission to perform this action.',
-        required: roles,
-        current: userRole || 'none',
-      });
+      return fail(res, 403, 'FORBIDDEN', 'You do not have permission to perform this action.', { required: roles, current: userRole || 'none' });
     }
     next();
   };

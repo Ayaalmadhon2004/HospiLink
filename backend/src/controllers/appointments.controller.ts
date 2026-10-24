@@ -161,7 +161,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
     });
 
     if (!appointment) {
-      return res.status(404).json({ success: false, message: 'Appointment not found' });
+      return res.status(404).json({ success: false, code: 'APPOINTMENT_NOT_FOUND', message: 'Appointment not found' });
     }
 
     res.status(200).json({ success: true, data: appointment });
@@ -192,7 +192,7 @@ export const createAppointment = async (req: Request, res: Response) => {
     // The doctor (Staff) must belong to the same hospital.
     const doctor = await prisma.staff.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
     if (!doctor) {
-      return res.status(404).json({ success: false, message: 'Doctor not found' });
+      return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
     }
 
     // The patient must already exist in this hospital (found by id first, then by code).
@@ -205,7 +205,7 @@ export const createAppointment = async (req: Request, res: Response) => {
       ? await prisma.patient.findFirst({ where: { id: patientId, hospitalId } })
       : await prisma.patient.findFirst({ where: { patientCode, hospitalId } });
     if (!patient) {
-      return res.status(404).json({ success: false, message: 'Patient not found' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
 
     // Overlap with the doctor's other appointments, each with its own duration.
@@ -261,13 +261,13 @@ export const updateAppointment = async (req: Request, res: Response) => {
       select: { id: true, doctorId: true, scheduledAt: true, duration: true, status: true },
     });
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Appointment not found' });
+      return res.status(404).json({ success: false, code: 'APPOINTMENT_NOT_FOUND', message: 'Appointment not found' });
     }
     if (updateData.patientId && !(await prisma.patient.findFirst({ where: { id: updateData.patientId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'Patient not found' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
     if (updateData.doctorId && !(await prisma.staff.findFirst({ where: { id: updateData.doctorId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'Doctor not found' });
+      return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
     }
 
     if (updateData.scheduledAt) {
@@ -322,7 +322,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
       select: { id: true },
     });
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'Appointment not found' });
+      return res.status(404).json({ success: false, code: 'APPOINTMENT_NOT_FOUND', message: 'Appointment not found' });
     }
 
     const appointment = await prisma.appointment.update({

@@ -205,7 +205,26 @@
   },
   "errors": {
     "forbidden": "You do not have permission to perform this action.",
-    "server": "Server error. Please try again later."
+    "server": "Server error. Please try again later.",
+    "codes": {
+      "RATE_LIMITED": "Too many requests. Please try again later.",
+      "ACCOUNT_PENDING": "Your account is pending admin approval.",
+      "ACCOUNT_DISABLED": "Your account is disabled.",
+      "EMAIL_NOT_VERIFIED": "Please verify your email address before signing in.",
+      "PATIENT_NOT_FOUND": "Patient not found.",
+      "BED_NOT_FOUND": "Bed not found.",
+      "WARD_NOT_FOUND": "Ward not found.",
+      "STAFF_NOT_FOUND": "Staff member not found.",
+      "USER_NOT_FOUND": "User not found.",
+      "APPOINTMENT_NOT_FOUND": "Appointment not found.",
+      "SHIFT_NOT_FOUND": "Shift not found.",
+      "INCIDENT_NOT_FOUND": "Incident not found.",
+      "VITALS_NOT_FOUND": "Vitals entry not found.",
+      "DOCTOR_NOT_FOUND": "Doctor not found.",
+      "UNIT_NOT_FOUND": "Unit not found.",
+      "THRESHOLD_NOT_FOUND": "Threshold not found.",
+      "FILE_NOT_FOUND": "File not found."
+    }
   },
   "errorBoundary": {
     "title": "Something went wrong",

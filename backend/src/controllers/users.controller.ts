@@ -89,7 +89,7 @@ export const approveUser = async (req: Request, res: Response) => {
       where: { id, hospitalId: hospitalIdOf(req) },
       select: { id: true, accountStatus: true },
     });
-    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!target) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
     if (target.accountStatus !== 'PENDING') {
       return res.status(409).json({ success: false, message: 'User is not pending approval' });
     }
@@ -115,7 +115,7 @@ export const rejectUser = async (req: Request, res: Response) => {
       where: { id, hospitalId: hospitalIdOf(req) },
       select: { id: true, accountStatus: true },
     });
-    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!target) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
     if (target.accountStatus !== 'PENDING') {
       return res.status(409).json({ success: false, message: 'User is not pending approval' });
     }
@@ -143,7 +143,7 @@ export const deactivateUser = async (req: Request, res: Response) => {
       where: { id, hospitalId: hospitalIdOf(req) },
       select: { id: true },
     });
-    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!target) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
 
     const user = await prisma.user.update({
       where: { id },
@@ -169,7 +169,7 @@ export const resetUserTwoFactor = async (req: Request, res: Response) => {
       where: { id, hospitalId: hospitalIdOf(req) },
       select: { id: true, email: true, twoFactorEnabledAt: true },
     });
-    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!target) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
     if (!target.twoFactorEnabledAt) {
       return res.status(409).json({ success: false, message: 'Two-factor authentication is not enabled for this user' });
     }

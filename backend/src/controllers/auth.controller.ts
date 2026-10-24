@@ -90,7 +90,9 @@ export const completeLogin = (
   const ttl = rememberMe ? SESSION_TTL.remember : SESSION_TTL.default;
   const token = generateToken({ id: user.id, email: user.email, role: user.role }, ttl);
   res.cookie('token', token, authCookieOptions(ttl.cookieMs));
-  res.status(200).json({ success: true, message: 'Login successful', token, user: toPublicUser(user) });
+  const publicUser = toPublicUser(user);
+  // `token` / `user` at the top level are deprecated duplicates of `data` (kept for one release).
+  res.status(200).json({ success: true, message: 'Login successful', data: { user: publicUser, token }, token, user: publicUser });
 };
 
 // ============================================
@@ -159,7 +161,8 @@ export const register = async (req: Request, res: Response) => {
     res.status(201).json({
       success: true,
       message: 'Registration received. Check your email to verify your address; your account is also pending admin approval.',
-      user,
+      data: { user },
+      user, // deprecated: use data.user
     });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Register error:');
@@ -239,7 +242,7 @@ export const login = async (req: Request, res: Response) => {
       // No cookie yet: the challenge only proves the password was right, lives 5 minutes and is
       // rejected by protect/socketAuth (no userId claim). POST /auth/2fa/login finishes the login.
       const challengeToken = jwt.sign({ uid: user.id, purpose: '2fa', rememberMe }, JWT_SECRET, { expiresIn: '5m' });
-      res.status(200).json({ success: true, twoFactorRequired: true, challengeToken });
+      res.status(200).json({ success: true, data: { twoFactorRequired: true, challengeToken }, twoFactorRequired: true, challengeToken });
       return;
     }
 
@@ -313,14 +316,15 @@ export const getMe = async (req: Request, res: Response) => {
     if (!user) {
       res.status(404).json({
         success: false,
-        message: 'User not found',
+        code: 'USER_NOT_FOUND', message: 'User not found',
       });
       return;
     }
 
     res.status(200).json({
       success: true,
-      user,
+      data: { user },
+      user, // deprecated: use data.user
     });
   } catch (error: unknown) {
     logger.error({ err: error }, 'GetMe error:');
@@ -368,7 +372,7 @@ export const updatePassword = async (req: Request, res: Response) => {
     if (!user) {
       res.status(404).json({
         success: false,
-        message: 'User not found',
+        code: 'USER_NOT_FOUND', message: 'User not found',
       });
       return;
     }

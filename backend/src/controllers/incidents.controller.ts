@@ -98,7 +98,7 @@ export const getIncidentById = async (req: Request, res: Response) => {
     const incident = await prisma.incident.findFirst({ where: { id, hospitalId: hospitalIdOf(req) } });
 
     if (!incident) {
-      return res.status(404).json({ success: false, message: 'Incident not found' });
+      return res.status(404).json({ success: false, code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' });
     }
 
     res.status(200).json({ success: true, data: incident });
@@ -161,7 +161,7 @@ export const updateIncident = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
     const previous = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { severity: true, status: true } });
     if (!previous) {
-      return res.status(404).json({ success: false, message: 'Incident not found' });
+      return res.status(404).json({ success: false, code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' });
     }
 
     const incident = await prisma.incident.update({
@@ -197,7 +197,7 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Incident not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' });
 
     const updateData: Prisma.IncidentUpdateInput = { status };
     if (progress !== undefined) updateData.progress = progress;
@@ -229,7 +229,7 @@ export const deleteIncident = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.incident.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Incident not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'INCIDENT_NOT_FOUND', message: 'Incident not found' });
 
     await prisma.incident.delete({ where: { id } });
 

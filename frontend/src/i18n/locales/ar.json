@@ -205,7 +205,26 @@
   },
   "errors": {
     "forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء.",
-    "server": "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً."
+    "server": "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
+    "codes": {
+      "RATE_LIMITED": "طلبات كثيرة جداً. يرجى المحاولة لاحقاً.",
+      "ACCOUNT_PENDING": "حسابك بانتظار موافقة المسؤول.",
+      "ACCOUNT_DISABLED": "حسابك معطّل.",
+      "EMAIL_NOT_VERIFIED": "يرجى تأكيد بريدك الإلكتروني قبل تسجيل الدخول.",
+      "PATIENT_NOT_FOUND": "المريض غير موجود.",
+      "BED_NOT_FOUND": "السرير غير موجود.",
+      "WARD_NOT_FOUND": "القسم غير موجود.",
+      "STAFF_NOT_FOUND": "الموظف غير موجود.",
+      "USER_NOT_FOUND": "المستخدم غير موجود.",
+      "APPOINTMENT_NOT_FOUND": "الموعد غير موجود.",
+      "SHIFT_NOT_FOUND": "المناوبة غير موجودة.",
+      "INCIDENT_NOT_FOUND": "الحادثة غير موجودة.",
+      "VITALS_NOT_FOUND": "سجل العلامات الحيوية غير موجود.",
+      "DOCTOR_NOT_FOUND": "الطبيب غير موجود.",
+      "UNIT_NOT_FOUND": "الوحدة غير موجودة.",
+      "THRESHOLD_NOT_FOUND": "الحد غير موجود.",
+      "FILE_NOT_FOUND": "الملف غير موجود."
+    }
   },
   "errorBoundary": {
     "title": "حدث خطأ ما",
