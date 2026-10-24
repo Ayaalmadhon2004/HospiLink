@@ -6,7 +6,10 @@ import { mockRequest, mockResponse, mockNext } from '../mocks/http';
 import { JWT_SECRET } from '../../src/config/jwt';
 import { encryptSecret, decryptSecret } from '../../src/config/twoFactor';
 import { login } from '../../src/controllers/auth.controller';
+jest.mock('../../src/services/securityNotices', () => ({ sendSecurityNotice: jest.fn() }));
+import { sendSecurityNotice } from '../../src/services/securityNotices';
 import {
+  twoFactorRegenerateRecoveryCodes,
   twoFactorLogin,
   twoFactorSetup,
   twoFactorEnable,
@@ -38,6 +41,7 @@ const baseUser = (over: object = {}) => ({
 describe('two-factor authentication', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
+    (sendSecurityNotice as jest.Mock).mockClear();
   });
   afterEach(() => jest.restoreAllMocks());
 
@@ -220,7 +224,7 @@ describe('two-factor authentication', () => {
 
   describe('twoFactorEnable', () => {
     const pending = (over = {}) => ({
-      id: 'user-1', twoFactorSecretEnc: encryptSecret(SECRET), twoFactorLastStep: null, twoFactorEnabledAt: null, ...over,
+      id: 'user-1', email: 'a@a.com', twoFactorSecretEnc: encryptSecret(SECRET), twoFactorLastStep: null, twoFactorEnabledAt: null, ...over,
     });
 
     it('400 for a malformed code', async () => {
@@ -266,6 +270,7 @@ describe('two-factor authentication', () => {
         expect.objectContaining({ data: expect.objectContaining({ twoFactorEnabledAt: expect.any(Date) }) }),
       );
       expect(prismaMock.$transaction).toHaveBeenCalledTimes(1);
+      expect(sendSecurityNotice).toHaveBeenCalledWith(expect.any(String), 'Two-factor authentication enabled', expect.any(String));
     });
   });
 
@@ -317,6 +322,81 @@ describe('two-factor authentication', () => {
         data: expect.objectContaining({ twoFactorSecretEnc: null, twoFactorEnabledAt: null }),
       });
       expect(prismaMock.twoFactorRecoveryCode.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+      expect(sendSecurityNotice).toHaveBeenCalledWith('a@a.com', 'Two-factor authentication disabled', expect.any(String));
+    });
+  });
+
+  describe('twoFactorRegenerateRecoveryCodes', () => {
+    const enabledUser = async (over = {}) => baseUser({ id: 'user-1', password: await bcrypt.hash('pw-correct', 4), ...over });
+    const goodBody = () => ({ password: 'pw-correct', code: authenticator.generate(SECRET) });
+
+    it('400 for malformed input, 401 without a user', async () => {
+      const res = mockResponse();
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ body: { password: 'x' } }), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+
+      const res2 = mockResponse();
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ user: undefined, body: goodBody() }), res2);
+      expect(res2.status).toHaveBeenCalledWith(401);
+    });
+
+    it('409 when 2FA is not enabled; 400 for a wrong password; 401 for a wrong code', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(await enabledUser({ twoFactorEnabledAt: null }));
+      const res1 = mockResponse();
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ body: goodBody() }), res1);
+      expect(res1.status).toHaveBeenCalledWith(409);
+
+      prismaMock.user.findUnique.mockResolvedValue(await enabledUser());
+      const res2 = mockResponse();
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ body: { ...goodBody(), password: 'nope' } }), res2);
+      expect(res2.status).toHaveBeenCalledWith(400);
+
+      prismaMock.user.update.mockResolvedValue({ twoFactorFailures: 1 });
+      const wrong = authenticator.generate(SECRET) === '000000' ? '111111' : '000000';
+      const res3 = mockResponse();
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ body: { password: 'pw-correct', code: wrong } }), res3);
+      expect(res3.status).toHaveBeenCalledWith(401);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('replaces every recovery code, returns 10 new ones once and notifies the user', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(await enabledUser());
+      prismaMock.user.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.user.update.mockResolvedValue({});
+      const res = mockResponse();
+
+      await twoFactorRegenerateRecoveryCodes(mockRequest({ body: goodBody() }), res);
+
+      expect(prismaMock.twoFactorRecoveryCode.deleteMany).toHaveBeenCalledWith({ where: { userId: 'user-1' } });
+      const created = prismaMock.twoFactorRecoveryCode.createMany.mock.calls[0][0].data;
+      expect(created).toHaveLength(10);
+      const { data } = (res.json as jest.Mock).mock.calls[0][0];
+      expect(data.recoveryCodes).toHaveLength(10);
+      expect(JSON.stringify(created)).not.toContain(data.recoveryCodes[0]);
+      expect(sendSecurityNotice).toHaveBeenCalledWith('a@a.com', 'Recovery codes regenerated', expect.any(String));
+    });
+  });
+
+  describe('recovery code use at login', () => {
+    it('notifies the user with the number of codes left', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(baseUser());
+      prismaMock.twoFactorRecoveryCode.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.twoFactorRecoveryCode.count.mockResolvedValue(7);
+      prismaMock.user.update.mockResolvedValue({});
+
+      await twoFactorLogin(mockRequest({ body: { challengeToken: challenge(), recoveryCode: 'abcde-12345' } }), mockResponse());
+
+      expect(sendSecurityNotice).toHaveBeenCalledWith('a@a.com', 'A recovery code was used to sign in', expect.stringContaining('left: 7'));
+    });
+
+    it('sends nothing for a normal authenticator code', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(baseUser());
+      prismaMock.user.updateMany.mockResolvedValue({ count: 1 });
+      prismaMock.user.update.mockResolvedValue({});
+
+      await twoFactorLogin(mockRequest({ body: { challengeToken: challenge(), code: authenticator.generate(SECRET) } }), mockResponse());
+
+      expect(sendSecurityNotice).not.toHaveBeenCalled();
     });
   });
 });

@@ -142,3 +142,11 @@ describe('PUT /staff/:id/login (link a login to a staff member)', () => {
     expect(res.body.data.hasLogin).toBe(false);
   });
 });
+
+describe('POST /users/:id/2fa/reset', () => {
+  it.each(['DOCTOR', 'NURSE', 'DISPATCHER'])('is ADMIN only: %s -> 403', async (role) => {
+    const res = await request(app).post(`/users/${U1}/2fa/reset`).set('Authorization', as(role, 'ACTIVE'));
+    expect(res.status).toBe(403);
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+});

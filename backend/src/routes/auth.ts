@@ -19,6 +19,7 @@ import {
   twoFactorSetup,
   twoFactorEnable,
   twoFactorDisable,
+  twoFactorRegenerateRecoveryCodes,
 } from '../controllers/twoFactor.controller';
 
 // Per-IP cap on second-step attempts (on top of the per-account lockout in services/twoFactor.ts).
@@ -72,6 +73,7 @@ router.post('/2fa/login', twoFactorLoginLimiter, twoFactorLogin);
 router.post('/2fa/setup', protect, logActivity('2FA_SETUP'), twoFactorSetup);
 router.post('/2fa/enable', protect, logActivity('2FA_ENABLE'), twoFactorEnable);
 router.post('/2fa/disable', protect, logActivity('2FA_DISABLE'), twoFactorDisable);
+router.post('/2fa/recovery-codes', protect, logActivity('2FA_RECOVERY_CODES'), twoFactorRegenerateRecoveryCodes);
 
 // ✅ NEW: PUT /api/auth/password — update password (protected)
 router.put('/password', protect, updatePassword);

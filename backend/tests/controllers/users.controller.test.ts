@@ -1,7 +1,10 @@
 import bcrypt from 'bcryptjs';
 import { prismaMock } from '../mocks/prisma';
 import { mockRequest, mockResponse } from '../mocks/http';
-import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser } from '../../src/controllers/users.controller';
+import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser, resetUserTwoFactor } from '../../src/controllers/users.controller';
+
+jest.mock('../../src/services/securityNotices', () => ({ sendSecurityNotice: jest.fn() }));
+import { sendSecurityNotice } from '../../src/services/securityNotices';
 
 describe('users.controller (ADMIN account administration)', () => {
   beforeEach(() => {
@@ -21,6 +24,54 @@ describe('users.controller (ADMIN account administration)', () => {
       );
       // the password hash is never selected
       expect((prismaMock.user.findMany.mock.calls[0][0] as any).select.password).toBeUndefined();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('listUsers linkable', () => {
+    it('linkable=true only returns logins without a staff record', async () => {
+      prismaMock.user.findMany.mockResolvedValue([] as any);
+      await listUsers(mockRequest({ query: { accountStatus: 'ACTIVE', linkable: 'true' } }), mockResponse());
+      expect(prismaMock.user.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { hospitalId: 'hosp-1', accountStatus: 'ACTIVE', staff: null } })
+      );
+    });
+  });
+
+  describe('resetUserTwoFactor', () => {
+    it('400 for your own account (use the settings page)', async () => {
+      const res = mockResponse();
+      await resetUserTwoFactor(mockRequest({ params: { id: 'user-1' } }), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.findFirst).not.toHaveBeenCalled();
+    });
+
+    it('404 for a user of another hospital, 409 when 2FA is off', async () => {
+      prismaMock.user.findFirst.mockResolvedValue(null);
+      const res1 = mockResponse();
+      await resetUserTwoFactor(mockRequest({ params: { id: 'foreign' } }), res1);
+      expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1' } }));
+      expect(res1.status).toHaveBeenCalledWith(404);
+
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'u2@h.com', twoFactorEnabledAt: null } as any);
+      const res2 = mockResponse();
+      await resetUserTwoFactor(mockRequest({ params: { id: 'u2' } }), res2);
+      expect(res2.status).toHaveBeenCalledWith(409);
+      expect(prismaMock.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('clears 2FA, deletes recovery codes, revokes sessions and notifies the user', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'u2@h.com', twoFactorEnabledAt: new Date() } as any);
+      const res = mockResponse();
+
+      await resetUserTwoFactor(mockRequest({ params: { id: 'u2' } }), res);
+
+      expect(prismaMock.user.update).toHaveBeenCalledWith({
+        where: { id: 'u2' },
+        data: expect.objectContaining({ twoFactorSecretEnc: null, twoFactorEnabledAt: null, passwordChangedAt: expect.any(Date) }),
+      });
+      expect(prismaMock.twoFactorRecoveryCode.deleteMany).toHaveBeenCalledWith({ where: { userId: 'u2' } });
+      expect(sendSecurityNotice).toHaveBeenCalledWith('u2@h.com', 'Two-factor authentication was reset', expect.any(String));
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

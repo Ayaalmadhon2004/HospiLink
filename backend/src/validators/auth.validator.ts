@@ -53,6 +53,9 @@ export const twoFactorDisableSchema = z
   .object({ password: z.string().min(1, 'Password is required').max(128), ...secondFactor })
   .refine(exactlyOneFactor, factorMessage);
 
+// Regenerating recovery codes needs the same proof as disabling 2FA.
+export const twoFactorRegenerateSchema = twoFactorDisableSchema;
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
