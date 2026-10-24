@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
 import { apiGet, apiDelete } from '../services/api';
+import { apiGetAll } from '../services/paginate';
 import type { ApiResponse } from '../types/api';
 import type { Patient } from '../types/patient';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
@@ -37,7 +38,7 @@ const Beds = () => {
 
   const fetchBeds = useCallback(async () => {
     try {
-      const data = await apiGet<ApiResponse<BedWithDetails[]>>('/beds');
+      const data = await apiGetAll<BedWithDetails>('/beds');
       if (data.success) setBeds(data.data);
     } catch (err) {
       logger.error('Error fetching beds:', err);

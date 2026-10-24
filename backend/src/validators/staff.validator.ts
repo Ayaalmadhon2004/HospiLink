@@ -1,7 +1,7 @@
 // backend/src/validators/staff.validator.ts
 import { z } from 'zod';
 import { ShiftType } from '@prisma/client';
-import { idSchema, nonEmpty, dateString, enumValue } from './common.validator';
+import { idSchema, nonEmpty, dateString, enumValue, pageQueryShape } from './common.validator';
 
 const staffStatus = z.enum(['ACTIVE', 'ON_LEAVE', 'INACTIVE']);
 
@@ -67,7 +67,10 @@ export const updateShiftSchema = z
   })
   .refine(endAfterStart, endAfterStartMsg);
 
+export const staffListQuerySchema = z.object({ ...pageQueryShape });
+
 export const shiftQuerySchema = z.object({
+  ...pageQueryShape,
   department: z.string().trim().min(1).max(100).optional(),
   staffId: z.string().trim().min(1).optional(),
   date: dateString('date').optional(),

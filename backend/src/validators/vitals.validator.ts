@@ -1,6 +1,6 @@
 // backend/src/validators/vitals.validator.ts
 import { z } from 'zod';
-import { idSchema, looseNumber, digitsString } from './common.validator';
+import { idSchema, looseNumber, digitsString, pageQueryShape } from './common.validator';
 
 const metrics = {
   heartRate: looseNumber(0, 300, { int: true }),
@@ -18,6 +18,7 @@ export const recordVitalsSchema = z.object({ patientId: idSchema, ...metrics });
 export const updateVitalsSchema = z.object(metrics);
 
 export const vitalsQuerySchema = z.object({
+  page: pageQueryShape.page,
   patientId: z.string().trim().min(1).optional(),
   critical: z.enum(['true', 'false']).optional(),
   limit: digitsString.optional(),

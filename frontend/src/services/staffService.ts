@@ -1,10 +1,11 @@
 // frontend/src/services/staffService.ts
 import { apiGet, apiPost, apiPut, apiDelete } from './api';
-import { toQueryString, type ApiResponse } from '../types/api';
+import { apiGetAll } from './paginate';
+import { toQueryString } from '../types/api';
 import type { ShiftInput, StaffMember } from '../types/staff';
 
 export const getStaff = (params?: { department?: string; role?: string }) => {
-  return apiGet<ApiResponse<StaffMember[]>>(`/staff${toQueryString(params)}`);
+  return apiGetAll<StaffMember>('/staff', params);
 };
 
 export const getStaffById = (id: string) => 

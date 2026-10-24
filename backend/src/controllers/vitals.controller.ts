@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
+import { pageParams, pageInfo } from '../utils/pagination';
 import { loadEffectiveThresholds, evaluateReading } from '../services/vitalThresholds';
 import { notify } from '../services/notification.service';
 import type { Prisma } from '@prisma/client';
@@ -49,13 +50,6 @@ const parseMetrics = (body: Record<string, unknown>, onlyPresent = false) => {
 
 const invalidMetricsResponse = (res: Response, invalid: string[]) =>
   res.status(400).json({ success: false, message: `Invalid numeric value for: ${invalid.join(', ')}` });
-
-// Safe query parsing: positive integer with default, clamped to max.
-const parseLimit = (raw: unknown, def = 50, max = 200): number => {
-  if (typeof raw !== 'string' || !/^\d+$/.test(raw.trim())) return def;
-  const n = parseInt(raw.trim(), 10);
-  return Number.isSafeInteger(n) && n > 0 ? Math.min(n, max) : def;
-};
 
 // Judges a reading against the thresholds of the patient's department (own rows + built-in defaults).
 const checkCriticalVitals = async (
@@ -169,18 +163,23 @@ export const getVitals = async (req: Request, res: Response) => {
     if (patientId) where.patientId = patientId;
     if (critical === 'true') where.isCritical = true;
 
-    const vitals = await prisma.patientVitals.findMany({
-      where,
-      include: {
-        patient: {
-          select: { name: true, patientCode: true, department: true },
+    const page = pageParams(req.query, 50);
+    const [vitals, totalCount] = await Promise.all([
+      prisma.patientVitals.findMany({
+        where,
+        include: {
+          patient: {
+            select: { name: true, patientCode: true, department: true },
+          },
         },
-      },
-      orderBy: { recordedAt: 'desc' },
-      take: parseLimit(req.query.limit),
-    });
+        orderBy: [{ recordedAt: 'desc' }, { id: 'desc' }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.patientVitals.count({ where }),
+    ]);
 
-    res.status(200).json({ success: true, count: vitals.length, data: vitals });
+    res.status(200).json({ success: true, count: vitals.length, data: vitals, pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get vitals error:');
     res.status(500).json({ success: false, message: 'Failed to fetch vitals' });
