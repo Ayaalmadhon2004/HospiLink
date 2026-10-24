@@ -55,7 +55,7 @@ vi.mock('../../hooks/useSettings', () => ({
   default: () => ({
     loading: false,
     settings: {
-      profile: { id: '1', name: 'Dr. Aya', email: 'a@b.c', role: 'DOCTOR', department: 'General', shift: 'Day', status: 'ACTIVE' },
+      profile: { id: '1', name: 'Dr. Aya', email: 'a@b.c', role: 'DOCTOR', department: 'General', shift: 'DAY', status: 'ACTIVE' },
       notifications: {
         criticalVitalsAlerts: true,
         incidentEscalations: false,

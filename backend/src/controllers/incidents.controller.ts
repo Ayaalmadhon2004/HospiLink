@@ -5,7 +5,7 @@ import { io } from '../server';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
 import logger from '../config/logger';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, IncidentStatus, IncidentSeverity, IncidentType } from '@prisma/client';
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
@@ -44,9 +44,9 @@ export const getIncidents = async (req: Request, res: Response) => {
     const { status, severity, type } = req.query;
     const where: Prisma.IncidentWhereInput = { hospitalId: hospitalIdOf(req) };
 
-    if (status && status !== '') where.status = status as string;
-    if (severity && severity !== '') where.severity = severity as string;
-    if (type && type !== '') where.type = type as string;
+    if (status && status !== '') where.status = status as IncidentStatus;
+    if (severity && severity !== '') where.severity = severity as IncidentSeverity;
+    if (type && type !== '') where.type = type as IncidentType;
 
     const incidents = await prisma.incident.findMany({
       where,

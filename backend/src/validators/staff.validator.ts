@@ -1,6 +1,7 @@
 // backend/src/validators/staff.validator.ts
 import { z } from 'zod';
-import { idSchema, nonEmpty, dateString } from './common.validator';
+import { ShiftType } from '@prisma/client';
+import { idSchema, nonEmpty, dateString, enumValue } from './common.validator';
 
 const staffStatus = z.enum(['ACTIVE', 'ON_LEAVE', 'INACTIVE']);
 
@@ -42,7 +43,7 @@ export const updateStaffSchema = z
   .transform(withIsActive);
 
 const shiftBase = {
-  type: nonEmpty('type', 50),
+  type: enumValue(ShiftType, 'type'),
   startTime: dateString('startTime'),
   endTime: dateString('endTime'),
   department: nonEmpty('department', 100),

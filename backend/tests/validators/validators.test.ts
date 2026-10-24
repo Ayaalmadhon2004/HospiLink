@@ -4,7 +4,7 @@ import { createBedSchema, updateBedSchema } from '../../src/validators/bed.valid
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
 import { upsertThresholdSchema } from '../../src/validators/vitals.validator';
 import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
-import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
+import { createIncidentSchema, updateIncidentStatusSchema, incidentQuerySchema } from '../../src/validators/incident.validator';
 import { createCallSchema, assignUnitSchema, updateUnitStatusSchema, createUnitSchema, updateUnitSchema } from '../../src/validators/dispatch.validator';
 import { notificationsQuerySchema } from '../../src/validators/notification.validator';
 import { updateDisplaySettingsSchema, updateProfileSchema, updateSecuritySettingsSchema } from '../../src/validators/settings.validator';
@@ -95,12 +95,18 @@ describe('staff & shifts', () => {
     expect(createStaffSchema.safeParse({ ...staff, email: 'bad' }).success).toBe(false);
     expect(createStaffSchema.safeParse({ name: 'x' }).success).toBe(false);
   });
-  const shift = { staffId: U1, type: 'MORNING', startTime: '2026-10-20T08:00:00Z', endTime: '2026-10-20T16:00:00Z', department: 'ER' };
+  const shift = { staffId: U1, type: 'DAY', startTime: '2026-10-20T08:00:00Z', endTime: '2026-10-20T16:00:00Z', department: 'ER' };
   it('shift: valid, end before start, bad staffId', () => {
     expect(createShiftSchema.safeParse(shift).success).toBe(true);
     expect(createShiftSchema.safeParse({ ...shift, endTime: '2026-10-20T07:00:00Z' }).success).toBe(false);
     expect(createShiftSchema.safeParse({ ...shift, staffId: 'x' }).success).toBe(false);
     expect(updateShiftSchema.safeParse({ notes: 'n' }).success).toBe(true);
+  });
+
+  it('shift type is a native enum (case/spacing tolerant, unknown rejected)', () => {
+    const parsed = createShiftSchema.safeParse({ ...shift, type: ' on call ' });
+    expect(parsed.success && parsed.data.type).toBe('ON_CALL');
+    expect(createShiftSchema.safeParse({ ...shift, type: 'MORNING' }).success).toBe(false);
   });
 });
 
@@ -193,4 +199,14 @@ describe('upsertThresholdSchema', () => {
     expect(upsertThresholdSchema.safeParse({ ...base, vitalType: 'MOOD' }).success).toBe(false);
     expect(upsertThresholdSchema.parse({ ...base, hospitalId: 'x' })).not.toHaveProperty('hospitalId');
   });
+
+describe('native enum fields', () => {
+  it('incident type/severity/status reject unknown values and normalise case', () => {
+    const base = { title: 'Fall', location: 'W1', reportedBy: 'N', type: 'patient fall', severity: 'low' };
+    const ok = createIncidentSchema.safeParse(base);
+    expect(ok.success && [ok.data.type, ok.data.severity]).toEqual(['PATIENT_FALL', 'LOW']);
+    expect(createIncidentSchema.safeParse({ ...base, severity: 'HUGE' }).success).toBe(false);
+    expect(incidentQuerySchema.safeParse({ status: 'DONE' }).success).toBe(false);
+  });
+});
 });

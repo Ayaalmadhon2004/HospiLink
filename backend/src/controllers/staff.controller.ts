@@ -103,7 +103,7 @@ export const createStaff = async (req: Request, res: Response) => {
             name,
             role: loginRole,
             department,
-            shift: 'Day',
+            shift: 'DAY',
             accountStatus: 'ACTIVE',
             emailVerifiedAt: new Date(),
             hospitalId,

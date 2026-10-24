@@ -109,6 +109,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   (`patient: { hospitalId }`, `staff: { hospitalId }`). Related ids from the client (bed, ward, doctor, patient) must be verified to belong to the same hospital.
   Socket rooms are per hospital via the helpers in `utils/tenant.ts` (`clinicalRoom`, `departmentRoom`, `dispatchRoom`, `unitRoom`).
   `notify()` refuses role/department broadcasts without a `hospitalId`.
+- Enums: closed value sets are native Prisma enums (`ShiftType` for `Shift.type`/`User.shift`, `DutyStatus` for `User.status`, `AppointmentType/Status`, `IncidentType/Severity/Status`); validators use `enumValue(Enum, 'label')` (`validators/common.validator.ts`, case/spacing tolerant, so 'Day' -> DAY). `Staff.role` and every `department` stay free-form on purpose. Adding a value = edit the enum + a migration (`ALTER TYPE ... ADD VALUE`) + the frontend option list.
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
 - Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.

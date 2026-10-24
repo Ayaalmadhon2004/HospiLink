@@ -32,8 +32,8 @@ model User {
   name       String
   role       Role          @default(DOCTOR)
   department String
-  shift      String
-  status     String        @default("OFF_DUTY")
+  shift      ShiftType
+  status     DutyStatus    @default(OFF_DUTY)
   // Login/approval state. Public signup creates PENDING; only an ADMIN activates (see users.controller).
   accountStatus AccountStatus @default(ACTIVE)
   hospitalId String
@@ -247,7 +247,7 @@ model Staff {
 model Shift {
   id         String   @id @default(uuid())
   staffId    String
-  type       String
+  type       ShiftType
   startTime  DateTime
   endTime    DateTime
   department String
@@ -262,8 +262,8 @@ model Appointment {
   patientId   String
   doctorId    String
   scheduledAt DateTime
-  type        String
-  status      String   @default("SCHEDULED")
+  type        AppointmentType
+  status      AppointmentStatus @default(SCHEDULED)
   department  String
   room        String?
   notes       String?
@@ -284,9 +284,9 @@ model Incident {
   code        String
   title       String
   description String?
-  type        String
-  severity    String
-  status      String    @default("ACTIVE")
+  type        IncidentType
+  severity    IncidentSeverity
+  status      IncidentStatus @default(ACTIVE)
   location    String
   teams       Int       @default(1)
   progress    Int       @default(0)
@@ -423,3 +423,55 @@ model Notification {
   @@index([userId, read])
   @@index([createdAt])
 }
+// Closed value sets (were free-form strings). Staff.role / department stay free-form on purpose: they are job
+// titles / hospital-defined names (seed has 'ER Physician', 'Anesthesiologist', ...).
+enum ShiftType {
+  DAY
+  EVENING
+  NIGHT
+  ON_CALL
+}
+
+enum DutyStatus {
+  ON_DUTY
+  OFF_DUTY
+}
+
+enum AppointmentType {
+  CONSULTATION
+  SURGERY
+  IMAGING
+  FOLLOW_UP
+  LAB_TEST
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+enum IncidentType {
+  MEDICAL_ERROR
+  EQUIPMENT_FAILURE
+  PATIENT_FALL
+  SECURITY
+  OTHER
+}
+
+enum IncidentSeverity {
+  CRITICAL
+  ELEVATED
+  MODERATE
+  LOW
+}
+
+enum IncidentStatus {
+  ACTIVE
+  PENDING
+  RESOLVED
+}
+
