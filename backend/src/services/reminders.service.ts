@@ -7,93 +7,88 @@
 // Idempotent and race-free: a reminder is claimed through the unique key of ReminderLog
 // (INSERT ... ON CONFLICT DO NOTHING); only the caller that inserts the row sends it. If nothing
 // was delivered (setting off, notify failed) the claim is released so a later run can retry
-// until the item starts. Times are formatted in the hospital's time zone. Never throws.
+// until the item starts. Claims, lookups and inserts are batched per run (no per-item queries). Times are formatted in the hospital's time zone. Never throws.
 import prisma from '../config/db';
 import logger from '../config/logger';
-import { notify } from './notification.service';
-import { formatLocal, hospitalTimezone } from '../utils/time';
+import { notifyBatch, type NotifyInput } from './notification.service';
+import { formatLocal, hospitalTimezones } from '../utils/time';
 
 export const REMINDER_LEAD_MS = 30 * 60 * 1000;
 const LOG_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 
 type Kind = 'SHIFT' | 'APPOINTMENT';
+type Pending = { userId: string; dedupeKey: string; input: NotifyInput };
 
-const claim = async (userId: string, kind: Kind, dedupeKey: string): Promise<boolean> => {
-  const res = await prisma.reminderLog.createMany({ data: [{ userId, kind, dedupeKey }], skipDuplicates: true });
-  return res.count === 1;
-};
-
-const release = async (userId: string, kind: Kind, dedupeKey: string): Promise<void> => {
+const release = async (kind: Kind, items: Pending[]): Promise<void> => {
+  if (!items.length) return;
   try {
-    await prisma.reminderLog.deleteMany({ where: { userId, kind, dedupeKey } });
+    await prisma.reminderLog.deleteMany({
+      where: { OR: items.map(({ userId, dedupeKey }) => ({ userId, kind, dedupeKey })) },
+    });
   } catch (err) {
-    logger.error({ err, userId, kind, dedupeKey }, '[Reminders] failed to release claim');
+    logger.error({ err, kind, count: items.length }, '[Reminders] failed to release claims');
   }
 };
 
-// One lookup per hospital per run.
-const tzCache = () => {
-  const cache = new Map<string, Promise<string>>();
-  return (hospitalId: string) => {
-    let tz = cache.get(hospitalId);
-    if (!tz) cache.set(hospitalId, (tz = hospitalTimezone(hospitalId)));
-    return tz;
-  };
-};
+// Batched claim -> notify -> release: one insert claims every candidate (only newly inserted rows
+// come back, so a concurrent run never sends the same reminder), one lookup + one insert deliver them,
+// and one delete releases the claims that delivered nothing. Returns recipients notified.
+const deliver = async (kind: Kind, items: Pending[]): Promise<number> => {
+  if (!items.length) return 0;
+  const claimed = await prisma.reminderLog.createManyAndReturn({
+    data: items.map(({ userId, dedupeKey }) => ({ userId, kind, dedupeKey })),
+    skipDuplicates: true,
+    select: { userId: true, dedupeKey: true },
+  });
+  const won = new Set((claimed ?? []).map((c) => `${c.userId}|${c.dedupeKey}`));
+  const mine = items.filter((i) => won.has(`${i.userId}|${i.dedupeKey}`));
+  if (!mine.length) return 0;
 
-type Reminder = Parameters<typeof notify>[0];
-
-// Claim -> notify -> release the claim when nothing was delivered or notify threw. Returns recipients notified.
-const sendOnce = async (userId: string, kind: Kind, dedupeKey: string, input: Reminder): Promise<number> => {
-  if (!(await claim(userId, kind, dedupeKey))) return 0;
   try {
-    const res = await notify(input);
-    if (res.length === 0) await release(userId, kind, dedupeKey);
-    return res.length;
+    const results = await notifyBatch(mine.map((i) => i.input));
+    await release(kind, mine.filter((_, idx) => results[idx].length === 0));
+    return results.reduce((n, r) => n + r.length, 0);
   } catch (err) {
-    await release(userId, kind, dedupeKey);
+    await release(kind, mine);
     throw err;
   }
 };
 
 export const sendShiftReminders = async (now: Date = new Date()): Promise<number> => {
-  let sent = 0;
-  const tzOf = tzCache();
   try {
     const shifts = await prisma.shift.findMany({
       where: { startTime: { gt: now, lte: new Date(now.getTime() + REMINDER_LEAD_MS) } },
       include: { staff: { select: { id: true, userId: true, isActive: true, hospitalId: true } } },
     });
-    for (const shift of shifts ?? []) {
-      try {
-        if (!shift.staff?.isActive) continue;
-        const userId = shift.staff.userId;
-        if (!userId) {
-          logger.warn({ staffId: shift.staff.id, shiftId: shift.id }, '[Reminders] shift reminder skipped: staff has no linked login');
-          continue;
-        }
-        const link = `/staff?shift=${shift.id}`;
-        const tz = await tzOf(shift.staff.hospitalId);
-        sent += await sendOnce(userId, 'SHIFT', shift.id, {
+    const due = (shifts ?? []).filter((shift) => {
+      if (!shift.staff?.isActive) return false;
+      if (shift.staff.userId) return true;
+      logger.warn({ staffId: shift.staff.id, shiftId: shift.id }, '[Reminders] shift reminder skipped: staff has no linked login');
+      return false;
+    });
+    const zones = await hospitalTimezones(due.map((s) => s.staff.hospitalId));
+    return await deliver('SHIFT', due.map((shift) => {
+      const userId = shift.staff.userId as string;
+      const tz = zones.get(shift.staff.hospitalId) ?? 'UTC';
+      return {
+        userId,
+        dedupeKey: shift.id,
+        input: {
           type: 'SHIFT',
           title: 'Shift starting soon',
           message: `Your ${shift.type} shift in ${shift.department} starts at ${formatLocal(shift.startTime, tz)}`,
-          link,
+          link: `/staff?shift=${shift.id}`,
           recipients: { userIds: [userId] },
-        });
-      } catch (err) {
-        logger.error({ err, shiftId: shift.id }, '[Reminders] shift reminder failed');
-      }
-    }
+        },
+      };
+    }));
   } catch (err) {
     logger.error({ err }, '[Reminders] shift reminders failed');
+    return 0;
   }
-  return sent;
 };
 
 export const sendAppointmentReminders = async (now: Date = new Date()): Promise<number> => {
-  let sent = 0;
-  const tzOf = tzCache();
   try {
     const appointments = await prisma.appointment.findMany({
       where: {
@@ -105,32 +100,34 @@ export const sendAppointmentReminders = async (now: Date = new Date()): Promise<
         patient: { select: { name: true } },
       },
     });
-    for (const appt of appointments ?? []) {
-      try {
-        const userId = appt.doctor.userId;
-        if (!userId) {
-          logger.warn({ staffId: appt.doctor.id, appointmentId: appt.id }, '[Reminders] appointment reminder skipped: doctor has no linked login');
-          continue;
-        }
-        // scheduledAt in the link: a rescheduled appointment is reminded again.
-        const dedupeKey = `${appt.id}-${appt.scheduledAt.getTime()}`;
-        const tz = await tzOf(appt.doctor.hospitalId);
-        const patient = appt.patient ? appt.patient.name : 'a patient';
-        sent += await sendOnce(userId, 'APPOINTMENT', dedupeKey, {
+    const due = (appointments ?? []).filter((appt) => {
+      if (appt.doctor.userId) return true;
+      logger.warn({ staffId: appt.doctor.id, appointmentId: appt.id }, '[Reminders] appointment reminder skipped: doctor has no linked login');
+      return false;
+    });
+    const zones = await hospitalTimezones(due.map((a) => a.doctor.hospitalId));
+    return await deliver('APPOINTMENT', due.map((appt) => {
+      const userId = appt.doctor.userId as string;
+      // scheduledAt in the key: a rescheduled appointment is reminded again.
+      const dedupeKey = `${appt.id}-${appt.scheduledAt.getTime()}`;
+      const tz = zones.get(appt.doctor.hospitalId) ?? 'UTC';
+      const patient = appt.patient ? appt.patient.name : 'a patient';
+      return {
+        userId,
+        dedupeKey,
+        input: {
           type: 'APPOINTMENT',
           title: 'Appointment starting soon',
           message: `${appt.type} with ${patient} at ${formatLocal(appt.scheduledAt, tz)}`,
           link: `/appointments?reminder=${dedupeKey}`,
           recipients: { userIds: [userId] },
-        });
-      } catch (err) {
-        logger.error({ err, appointmentId: appt.id }, '[Reminders] appointment reminder failed');
-      }
-    }
+        },
+      };
+    }));
   } catch (err) {
     logger.error({ err }, '[Reminders] appointment reminders failed');
+    return 0;
   }
-  return sent;
 };
 
 // Old claims are only needed while the item can still be reminded (< 30 min); keep a week for debugging.

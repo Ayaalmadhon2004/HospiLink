@@ -21,6 +21,22 @@ export const hospitalTimezone = async (hospitalId: string): Promise<string> => {
   }
 };
 
+// One query for many hospitals; hospitals that are missing or have an invalid zone map to UTC.
+export const hospitalTimezones = async (hospitalIds: string[]): Promise<Map<string, string>> => {
+  const zones = new Map<string, string>(hospitalIds.map((id) => [id, DEFAULT_TZ]));
+  if (!hospitalIds.length) return zones;
+  try {
+    const rows = await prisma.hospital.findMany({
+      where: { id: { in: [...new Set(hospitalIds)] } },
+      select: { id: true, timezone: true },
+    });
+    for (const h of rows ?? []) if (h.timezone && isValidTimeZone(h.timezone)) zones.set(h.id, h.timezone);
+  } catch (err) {
+    logger.error({ err }, '[time] hospital timezones lookup failed, using UTC');
+  }
+  return zones;
+};
+
 // Half-open UTC range [start, end) of the local calendar day in `tz`.
 // `ref` is an instant, or a "YYYY-MM-DD" (or ISO) string whose date part is the local day wanted.
 export const dayRange = (tz: string, ref: Date | string = new Date()): { start: Date; end: Date } => {

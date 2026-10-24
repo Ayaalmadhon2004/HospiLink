@@ -15,9 +15,9 @@ const appt = {
 describe('reminders.service', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    prismaMock.reminderLog.createMany.mockResolvedValue({ count: 1 } as any);
+    prismaMock.reminderLog.createManyAndReturn.mockImplementation((async ({ data }: any) => data) as any);
     prismaMock.reminderLog.deleteMany.mockResolvedValue({ count: 0 } as any);
-    prismaMock.hospital.findUnique.mockResolvedValue({ timezone: 'Asia/Amman' } as any);
+    prismaMock.hospital.findMany.mockResolvedValue([{ id: 'h1', timezone: 'Asia/Amman' }] as any);
     prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', settings: { shiftReminders: true, appointmentReminders: true } }] as any);
     prismaMock.notification.createManyAndReturn.mockImplementation((async ({ data }: any) =>
       data.map((d: any, i: number) => ({ id: `n${i}`, ...d }))) as any);
@@ -36,9 +36,10 @@ describe('reminders.service', () => {
   it('claims atomically through the unique key and words the time in the hospital zone', async () => {
     prismaMock.shift.findMany.mockResolvedValue([shift] as any);
     await sendShiftReminders(now);
-    expect(prismaMock.reminderLog.createMany).toHaveBeenCalledWith({
+    expect(prismaMock.reminderLog.createManyAndReturn).toHaveBeenCalledWith({
       data: [{ userId: 'u1', kind: 'SHIFT', dedupeKey: 's1' }],
       skipDuplicates: true,
+      select: { userId: true, dedupeKey: true },
     });
     const msg = (prismaMock.notification.createManyAndReturn.mock.calls[0][0] as any).data[0].message;
     expect(msg).toContain('2026-10-21 13:20'); // 10:20Z in Asia/Amman (UTC+3)
@@ -50,7 +51,7 @@ describe('reminders.service', () => {
     prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', settings: { shiftReminders: false } }] as any);
     await sendShiftReminders(now);
     expect(prismaMock.reminderLog.deleteMany).toHaveBeenCalledWith({
-      where: { userId: 'u1', kind: 'SHIFT', dedupeKey: 's1' },
+      where: { OR: [{ userId: 'u1', kind: 'SHIFT', dedupeKey: 's1' }] },
     });
   });
 
@@ -65,7 +66,7 @@ describe('reminders.service', () => {
 
   it('skips a shift already notified', async () => {
     prismaMock.shift.findMany.mockResolvedValue([shift] as any);
-    prismaMock.reminderLog.createMany.mockResolvedValue({ count: 0 } as any);
+    prismaMock.reminderLog.createManyAndReturn.mockResolvedValue([] as any);
     expect(await sendShiftReminders(now)).toBe(0);
     expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
   });
@@ -101,9 +102,40 @@ describe('reminders.service', () => {
 
   it('skips an appointment already notified, and never throws on DB errors', async () => {
     prismaMock.appointment.findMany.mockResolvedValue([appt] as any);
-    prismaMock.reminderLog.createMany.mockResolvedValue({ count: 0 } as any);
+    prismaMock.reminderLog.createManyAndReturn.mockResolvedValue([] as any);
     expect(await sendAppointmentReminders(now)).toBe(0);
     prismaMock.appointment.findMany.mockRejectedValue(new Error('db'));
     await expect(sendAppointmentReminders(now)).resolves.toBe(0);
+  });
+
+  it('batches many reminders into one claim, one timezone lookup, one user lookup and one insert', async () => {
+    const shifts = ['a', 'b', 'c'].map((id, i) => ({
+      ...shift, id, staff: { ...shift.staff, id: `st${i}`, userId: `u${i}` },
+    }));
+    prismaMock.shift.findMany.mockResolvedValue(shifts as any);
+    prismaMock.user.findMany.mockResolvedValue(
+      shifts.map((s) => ({ id: s.staff.userId, settings: { shiftReminders: true } })) as any);
+
+    expect(await sendShiftReminders(now)).toBe(3);
+    expect(prismaMock.reminderLog.createManyAndReturn).toHaveBeenCalledTimes(1);
+    expect(prismaMock.hospital.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.user.findMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.notification.createManyAndReturn).toHaveBeenCalledTimes(1);
+    expect(prismaMock.hospital.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('releases only the claims that delivered nothing, in one delete', async () => {
+    const shifts = [shift, { ...shift, id: 's2', staff: { ...shift.staff, id: 'st9', userId: 'u2' } }];
+    prismaMock.shift.findMany.mockResolvedValue(shifts as any);
+    prismaMock.user.findMany.mockResolvedValue([
+      { id: 'u1', settings: { shiftReminders: true } },
+      { id: 'u2', settings: { shiftReminders: false } },
+    ] as any);
+
+    expect(await sendShiftReminders(now)).toBe(1);
+    expect(prismaMock.reminderLog.deleteMany).toHaveBeenCalledTimes(1);
+    expect(prismaMock.reminderLog.deleteMany).toHaveBeenCalledWith({
+      where: { OR: [{ userId: 'u2', kind: 'SHIFT', dedupeKey: 's2' }] },
+    });
   });
 });
