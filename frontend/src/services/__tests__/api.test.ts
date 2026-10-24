@@ -1,6 +1,7 @@
-import { describe, it, expect, afterEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
 import { api, apiGet } from '../api';
+import { setSessionExpiredHandler } from '../sessionExpiry';
 
 const originalAdapter = api.defaults.adapter;
 
@@ -48,5 +49,17 @@ describe('api response interceptor', () => {
     api.defaults.adapter = (config) =>
       Promise.resolve({ status: 200, statusText: 'OK', data: { ok: true }, headers: {}, config });
     await expect(apiGet('/x')).resolves.toEqual({ ok: true });
+  });
+
+  it('reports 401 to the session-expired handler, but not other statuses', async () => {
+    const onExpired = vi.fn();
+    const unregister = setSessionExpiredHandler(onExpired);
+    api.defaults.adapter = failWith(403, {});
+    await expect(apiGet('/x')).rejects.toThrow();
+    expect(onExpired).not.toHaveBeenCalled();
+    api.defaults.adapter = failWith(401, { message: 'jwt expired' });
+    await expect(apiGet('/x')).rejects.toMatchObject({ status: 401 });
+    expect(onExpired).toHaveBeenCalledTimes(1);
+    unregister();
   });
 });

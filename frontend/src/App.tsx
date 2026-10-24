@@ -8,7 +8,9 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrivateRoute } from './components/PrivateRoute';
+import { BackendWarmupBanner } from './components/BackendWarmupBanner';
 import { AppLayout } from './components/Layout/AppLayout';
+import { ROUTE_ROLES } from './configs/permissions';
 const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
@@ -29,6 +31,7 @@ function App() {
   return (
     <ErrorBoundary>
     <Toaster position="top-right" richColors closeButton />
+    <BackendWarmupBanner />
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
         <div className="flex flex-col items-center gap-3">
@@ -52,11 +55,11 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/patients" element={<PatientsPage />} />
           <Route path="/beds" element={<Beds />} />
-          <Route path="/staff" element={<StaffDirectoryPage />} />
+          <Route path="/staff" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/staff']}><StaffDirectoryPage /></PrivateRoute>} />
           <Route path="/appointments" element={<AppointmentsPage />} />
           <Route path="/vitals" element={<VitalsMonitorPage />} />
           <Route path="/incidents" element={<IncidentsPage />} />
-          <Route path="/dispatch" element={<DispatchDashboard />} />
+          <Route path="/dispatch" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dispatch']}><DispatchDashboard /></PrivateRoute>} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

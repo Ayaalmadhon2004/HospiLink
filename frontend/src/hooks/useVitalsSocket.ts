@@ -2,9 +2,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 import type { Vitals } from '../types/vitals';
+import { SOCKET_URL } from '../config/env';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
-  .replace('/api', '');
 
 export const useVitalsSocket = (patientId: string) => {
   const [latestVital, setLatestVital] = useState<Vitals | null>(null);

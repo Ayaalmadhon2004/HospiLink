@@ -65,6 +65,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `DATABASE_URL`  PostgreSQL connection string
 - `JWT_SECRET`    required, long random string; the app must not start without it
 - `PORT`          default 5000
+- `CORS_ORIGINS`  required, comma separated frontend origins for CORS + Socket.io (no built-in defaults; validated with zod in `config/env.ts`, the API refuses to boot without it)
 - `NODE_ENV`      `production` disables dev logging
 - `COOKIE_DOMAIN` optional; shared parent domain (e.g. `.example.com`) switches the auth cookie to SameSite=Lax (default: SameSite=None)
 - `APP_URL`, `SMTP_URL`, `MAIL_FROM`  frontend URL used in emailed links and the SMTP transport for password reset / email verification
@@ -72,7 +73,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `TWO_FACTOR_ENC_KEY`  32 random bytes, base64 (`openssl rand -base64 32`); encrypts TOTP secrets, required to use 2FA (the API boots without it, the `/auth/2fa/*` endpoints fail)
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
-Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
+Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/config/env.ts`, no fallback; see `frontend/.env.example`). Optional `VITE_DEV_PROXY_TARGET` for the Vite dev proxy.
 
 ## Backend conventions (Node / Express)
 
@@ -141,6 +142,8 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Server state through React Query; mutations via `hooks/useCrud.ts` (optimistic updates, rollback on error).
 - All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiPatch/apiDelete/apiUpload`, all generic over the response type). Never call axios/fetch directly
   in components. Failures reject with `ApiError` (`message` ready to show, `code`, `status`; see `services/normalizeApiError.ts`); read the code with `getErrorCode(err)`.
+- Session/RBAC: a 401 on any request calls `notifySessionExpired()` (`services/sessionExpiry.ts`); `AuthProvider` clears the user, toasts once and `PrivateRoute` redirects to `/login`. Role rules live in `configs/permissions.ts` (`ROUTE_ROLES`, `Permission`); use `PrivateRoute allowedRoles`, `useAuthPermissions().can(...)` and keep them in sync with the backend `authorize(...)`.
+- Cold starts: `useBackendWarmup` (mounted via `BackendWarmupBanner` in `App.tsx`) polls `GET /api/health` and pings every 10 min while the tab is open.
 - Real-time: one `use*Socket` hook per domain; always clean up listeners in the effect cleanup.
 - Forms: define fields declaratively in `configs/entityConfigs.ts` and render with `components/Form/*`
   instead of hand-writing new modal forms.

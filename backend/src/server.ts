@@ -34,13 +34,14 @@ import settingsRoutes from './routes/settings.routes';
 import internalRoutes from './routes/internal.routes';
 import logger from './config/logger';
 import { initSentry } from './config/sentry';
-import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
+import { createShutdown } from './config/serverConfig';
+import { loadEnv } from './config/env';
 
 dotenv.config();
 initSentry();
 
 const app = express();
-const PORT = parsePort(process.env.PORT);
+const { PORT, CORS_ORIGINS: allowedOrigins } = loadEnv();
 const server = http.createServer(app);
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -70,9 +71,6 @@ app.use(compression({
   },
   level: 6,
 }));
-
-// ✅ CORS origins — production + development
-const allowedOrigins = buildAllowedOrigins();
 
 // ✅ Rate limiting for auth routes — prevents brute force
 const authLimiter = rateLimit({

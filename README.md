@@ -168,7 +168,7 @@ npm install
 npm run dev                 # http://localhost:5173
 ```
 
-Set `VITE_API_URL` (for example `http://localhost:5000`) in `frontend/.env` to point at a local API; otherwise it falls back to the hosted Render API. Scripts: `npm run dev`, `npm run build` (`tsc -b && vite build`), `npm run lint`, `npm run preview`.
+Set `VITE_API_URL` (for example `http://localhost:5000/api`, see `frontend/.env.example`) in `frontend/.env`; it is required and the app refuses to start without it. The backend likewise requires `CORS_ORIGINS` (see `backend/.env.example`). Scripts: `npm run dev`, `npm run build` (`tsc -b && vite build`), `npm run lint`, `npm run preview`.
 
 The backend CORS allowlist (`allowedOrigins` in `backend/src/server.ts`) must include every frontend origin you use.
 

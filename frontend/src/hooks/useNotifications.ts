@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { io } from 'socket.io-client';
 import { apiGet, apiPut, apiDelete } from '../services/api';
 import type { Notification } from '../types/notification';
+import { SOCKET_URL } from '../config/env';
 
 export type { Notification };
 
@@ -15,8 +16,6 @@ interface NotificationsResponse {
   unreadCount: number;
 }
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
-  .replace('/api', '');
 
 const NOTIFICATIONS_KEY = ['notifications'] as const;
 const POLLING_INTERVAL = 30_000;

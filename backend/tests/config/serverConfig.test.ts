@@ -1,31 +1,6 @@
-import { buildAllowedOrigins, parsePort, createShutdown } from '../../src/config/serverConfig';
+import { createShutdown } from '../../src/config/serverConfig';
 
-const DEFAULT_PORT = 5000;
-const CUSTOM_PORT = 8080;
-const OUT_OF_RANGE_PORT = '70000';
 type ServerArg = Parameters<typeof createShutdown>[0]['server'];
-
-describe('buildAllowedOrigins', () => {
-  it('has no origin with whitespace', () => {
-    expect(buildAllowedOrigins('').every((o) => o === o.trim())).toBe(true);
-    expect(buildAllowedOrigins('')).toContain('http://localhost:4173');
-  });
-
-  it('merges, trims and de-duplicates extra origins', () => {
-    const origins = buildAllowedOrigins(' https://a.example.com/ , http://localhost:5173,,');
-    expect(origins).toContain('https://a.example.com');
-    expect(origins.filter((o) => o === 'http://localhost:5173')).toHaveLength(1);
-  });
-});
-
-describe('parsePort', () => {
-  it('parses numeric strings', () => expect(parsePort(String(CUSTOM_PORT))).toBe(CUSTOM_PORT));
-  it('falls back on invalid values', () => {
-    expect(parsePort(undefined)).toBe(DEFAULT_PORT);
-    expect(parsePort('abc')).toBe(DEFAULT_PORT);
-    expect(parsePort(OUT_OF_RANGE_PORT)).toBe(DEFAULT_PORT);
-  });
-});
 
 describe('createShutdown', () => {
   const log = { info: jest.fn(), error: jest.fn() };
