@@ -44,7 +44,7 @@ describe('PENDING / DISABLED accounts', () => {
   ])('%s %s -> 403 "Account pending admin approval" for a PENDING NURSE', async (method, url) => {
     const res = await (request(app) as any)[method.toLowerCase()](url).set('Authorization', as('NURSE', 'PENDING')).send({});
     expect(res.status).toBe(403);
-    expect(res.body.error).toBe('Account pending admin approval');
+    expect(res.body.error).toEqual({ code: 'ACCOUNT_PENDING', message: 'Account pending admin approval' });
     expect(res.body.code).toBe('ACCOUNT_PENDING');
     expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
     expect(prismaMock.patient.create).not.toHaveBeenCalled();

@@ -115,8 +115,11 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Reminders: no in-process timer. An external scheduler (Render Cron Job, every minute) calls `POST /api/internal/run-reminders` (`x-reminders-secret` = `REMINDERS_CRON_SECRET`; 404 when unset). `services/reminders.service.ts` claims each reminder via `ReminderLog` (unique key, `createMany skipDuplicates`) before `notify()` — never `findFirst` then `create`. See `docs/NOTIFICATIONS.md`.
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
-- Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.
-  Prefer the `success` shape for new code.
+- Response shape (`utils/apiResponse.ts`): success `{ success: true, data?, message?, pagination? }`; failure `{ success: false, error: { code, message, details? } }`.
+  Use `ok()` / `fail(res, status, 'CODE', 'English message')`; `message` is English for developers, the frontend translates `code` (`errors.codes.*` in the locale files).
+  `errorEnvelope` (mounted in server.ts) rewrites every legacy failure body (`{ success:false, message }`, `{ error: 'text' }`) into that shape, with a status-based code (VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR) unless the body carries its own `code`
+  (e.g. `PATIENT_NOT_FOUND`, `ACCOUNT_PENDING`). New codes: add to `ErrorCode` and to `errors.codes` in `en.json`/`ar.json` when the UI should show a fixed text.
+  Login/register/`/auth/me`/2FA return their payload in `data` (`data.user`, `data.token`, `data.twoFactorRequired`); the top-level `user`/`token`/`message`/`code`/`errors` copies are deprecated and will be removed.
 - Errors: throw/forward to `errorHandler` where possible; do not leak `error.message` of internal errors to clients.
 - Auth: JWT (24h) accepted via `Authorization: Bearer` or httpOnly cookie `token`.
   Passwords hashed with bcryptjs (12 rounds).

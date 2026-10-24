@@ -256,6 +256,23 @@ describe('auth.controller', () => {
       expect(opts.maxAge).toBe(maxAge);
     });
 
+    it('يضع user و token داخل data (والنسخ القديمة بالأعلى مؤقتاً)', async () => {
+      const hashed = await bcrypt.hash('correct-password', 4);
+      const res = mockResponse();
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'u1', email: 'a@a.com', password: hashed, role: 'DOCTOR', accountStatus: 'ACTIVE', emailVerifiedAt: new Date(), hospital: null,
+      } as any);
+
+      await login(mockRequest({ body: { email: 'a@a.com', password: 'correct-password' } }), res);
+
+      const body = (res.json as jest.Mock).mock.calls[0][0];
+      expect(body.success).toBe(true);
+      expect(body.data.user).toMatchObject({ id: 'u1', email: 'a@a.com' });
+      expect(body.data.user.password).toBeUndefined();
+      expect(typeof body.data.token).toBe('string');
+      expect(body.token).toBe(body.data.token); // deprecated duplicate
+    });
+
     it('يرفض rememberMe غير boolean بـ 400', async () => {
       const req = mockRequest({ body: { email: 'a@a.com', password: 'x', rememberMe: 'yes' } });
       const res = mockResponse();

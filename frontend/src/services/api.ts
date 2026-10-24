@@ -36,22 +36,33 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    const code = error.response?.data?.code;
-    if (error.response?.status === 403 && (code === 'ACCOUNT_PENDING' || code === 'ACCOUNT_DISABLED' || code === 'EMAIL_NOT_VERIFIED')) {
-      // Keep the server message ("Account pending admin approval") and code so the login page can react to them.
-      return Promise.reject(Object.assign(new Error(error.response.data.message || error.response.data.error), { code }));
+    // Unified failure body: { success:false, error:{ code, message, details? } }. The flat `code` /
+    // `message` / string `error` of older servers are still understood.
+    const body = error.response?.data;
+    const apiError = typeof body?.error === 'object' && body.error !== null ? body.error : undefined;
+    const code: string | undefined = apiError?.code ?? body?.code;
+    const serverMessage: string | undefined = apiError?.message ?? body?.message ?? (typeof body?.error === 'string' ? body.error : undefined);
+    const status = error.response?.status;
+
+    // Machine-readable codes are translated; codes without a locale entry keep the server's message
+    // (validation details, "Invalid email or password"...).
+    const translated = code && i18n.exists(`errors.codes.${code}`) ? i18n.t(`errors.codes.${code}`) : undefined;
+    const withCode = (message: string) => Object.assign(new Error(message), { code });
+
+    if (status === 403 && (code === 'ACCOUNT_PENDING' || code === 'ACCOUNT_DISABLED' || code === 'EMAIL_NOT_VERIFIED')) {
+      // Keep the code so the login page can react to it.
+      return Promise.reject(withCode(translated || serverMessage || ''));
     }
 
-    if (error.response?.status === 403) {
-      return Promise.reject(new Error(i18n.t('errors.forbidden')));
+    if (status === 403) {
+      return Promise.reject(withCode(i18n.t('errors.forbidden')));
     }
 
-    if (error.response?.status >= 500) {
-      return Promise.reject(new Error(i18n.t('errors.server')));
+    if (status >= 500) {
+      return Promise.reject(withCode(i18n.t('errors.server')));
     }
 
-    const message = error.response?.data?.message || error.response?.data?.error || error.message;
-    return Promise.reject(new Error(message));
+    return Promise.reject(withCode(translated || serverMessage || error.message));
   }
 );
 

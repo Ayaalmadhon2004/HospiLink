@@ -41,7 +41,7 @@ export const getBedById = async (req: Request, res: Response) => {
         patient: { select: { name: true, id: true } }
       }
     });
-    if (!bed) return res.status(404).json({ success: false, message: 'السرير غير موجود' });
+    if (!bed) return res.status(404).json({ success: false, code: 'BED_NOT_FOUND', message: 'Bed not found' });
     res.status(200).json({ success: true, data: bed });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get bed error:');
@@ -68,7 +68,7 @@ export const createBed = async (req: Request, res: Response) => {
     }
 
     const ward = await prisma.ward.findFirst({ where: { id: wardId, hospitalId }, select: { id: true } });
-    if (!ward) return res.status(404).json({ success: false, message: 'Ward not found' });
+    if (!ward) return res.status(404).json({ success: false, code: 'WARD_NOT_FOUND', message: 'Ward not found' });
 
     const bed = await prisma.bed.create({
       data: {
@@ -108,11 +108,11 @@ export const updateBedStatus = async (req: Request, res: Response) => {
       where: { id, hospitalId },
       select: { id: true, patient: { select: { id: true } } },
     });
-    if (!existing) return res.status(404).json({ success: false, message: 'السرير غير موجود' });
+    if (!existing) return res.status(404).json({ success: false, code: 'BED_NOT_FOUND', message: 'Bed not found' });
 
     // Related records must belong to the same hospital as the bed.
     if (wardId && !(await prisma.ward.findFirst({ where: { id: wardId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'Ward not found' });
+      return res.status(404).json({ success: false, code: 'WARD_NOT_FOUND', message: 'Ward not found' });
     }
 
     const assigning = typeof patientId === 'string' && patientId !== '';
@@ -176,12 +176,12 @@ export const deleteBed = async (req: Request, res: Response) => {
       where: { id, hospitalId: hospitalIdOf(req) },
       select: { id: true, patient: { select: { id: true } } },
     });
-    if (!existing) return res.status(404).json({ success: false, message: 'السرير غير موجود' });
+    if (!existing) return res.status(404).json({ success: false, code: 'BED_NOT_FOUND', message: 'Bed not found' });
     if (existing.patient) {
       return res.status(409).json({ success: false, message: 'The bed has a patient: move or discharge the patient first' });
     }
     await prisma.bed.delete({ where: { id } });
-    res.status(200).json({ success: true, message: 'تم حذف السرير' });
+    res.status(200).json({ success: true, message: 'Bed deleted' });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Delete bed error:');
     res.status(500).json({ success: false, message: 'Internal server error' });

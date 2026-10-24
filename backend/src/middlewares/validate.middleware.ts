@@ -1,6 +1,7 @@
 // backend/src/middlewares/validate.middleware.ts
 import { Request, Response, NextFunction } from 'express';
 import { ZodTypeAny, ZodError } from 'zod';
+import { fail } from '../utils/apiResponse';
 
 export interface ValidationSchemas {
   body?: ZodTypeAny;
@@ -25,7 +26,7 @@ const assign = (req: Request, key: Part, value: unknown): void => {
 /**
  * Validates req.params / req.query / req.body against zod schemas.
  * Unknown keys are stripped (zod object default). On failure responds
- * 400 { success:false, message, errors } and does not call next().
+ * 400 { success:false, error:{ code:'VALIDATION_ERROR', message, details: issues } } and does not call next().
  * On success the parsed (stripped / normalised) values replace the originals.
  */
 export const validate =
@@ -46,11 +47,7 @@ export const validate =
     );
 
     if (errors.length > 0) {
-      return res.status(HTTP_BAD_REQUEST).json({
-        success: false,
-        message: errors.map((e) => `${e.path}: ${e.message}`).join('; '),
-        errors,
-      });
+      return fail(res, HTTP_BAD_REQUEST, 'VALIDATION_ERROR', errors.map((e) => `${e.path}: ${e.message}`).join('; '), errors);
     }
 
     results.forEach(({ key, result }) => result.success && assign(req, key, result.data));

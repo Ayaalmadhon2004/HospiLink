@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // الجلسة بتعتمد على كوكي httpOnly — بنسأل السيرفر مين المستخدم
     apiGet<{ user?: User; data?: { user?: User } }>('/auth/me')
       .then((res) => {
-        setUser(res.user || res.data?.user || null);
+        setUser(res.data?.user || res.user || null);
       })
       .catch(() => {
         setUser(null);

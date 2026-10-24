@@ -118,7 +118,7 @@ export const recordVitals = async (req: Request, res: Response) => {
     });
 
     if (!patient) {
-      return res.status(404).json({ success: false, message: 'Patient not found' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
 
     const { isCritical, alertType } = await checkCriticalVitals(patient.hospitalId, patient.department, values);
@@ -229,7 +229,7 @@ export const getVitalsById = async (req: Request, res: Response) => {
     });
 
     if (!vitals) {
-      return res.status(404).json({ success: false, message: 'Vitals entry not found' });
+      return res.status(404).json({ success: false, code: 'VITALS_NOT_FOUND', message: 'Vitals entry not found' });
     }
 
     res.status(200).json({ success: true, data: vitals });
@@ -255,7 +255,7 @@ export const updateVitals = async (req: Request, res: Response) => {
     });
 
     if (!currentVitals) {
-      return res.status(404).json({ success: false, message: 'Vitals entry not found' });
+      return res.status(404).json({ success: false, code: 'VITALS_NOT_FOUND', message: 'Vitals entry not found' });
     }
 
     const newVitalsData: MetricValues = {};
@@ -300,7 +300,7 @@ export const deleteVitals = async (req: Request, res: Response) => {
       where: { id, patient: { hospitalId: hospitalIdOf(req) } },
       select: { id: true },
     });
-    if (!existing) return res.status(404).json({ success: false, message: 'Vitals entry not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'VITALS_NOT_FOUND', message: 'Vitals entry not found' });
     await prisma.patientVitals.delete({ where: { id } });
 
     res.status(200).json({ success: true, message: 'Vitals entry deleted' });
@@ -354,7 +354,7 @@ export const deleteThreshold = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { count } = await prisma.vitalThresholds.deleteMany({ where: { id, hospitalId: hospitalIdOf(req) } });
-    if (count === 0) return res.status(404).json({ success: false, message: 'Threshold not found' });
+    if (count === 0) return res.status(404).json({ success: false, code: 'THRESHOLD_NOT_FOUND', message: 'Threshold not found' });
     res.status(200).json({ success: true, message: 'Threshold removed; the default applies' });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Delete threshold error:');

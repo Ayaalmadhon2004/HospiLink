@@ -55,7 +55,12 @@ describe('two-factor authentication', () => {
 
       expect(res.cookie).not.toHaveBeenCalled();
       const body = (res.json as jest.Mock).mock.calls[0][0];
-      expect(body).toEqual({ success: true, twoFactorRequired: true, challengeToken: expect.any(String) });
+      expect(body).toEqual({
+        success: true,
+        data: { twoFactorRequired: true, challengeToken: expect.any(String) },
+        twoFactorRequired: true,
+        challengeToken: expect.any(String),
+      });
       expect(body.user).toBeUndefined();
       const decoded = jwt.verify(body.challengeToken, JWT_SECRET) as any;
       expect(decoded).toMatchObject({ uid: 'u1', purpose: '2fa', rememberMe: true });

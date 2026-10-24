@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import { errorEnvelope } from './utils/apiResponse';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import prisma from './config/db';
@@ -167,6 +168,7 @@ app.use(cors({
 
 app.use(express.json());
 app.use(cookieParser());
+app.use(errorEnvelope);
 
 // ✅ Apply rate limiting
 app.use('/api/auth', authLimiter);
