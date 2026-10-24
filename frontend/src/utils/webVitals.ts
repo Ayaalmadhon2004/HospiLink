@@ -1,4 +1,5 @@
 import type { Metric } from 'web-vitals';
+import { logger } from './logger';
 
 // Anonymous payload: metric name, value, rating and a normalised route (no record ids, no query string).
 export interface VitalsPayload {
@@ -64,7 +65,7 @@ export const reportWebVitals = async (): Promise<void> => {
   const { onCLS, onINP, onLCP, onFCP, onTTFB } = await import('web-vitals');
   const handle = (metric: Metric): void => {
     const payload = toPayload(metric);
-    if (isDev) console.log('[web-vitals]', payload);
+    if (isDev) logger.log('[web-vitals]', payload);
     if (endpoint) void sendVital(endpoint, payload);
   };
   [onCLS, onINP, onLCP, onFCP, onTTFB].forEach((observe) => observe(handle));

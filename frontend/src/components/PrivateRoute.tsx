@@ -1,6 +1,6 @@
 // frontend/src/components/PrivateRoute.tsx
 import { Navigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/authContext';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 

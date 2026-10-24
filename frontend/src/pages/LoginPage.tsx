@@ -2,7 +2,7 @@
 import { useState, type FormEvent } from 'react';
 import { Activity } from 'lucide-react';
 import { login, resendVerification, verifyTwoFactor } from '../services/authService';
-import { getErrorMessage } from '../types/api';
+import { getErrorCode, getErrorMessage } from '../types/api';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
@@ -44,7 +44,7 @@ export const LoginPage = () => {
         setError(data.message || t('auth.loginFailed'));
       }
     } catch (err: unknown) {
-      if ((err as { code?: string }).code === 'EMAIL_NOT_VERIFIED') {
+      if (getErrorCode(err) === 'EMAIL_NOT_VERIFIED') {
         setNeedsVerification(true);
         setError(t('auth.emailNotVerified'));
       } else {

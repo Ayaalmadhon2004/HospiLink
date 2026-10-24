@@ -1,5 +1,5 @@
 // frontend/src/hooks/useDispatchSocket.ts
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
 
 const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
@@ -9,7 +9,8 @@ export interface UnitUpdate {
   unitId: string;
   unitCode?: string;
   status: string;
-  location?: { lat: number; lng: number };
+  lat?: number;
+  lng?: number;
   eta?: number;
   timestamp: Date;
 }
@@ -28,7 +29,7 @@ export interface DispatchCall {
 }
 
 export const useDispatchSocket = () => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);
   const [latestUnitUpdate, setLatestUnitUpdate] = useState<UnitUpdate | null>(null);
   const [latestCall, setLatestCall] = useState<DispatchCall | null>(null);
   const [criticalAlert, setCriticalAlert] = useState<CriticalAlert | null>(null);
@@ -73,33 +74,32 @@ export const useDispatchSocket = () => {
       setLatestUnitUpdate(data);
     });
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    setSocket(newSocket);
+    socketRef.current = newSocket;
 
     return () => {
       newSocket.emit('leave-dispatch');
       newSocket.disconnect();
+      socketRef.current = null;
     };
   }, []);
 
   const joinDepartment = useCallback((department: string) => {
-    socket?.emit('join-department', department);
-  }, [socket]);
+    socketRef.current?.emit('join-department', department);
+  }, []);
 
   const leaveDepartment = useCallback((department: string) => {
-    socket?.emit('leave-department', department);
-  }, [socket]);
+    socketRef.current?.emit('leave-department', department);
+  }, []);
 
   const trackUnit = useCallback((unitId: string) => {
-    socket?.emit('track-unit', unitId);
-  }, [socket]);
+    socketRef.current?.emit('track-unit', unitId);
+  }, []);
 
   const untrackUnit = useCallback((unitId: string) => {
-    socket?.emit('untrack-unit', unitId);
-  }, [socket]);
+    socketRef.current?.emit('untrack-unit', unitId);
+  }, []);
 
   return {
-    socket,
     isConnected,
     latestUnitUpdate,
     latestCall,

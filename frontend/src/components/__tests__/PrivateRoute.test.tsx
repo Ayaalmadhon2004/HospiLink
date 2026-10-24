@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { PrivateRoute } from '../PrivateRoute';
 
 const useAuth = vi.fn();
-vi.mock('../../contexts/AuthContext', () => ({ useAuth: () => useAuth() }));
+vi.mock('../../contexts/authContext', () => ({ useAuth: () => useAuth() }));
 
 const renderAt = (path: string) =>
   render(

@@ -1,33 +1,15 @@
 // frontend/src/contexts/AuthContext.tsx
-import { createContext, useContext, useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { apiGet } from '../services/api';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  department?: string;
-  avatar?: string;
-}
-
-interface AuthContextType {
-  user: User | null;
-  loading: boolean;
-}
-
-const AuthContext = createContext<AuthContextType>({
-  user: null,
-  loading: true,
-});
+import { AuthContext, type AuthUser } from './authContext';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // الجلسة بتعتمد على كوكي httpOnly — بنسأل السيرفر مين المستخدم
-    apiGet<{ user?: User; data?: { user?: User } }>('/auth/me')
+    apiGet<{ user?: AuthUser; data?: { user?: AuthUser } }>('/auth/me')
       .then((res) => {
         setUser(res.data?.user || res.user || null);
       })
@@ -44,5 +26,3 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   );
 };
 
-// eslint-disable-next-line react-refresh/only-export-components -- hook must stay next to its provider; moving it would change every importer
-export const useAuth = () => useContext(AuthContext);

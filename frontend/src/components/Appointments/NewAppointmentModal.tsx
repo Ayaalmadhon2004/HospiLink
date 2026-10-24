@@ -52,7 +52,13 @@ const DEPARTMENTS = [
   'Surgery',
 ];
 
-export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppointment }: NewAppointmentModalProps) => {
+const SLOT_LENGTH = 16; // "YYYY-MM-DDTHH:mm", the value format of <input type="datetime-local">
+const DEFAULT_LEAD_MINUTES = 30;
+
+/** A new appointment starts half an hour from now unless the user picks another time. */
+const defaultSlot = (): string => new Date(Date.now() + DEFAULT_LEAD_MINUTES * 60_000).toISOString().slice(0, SLOT_LENGTH);
+
+const AppointmentForm = ({ onClose, onSuccess, editingAppointment }: Omit<NewAppointmentModalProps, 'isOpen'>) => {
   const { t } = useTranslation();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [doctors, setDoctors] = useState<Doctor[]>([]);
@@ -60,16 +66,19 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
   const [fetchingPatients, setFetchingPatients] = useState(false);
 
   // Form state
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
-  const [patientSearch, setPatientSearch] = useState('');
-  
-  const [doctorId, setDoctorId] = useState('');
-  const [scheduledAt, setScheduledAt] = useState('');
-  const [type, setType] = useState('CONSULTATION');
-  const [department, setDepartment] = useState('General');
-  const [room, setRoom] = useState('');
-  const [notes, setNotes] = useState('');
-  const [duration, setDuration] = useState(30);
+  // Starts from the appointment being edited (the form is mounted per opening, so there is nothing to reset)
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(editingAppointment?.patient ?? null);
+  const [patientSearch, setPatientSearch] = useState(editingAppointment?.patient?.name ?? '');
+
+  const [doctorId, setDoctorId] = useState(editingAppointment?.doctorId ?? '');
+  const [scheduledAt, setScheduledAt] = useState(() =>
+    editingAppointment?.scheduledAt ? new Date(editingAppointment.scheduledAt).toISOString().slice(0, SLOT_LENGTH) : defaultSlot(),
+  );
+  const [type, setType] = useState(editingAppointment?.type || 'CONSULTATION');
+  const [department, setDepartment] = useState(editingAppointment?.department || 'General');
+  const [room, setRoom] = useState(editingAppointment?.room ?? '');
+  const [notes, setNotes] = useState(editingAppointment?.notes ?? '');
+  const [duration, setDuration] = useState(editingAppointment?.duration || 30);
   const isEditing = !!editingAppointment;
 
   interface CreateAppointmentData {
@@ -120,49 +129,8 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
         // Doctor list stays empty on failure
       }
     };
-    if (isOpen) fetchDoctors();
-  }, [isOpen]);
-
-  // ─── Reset / Load Editing Data ─────────────────────
-  useEffect(() => {
-    if (!isOpen) {
-      // Reset form
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      setSelectedPatient(null);
-      setPatientSearch('');
-      setDoctorId('');
-      setScheduledAt('');
-      setType('CONSULTATION');
-      setDepartment('General');
-      setRoom('');
-      setNotes('');
-      setDuration(30);
-      setPatients([]);
-      return;
-    }
-
-    if (editingAppointment) {
-      // Load editing data
-      setSelectedPatient(editingAppointment.patient || null);
-      setPatientSearch(editingAppointment.patient?.name || '');
-      setDoctorId(editingAppointment.doctorId || '');
-      setScheduledAt(
-        editingAppointment.scheduledAt 
-          ? new Date(editingAppointment.scheduledAt).toISOString().slice(0, 16) 
-          : ''
-      );
-      setType(editingAppointment.type || 'CONSULTATION');
-      setDepartment(editingAppointment.department || 'General');
-      setRoom(editingAppointment.room || '');
-      setNotes(editingAppointment.notes || '');
-      setDuration(editingAppointment.duration || 30);
-    } else {
-      // Default for new appointment
-      const now = new Date();
-      now.setMinutes(now.getMinutes() + 30);
-      setScheduledAt(now.toISOString().slice(0, 16));
-    }
-  }, [isOpen, editingAppointment]);
+    fetchDoctors();
+  }, []);
 
   // ─── Handle Patient Selection ──────────────────────
   const handleSelectPatient = (patient: Patient) => {
@@ -232,8 +200,6 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
       setLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-hospital-navy/50 backdrop-blur-sm">
@@ -452,3 +418,7 @@ export const NewAppointmentModal = ({ isOpen, onClose, onSuccess, editingAppoint
     </div>
   );
 };
+
+/** Mounts the form only while open (one instance per appointment), so every opening starts from fresh state. */
+export const NewAppointmentModal = ({ isOpen, ...formProps }: NewAppointmentModalProps) =>
+  isOpen ? <AppointmentForm key={formProps.editingAppointment?.id ?? 'new'} {...formProps} /> : null;

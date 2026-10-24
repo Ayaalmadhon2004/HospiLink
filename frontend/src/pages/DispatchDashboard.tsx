@@ -1,12 +1,13 @@
 // frontend/src/pages/Dispatch/DispatchDashboard.tsx
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { useDispatchSocket } from '../hooks/useDispatchSocket';
-import { useQuery } from '@tanstack/react-query';
+import { useNow } from '../hooks/useNow';
 import { apiGet } from '../services/api';
 import type { ApiResponse } from '../types/api';
-import { AlertCircle, X } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/authContext';
 import UnitActions from '../components/Dashboard/UnitActions';
 import {
   computeUnitStats,
@@ -17,30 +18,21 @@ import {
 
 const POLL_INTERVAL_MS = 10_000;
 const CLOCK_TICK_MS = 30_000;
+const ALERT_TOAST_MS = 8_000;
 const CAN_DISPATCH = ['ADMIN', 'DISPATCHER'];
-
-interface Toast {
-  id: string;
-  message: string;
-  type: 'error' | 'warning' | 'success';
-}
+const UNITS_KEY = ['dispatch-units'] as const;
 
 const DispatchDashboard: React.FC = () => {
   const { t } = useTranslation();
-  const {
-    isConnected,
-    latestUnitUpdate,
-    criticalAlert,
-  } = useDispatchSocket();
-
-  const [units, setUnits] = useState<DispatchUnit[]>([]);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-  const [now, setNow] = useState(() => Date.now());
+  const queryClient = useQueryClient();
+  const { isConnected, latestUnitUpdate, criticalAlert } = useDispatchSocket();
+  // Re-evaluates time-based alarms (prolonged on-scene, delayed) between polls
+  const now = useNow(CLOCK_TICK_MS);
   const { user } = useAuth();
   const canDispatch = !!user && CAN_DISPATCH.includes(user.role);
 
-  const { data: unitsData } = useQuery({
-    queryKey: ['dispatch-units'],
+  const { data: units = [] } = useQuery({
+    queryKey: UNITS_KEY,
     queryFn: async () => {
       const res = await apiGet<ApiResponse<DispatchUnit[]>>('/dispatch/units/active');
       return res?.data || [];
@@ -49,86 +41,26 @@ const DispatchDashboard: React.FC = () => {
     refetchIntervalInBackground: false,
   });
 
-  // Re-evaluate time-based alarms (prolonged on-scene, delayed) between polls
+  // A live status update patches the cached unit until the next poll confirms it.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), CLOCK_TICK_MS);
-    return () => clearInterval(id);
-  }, []);
+    if (!latestUnitUpdate) return;
+    queryClient.setQueryData<DispatchUnit[]>(UNITS_KEY, (current) =>
+      current?.map((unit) =>
+        unit.id === latestUnitUpdate.unitId
+          ? { ...unit, status: latestUnitUpdate.status, eta: latestUnitUpdate.eta }
+          : unit,
+      ),
+    );
+  }, [latestUnitUpdate, queryClient]);
 
-  // Toast helper
-  const showToast = useCallback((message: string, type: 'error' | 'warning' | 'success') => {
-    const id = Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(item => item.id !== id));
-    }, 8000);
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts(prev => prev.filter(item => item.id !== id));
-  }, []);
-
-  // Update from useQuery
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    if (unitsData) setUnits(unitsData);
-  }, [unitsData]);
-
-  // Update from socket
-  useEffect(() => {
-    if (latestUnitUpdate) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      setUnits(prev => prev.map(u => 
-        u.id === latestUnitUpdate.unitId 
-          ? { ...u, status: latestUnitUpdate.status, eta: latestUnitUpdate.eta }
-          : u
-      ));
-    }
-  }, [latestUnitUpdate]);
-
-  // Critical alert - show toast instead of alert()
-  useEffect(() => {
-    if (criticalAlert) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      showToast(`🚨 ${criticalAlert.message}`, 'warning');
-    }
-  }, [criticalAlert, showToast]);
+    if (criticalAlert) toast.warning(`🚨 ${criticalAlert.message}`, { duration: ALERT_TOAST_MS });
+  }, [criticalAlert]);
 
   const stats = useMemo(() => computeUnitStats(units, now), [units, now]);
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      {/* Toast Notifications */}
-      <div 
-        className="fixed top-4 end-4 z-50 space-y-2"
-        role="region"
-        aria-label={t('common.notifications')}
-      >
-        {toasts.map((toast) => (
-          <div
-            key={toast.id}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl shadow-lg transition-all ${
-              toast.type === 'warning' 
-                ? 'bg-amber-50 border border-amber-200 text-amber-700' 
-                : toast.type === 'error'
-                ? 'bg-red-50 border border-red-200 text-red-700'
-                : 'bg-green-50 border border-green-200 text-green-700'
-            }`}
-            role="alert"
-            aria-live="assertive"
-          >
-            <AlertCircle size={18} aria-hidden="true" />
-            <span className="text-sm font-medium">{toast.message}</span>
-            <button
-              onClick={() => removeToast(toast.id)}
-              className="ms-2 text-current opacity-50 hover:opacity-100"
-              aria-label={t('dispatch.dismiss')}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        ))}
-      </div>
 
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">{t('dispatch.title')}</h1>
@@ -203,7 +135,7 @@ const DispatchDashboard: React.FC = () => {
                     <p className="text-gray-700">{unit.currentCall?.location ?? t('dispatch.noCall')}</p>
                   </td>
                   <td className="py-4">
-                    <p className="text-gray-700">{unit.crew.join(t('common.listSeparator'))}</p>
+                    <p className="text-gray-700">{unit.crew.map((member) => member.name).join(t('common.listSeparator'))}</p>
                   </td>
                   <td className="py-4">
                     <p className="text-gray-700">{unit.eta ? t('dispatch.etaMinutes', { count: unit.eta }) : t('dispatch.noCall')}</p>

@@ -1,7 +1,7 @@
 // frontend/src/contexts/SettingsContext.tsx
 // Loads the user's settings once after login and applies them app-wide (theme, language/dir, density,
 // timezone, idle auto-lock). Pages read/update them through the `useSettings` hook.
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import i18n, { isSupported } from '../i18n';
@@ -11,78 +11,19 @@ import { getErrorMessage } from '../types/api';
 import { logger } from '../utils/logger';
 import { setActiveTimezone } from '../utils/datetime';
 import { applyDisplay, readDisplayCache, resolveTheme, writeDisplayCache, DEFAULT_DISPLAY } from '../utils/settingsDom';
-import { useAuth } from './AuthContext';
+import { useAuth } from './authContext';
+import {
+  IDLE_TIMEOUT_MS,
+  SETTINGS_QUERY_KEY,
+  SettingsContext,
+  type ProfileSettings,
+  type SettingsContextValue,
+  type SettingsSection as Section,
+  type UpdateResult,
+  type UserSettings,
+} from './settingsContext';
 
-export interface ProfileSettings {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  department: string;
-  shift: string;
-  status: string;
-}
-
-export interface NotificationSettings {
-  criticalVitalsAlerts: boolean;
-  incidentEscalations: boolean;
-  shiftReminders: boolean;
-  dispatchAlerts: boolean;
-  appointmentReminders: boolean;
-}
-
-export interface SecuritySettings {
-  twoFactorAuth: boolean;
-  autoLockIdleSessions: boolean;
-  compactDensity: boolean;
-}
-
-export interface DisplaySettings {
-  theme: 'light' | 'dark' | 'system';
-  language: string;
-  timezone: string;
-}
-
-// `code` (the signup code) is only sent to ADMIN users.
-export interface HospitalInfo {
-  name: string;
-  code?: string;
-}
-
-export interface UserSettings {
-  profile: ProfileSettings;
-  hospital?: HospitalInfo | null;
-  notifications: NotificationSettings;
-  security: SecuritySettings;
-  display: DisplaySettings;
-}
-
-type Section = Exclude<keyof UserSettings, 'hospital'>;
-export interface UpdateResult {
-  success: boolean;
-  error?: string;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components -- shared constants live next to the provider
-export const SETTINGS_QUERY_KEY = ['settings'] as const;
-const IDLE_MINUTES = 10;
-const MS_PER_MINUTE = 60_000;
-export const IDLE_TIMEOUT_MS = IDLE_MINUTES * MS_PER_MINUTE;
 const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll', 'click'] as const;
-
-export interface SettingsContextValue {
-  settings: UserSettings | null;
-  loading: boolean;
-  error: string | null;
-  updateProfile: (data: Partial<ProfileSettings>) => Promise<UpdateResult>;
-  updateNotifications: (data: Partial<NotificationSettings>) => Promise<UpdateResult>;
-  updateSecurity: (data: Partial<SecuritySettings>) => Promise<UpdateResult>;
-  updateDisplay: (data: Partial<DisplaySettings>) => Promise<UpdateResult>;
-  refresh: () => Promise<unknown>;
-}
-
-// eslint-disable-next-line react-refresh/only-export-components -- context object lives next to its provider
-export const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 interface UpdateVars {
   section: Section;
@@ -218,11 +159,4 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   }, [autoLock]);
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;
-};
-
-// eslint-disable-next-line react-refresh/only-export-components -- hook must stay next to its provider
-export const useSettingsContext = (): SettingsContextValue => {
-  const ctx = useContext(SettingsContext);
-  if (!ctx) throw new Error('useSettings must be used inside <SettingsProvider>');
-  return ctx;
 };

@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { FieldRenderer } from '../FieldRenderer';
 import type { FieldConfig } from '../types';
 import { apiGet } from '../../../services/api';
+import { QueryWrapper } from '../../../test/QueryWrapper';
 
 vi.mock('../../../services/api', () => ({ apiGet: vi.fn() }));
 
@@ -23,6 +24,7 @@ const renderField = (
       error={props.error}
       disabled={props.disabled}
     />,
+    { wrapper: QueryWrapper },
   );
   return setValue;
 };

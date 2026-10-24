@@ -1,6 +1,7 @@
 import { describe, it, expect, afterEach, beforeEach } from 'vitest';
 import { AxiosError, type AxiosAdapter, type InternalAxiosRequestConfig } from 'axios';
-import { api, apiGet, apiPost, apiPut, apiPatch, apiDelete, apiFetch } from '../api';
+import { ApiError } from '../apiError';
+import { api, apiGet, apiPost, apiPut, apiPatch, apiDelete, apiUpload } from '../api';
 
 const originalAdapter = api.defaults.adapter;
 
@@ -11,7 +12,7 @@ const failWith =
       new AxiosError('Request failed', 'ERR', config, null, { status, statusText: '', data, headers: {}, config }),
     );
 
-describe('api helper methods and apiFetch', () => {
+describe('api helper methods', () => {
   const calls: { method?: string; url?: string; data?: unknown; params?: unknown }[] = [];
 
   beforeEach(() => {
@@ -43,42 +44,19 @@ describe('api helper methods and apiFetch', () => {
     expect(JSON.parse(calls[1].data as string)).toEqual({ n: 1 });
   });
 
-  it('apiFetch parses a JSON body and exposes a fetch-like success response', async () => {
-    const res = await apiFetch('/x', { method: 'post', body: JSON.stringify({ a: 1 }) });
-    expect(res.ok).toBe(true);
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
-    expect(await res.text()).toBe('{"ok":true}');
-    expect(JSON.parse(calls[0].data as string)).toEqual({ a: 1 });
-  });
-
-  it('apiFetch sends a FormData body untouched instead of JSON-parsing it', async () => {
+  it('apiUpload sends the FormData untouched as multipart and returns response.data', async () => {
     const form = new FormData();
     form.append('reportFile', new File(['x'], 'r.pdf', { type: 'application/pdf' }));
-    const res = await apiFetch('/upload', { method: 'POST', body: form });
-    expect(res.ok).toBe(true);
+    await expect(apiUpload('/upload', form)).resolves.toEqual({ ok: true });
     expect(calls).toHaveLength(1);
+    expect(calls[0].method).toBe('post');
     expect(calls[0].data).toBeInstanceOf(FormData);
   });
 
-  it('apiFetch defaults to GET', async () => {
-    await apiFetch('/x');
-    expect(calls[0].method).toBe('get');
-  });
-
-  it('apiFetch turns failures into ok:false with a message, without throwing', async () => {
-    api.defaults.adapter = failWith(404, { error: 'Not found' });
-    const res = await apiFetch('/x');
-    expect(res.ok).toBe(false);
-    // the response interceptor has already normalised the error into a plain Error (no .response)
-    expect(res.status).toBe(500);
-    expect(await res.text()).toBe('Not found');
-  });
-
-  it('apiFetch reports an unsupported method as a 500 result', async () => {
-    const res = await apiFetch('/x', { method: 'TRACE' });
-    expect(res.ok).toBe(false);
-    expect(res.status).toBe(500);
-    expect(await res.text()).toBe('Unsupported method: TRACE');
+  it('rejects with an ApiError carrying the status and the server code', async () => {
+    api.defaults.adapter = failWith(409, { success: false, error: { code: 'CONFLICT', message: 'Bed already taken' } });
+    const error = await apiGet('/x').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ message: 'Bed already taken', code: 'CONFLICT', status: 409 });
   });
 });

@@ -7,7 +7,24 @@ import { FieldRenderer } from './FieldRenderer';
 import { getResponseData } from '../../types/api';
 import type { FormModalProps } from './types';
 
-export const FormModal = <T extends object>({
+/** Starting values: the initial value when there is one, else an empty value of the field's kind. */
+const buildDefaults = <T extends object>(fields: FormModalProps<T>['fields'], initialValues: FormModalProps<T>['initialValues']): Partial<T> => {
+  const defaults: Partial<T> = {};
+  fields.forEach((field) => {
+    if (initialValues && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
+      defaults[field.name as keyof T] = initialValues[field.name];
+    } else if (field.type === 'checkbox') {
+      defaults[field.name as keyof T] = false as T[keyof T];
+    } else if (field.type === 'number') {
+      defaults[field.name as keyof T] = undefined as T[keyof T]; // number empty = undefined
+    } else {
+      defaults[field.name as keyof T] = '' as T[keyof T];
+    }
+  });
+  return defaults;
+};
+
+const FormModalBody = <T extends object>({
   isOpen,
   onClose,
   title,
@@ -22,7 +39,7 @@ export const FormModal = <T extends object>({
   const { t } = useTranslation();
   // Config text may be an i18n key or a plain literal (the literal is the fallback)
   const tr = useCallback((text?: string) => (text ? t(text, { defaultValue: text }) : text), [t]);
-  const [values, setValues] = useState<Partial<T>>({});
+  const [values, setValues] = useState<Partial<T>>(() => buildDefaults(fields, initialValues));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
@@ -30,30 +47,6 @@ export const FormModal = <T extends object>({
   const [success, setSuccess] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
   const firstInputRef = useRef<HTMLInputElement>(null);
-
-  // Initialize form values
-  useEffect(() => {
-    if (isOpen) {
-      const defaults: Partial<T> = {};
-      fields.forEach((field) => {
-        if (initialValues && initialValues[field.name] !== undefined && initialValues[field.name] !== null) {
-          defaults[field.name as keyof T] = initialValues[field.name];
-        } else if (field.type === 'checkbox') {
-          defaults[field.name as keyof T] = false as T[keyof T];
-        } else if (field.type === 'number') {
-          defaults[field.name as keyof T] = undefined as T[keyof T]; // number empty = undefined
-        } else {
-          defaults[field.name as keyof T] = '' as T[keyof T];
-        }
-      });
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      setValues(defaults);
-      setErrors({});
-      setFormError('');
-      setFormErrorDetail('');
-      setSuccess('');
-    }
-  }, [isOpen, fields, initialValues]);
 
   // Focus first input
   useEffect(() => {
@@ -251,3 +244,7 @@ export const FormModal = <T extends object>({
     </div>
   );
 };
+
+/** Mounts the form only while open, so every opening starts from fresh values (no reset effect needed). */
+export const FormModal = <T extends object>(props: FormModalProps<T>) =>
+  props.isOpen ? <FormModalBody<T> {...props} /> : null;

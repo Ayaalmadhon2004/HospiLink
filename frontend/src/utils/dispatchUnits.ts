@@ -9,13 +9,21 @@ export interface DispatchCallInfo {
   priority: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 }
 
+export interface DispatchCrewMember {
+  id: string;
+  name: string;
+  role: string;
+}
+
 export interface DispatchUnit {
   id: string;
   unitCode: string;
   unitType: string;
   status: UnitStatus | string;
   currentCall?: DispatchCallInfo | null;
-  crew: string[];
+  crew: DispatchCrewMember[];
+  lat?: number | null;
+  lng?: number | null;
   eta?: number | null;
   lastUpdated?: string;
 }

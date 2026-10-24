@@ -1,10 +1,16 @@
 // components/Form/FieldRenderer.tsx
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../../services/api';
 import { extractList } from '../../types/api';
 import type { FieldConfig } from './types';
 import { Combobox } from './Combobox';
+
+interface SearchOption {
+  label: string;
+  value: string;
+  hint?: string;
+}
 
 interface FieldRendererProps<T = Record<string, unknown>> {
   field: FieldConfig<T>;
@@ -26,56 +32,25 @@ export const FieldRenderer = <T extends object>({
   const { t } = useTranslation();
   // Config text may be an i18n key or a plain literal (literal is the fallback)
   const tr = (text?: string) => (text ? t(text, { defaultValue: text }) : text);
-  const [searchOptions, setSearchOptions] = useState<{ label: string; value: string; hint?: string }[]>([]);
-  const [searchLoading, setSearchLoading] = useState(false);
 
-  // ✅ Fetch options for search-select (with or without dependsOn)
-  const fetchOptions = useCallback(async () => {
-    if (!field.apiEndpoint) return;
-
-    // If dependsOn exists, check parent value first
-    if (field.dependsOn) {
-      const parentValue = formValues[field.dependsOn as keyof T];
-      if (!parentValue) {
-        setSearchOptions([]);
-        return;
-      }
-    }
-
-    setSearchLoading(true);
-    try {
-      let endpoint = field.apiEndpoint;
-      if (field.dependsOn) {
-        endpoint = endpoint.replace(`{${field.dependsOn}}`, String(formValues[field.dependsOn as keyof T]));
-      }
-      const res = await apiGet(endpoint);
-      const data = extractList<Record<string, string>>(res);
-      setSearchOptions(
-        data.map((item) => ({
-          label:
-            item.name ||
-            item.fullName ||
-            item.bedNumber ||
-            item.label ||
-            item.code ||
-            String(item),
-          value: item.id || item.value || String(item),
-          hint: item.patientCode,
-        }))
-      );
-    } catch {
-      setSearchOptions([]);
-    } finally {
-      setSearchLoading(false);
-    }
-  }, [field.apiEndpoint, field.dependsOn, formValues]);
-
-  useEffect(() => {
-    if (field.type === 'search-select' && field.apiEndpoint) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      fetchOptions();
-    }
-  }, [fetchOptions, field.type, field.apiEndpoint]);
+  // search-select: options come from `apiEndpoint`; with `dependsOn` the endpoint is only called once the parent has a value
+  const parentValue = field.dependsOn ? formValues[field.dependsOn as keyof T] : undefined;
+  const optionsEndpoint =
+    field.type === 'search-select' && field.apiEndpoint && (!field.dependsOn || parentValue)
+      ? field.apiEndpoint.replace(`{${field.dependsOn}}`, String(parentValue))
+      : null;
+  const { data: searchOptions = [], isFetching: searchLoading } = useQuery({
+    queryKey: ['field-options', optionsEndpoint],
+    queryFn: async (): Promise<SearchOption[]> =>
+      extractList<Record<string, string>>(await apiGet(optionsEndpoint as string)).map((item) => ({
+        label: item.name || item.fullName || item.bedNumber || item.label || item.code || String(item),
+        value: item.id || item.value || String(item),
+        hint: item.patientCode,
+      })),
+    enabled: optionsEndpoint !== null,
+    retry: false,
+    staleTime: 0,
+  });
 
   const isDisabled =
     formDisabled ||

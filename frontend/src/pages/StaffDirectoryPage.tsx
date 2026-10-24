@@ -1,11 +1,10 @@
 // pages/StaffDirectoryPage.tsx
-import { logger } from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { 
   Users, RefreshCw, Search, Plus, Pencil, Trash2
 } from 'lucide-react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { getStaff, deleteStaff, getShiftTimeline } from '../services/staffService';
 import { extractList } from '../types/api';
 import type { Shift } from '../types/staff';
@@ -31,9 +30,6 @@ interface StaffMember {
 
 export const StaffDirectoryPage = () => {
   const { t } = useTranslation();
-  const [staff, setStaff] = useState<StaffMember[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [selectedDept, setSelectedDept] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -49,26 +45,17 @@ export const StaffDirectoryPage = () => {
 
   const latestShift = useStaffSocket(selectedDept || 'all');
 
-  const fetchStaff = useCallback(async () => {
-    try {
-      setRefreshing(true);
-      const res = await getStaff({ department: selectedDept || undefined });
-      setStaff(extractList<StaffMember>(res));
-    } catch (err) {
-      logger.error('Failed to fetch staff:', err);
-      setStaff([]);
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
-    }
-  }, [selectedDept]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    fetchStaff();
-  }, [fetchStaff]);
-
   const queryClient = useQueryClient();
+  const staffQuery = useQuery({
+    queryKey: ['staff', 'list', selectedDept],
+    queryFn: async () => extractList<StaffMember>(await getStaff({ department: selectedDept || undefined })),
+    placeholderData: keepPreviousData, // changing the department filter keeps the list on screen while it reloads
+  });
+  const staff = staffQuery.data ?? [];
+  const loading = staffQuery.isPending;
+  const refreshing = staffQuery.isFetching;
+  const fetchStaff = staffQuery.refetch;
+
   const { data: timeline, isError: timelineError } = useQuery({
     queryKey: ['staff', 'shift-timeline'],
     queryFn: async () => {
@@ -79,12 +66,8 @@ export const StaffDirectoryPage = () => {
   });
 
   useEffect(() => {
-    if (latestShift) {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      fetchStaff();
-      void queryClient.invalidateQueries({ queryKey: ['staff', 'shift-timeline'] });
-    }
-  }, [latestShift, fetchStaff, queryClient]);
+    if (latestShift) void queryClient.invalidateQueries({ queryKey: ['staff'] });
+  }, [latestShift, queryClient]);
 
   const departments = [...new Set(staff.map((s) => s.department))];
 
@@ -128,7 +111,7 @@ export const StaffDirectoryPage = () => {
         </div>
         <div className="flex gap-2">
           <button
-            onClick={() => { fetchStaff(); }}
+            onClick={() => { void fetchStaff(); }}
             className="flex items-center gap-2 bg-white text-gray-700 px-4 py-2 rounded-lg border hover:bg-gray-50 transition"
             disabled={refreshing}
             aria-label={t('staff.refreshLabel')}
@@ -150,7 +133,7 @@ export const StaffDirectoryPage = () => {
       <StaffModal
         isOpen={isModalOpen}
         onClose={() => { handleModalSuccess(); }}
-        onSuccess={() => { fetchStaff(); handleModalSuccess(); }}
+        onSuccess={() => { void queryClient.invalidateQueries({ queryKey: ['staff'] }); handleModalSuccess(); }}
         initialData={editingItem ? {
           id: editingItem.id,
           name: editingItem.name,

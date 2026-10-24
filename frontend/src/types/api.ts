@@ -1,3 +1,5 @@
+import { ApiError } from '../services/apiError';
+
 /** Standard envelope returned by the backend. */
 export interface ApiResponse<T = unknown> {
   success?: boolean;
@@ -35,6 +37,13 @@ export const getErrorMessage = (err: unknown, fallback = 'Something went wrong')
   return fallback;
 };
 
+/** Machine-readable reason (`EMAIL_NOT_VERIFIED`, `CONFLICT`...) of an error rejected by the API layer, if it has one. */
+export const getErrorCode = (err: unknown): string | undefined => {
+  if (typeof err !== 'object' || err === null) return undefined;
+  const { code } = err as { code?: unknown };
+  return typeof code === 'string' ? code : undefined;
+};
+
 export interface Pagination {
   page: number;
   limit: number;
@@ -58,6 +67,11 @@ export interface ApiErrorBody {
   fullError?: string;
 }
 
-/** Body of the HTTP error response attached to a caught (axios-style) error, if any. */
+/**
+ * Body of the HTTP error response attached to a caught (axios-style) error, if any. An ApiError (what the API layer
+ * rejects with) already carries the ready-to-show message, so that is returned as `message`.
+ */
 export const getResponseData = (err: unknown): ApiErrorBody | undefined =>
-  (err as { response?: { data?: ApiErrorBody } } | null | undefined)?.response?.data;
+  err instanceof ApiError
+    ? { message: err.message }
+    : (err as { response?: { data?: ApiErrorBody } } | null | undefined)?.response?.data;

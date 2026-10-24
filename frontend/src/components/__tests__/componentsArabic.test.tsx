@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { QueryWrapper } from '../../test/QueryWrapper';
 import userEvent from '@testing-library/user-event';
 import i18n from '../../i18n';
 import { ConfirmDeleteDialog } from '../ConfirmDeleteDialog';
@@ -42,7 +43,7 @@ describe('shared components in Arabic', () => {
   });
 
   it('translates config-driven form labels, options and validation errors', async () => {
-    render(<IncidentModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+    render(<IncidentModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />, { wrapper: QueryWrapper });
     expect(screen.getByText('إضافة تقرير حادثة')).toBeInTheDocument();
     expect(screen.getByText('عنوان الحادثة')).toBeInTheDocument();
     expect(screen.getByRole('option', { name: 'سقوط مريض' })).toBeInTheDocument();
@@ -61,6 +62,7 @@ describe('shared components in Arabic', () => {
         title="Custom"
         fields={[{ name: 'x', label: 'Plain label', type: 'text' }]}
       />,
+      { wrapper: QueryWrapper },
     );
     expect(screen.getByText('Plain label')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'حفظ' })).toBeInTheDocument();

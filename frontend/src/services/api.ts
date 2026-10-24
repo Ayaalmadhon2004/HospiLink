@@ -1,7 +1,7 @@
 // frontend/src/services/api.ts
 import axios from 'axios';
-import i18n from '../i18n';
 import type { ApiResponse, QueryParams } from '../types/api';
+import { toApiError } from './normalizeApiError';
 const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
 
 // ============================================
@@ -33,38 +33,7 @@ api.interceptors.request.use(
 // RESPONSE INTERCEPTOR — NO hard redirect
 // ============================================
 
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Unified failure body: { success:false, error:{ code, message, details? } }. The flat `code` /
-    // `message` / string `error` of older servers are still understood.
-    const body = error.response?.data;
-    const apiError = typeof body?.error === 'object' && body.error !== null ? body.error : undefined;
-    const code: string | undefined = apiError?.code ?? body?.code;
-    const serverMessage: string | undefined = apiError?.message ?? body?.message ?? (typeof body?.error === 'string' ? body.error : undefined);
-    const status = error.response?.status;
-
-    // Machine-readable codes are translated; codes without a locale entry keep the server's message
-    // (validation details, "Invalid email or password"...).
-    const translated = code && i18n.exists(`errors.codes.${code}`) ? i18n.t(`errors.codes.${code}`) : undefined;
-    const withCode = (message: string) => Object.assign(new Error(message), { code });
-
-    if (status === 403 && (code === 'ACCOUNT_PENDING' || code === 'ACCOUNT_DISABLED' || code === 'EMAIL_NOT_VERIFIED')) {
-      // Keep the code so the login page can react to it.
-      return Promise.reject(withCode(translated || serverMessage || ''));
-    }
-
-    if (status === 403) {
-      return Promise.reject(withCode(i18n.t('errors.forbidden')));
-    }
-
-    if (status >= 500) {
-      return Promise.reject(withCode(i18n.t('errors.server')));
-    }
-
-    return Promise.reject(withCode(translated || serverMessage || error.message));
-  }
-);
+api.interceptors.response.use((response) => response, (error: unknown) => Promise.reject(toApiError(error)));
 
 // ============================================
 // MODERN HTTP METHODS
@@ -106,69 +75,6 @@ export const apiUpload = async <T = ApiResponse>(url: string, formData: FormData
     },
   });
   return response.data;
-};
-
-// ============================================
-// LEGACY COMPATIBILITY
-// ============================================
-// ليش الفتش فيها كل المثودز مش بس get ? 
-// A FormData body (file uploads) must reach axios untouched; only JSON strings are parsed.
-const toRequestData = (body: RequestInit['body']): unknown => {
-  if (!body) return undefined;
-  if (body instanceof FormData) return body;
-  return JSON.parse(body as string);
-};
-
-// The instance default is application/json, and axios then turns a FormData into JSON (the file is lost).
-// Asking for multipart makes axios keep the FormData; the browser adds the boundary itself.
-const toRequestConfig = (body: RequestInit['body']): { headers?: Record<string, string> } =>
-  body instanceof FormData ? { headers: { 'Content-Type': 'multipart/form-data' } } : {};
-
-export const apiFetch = async (url: string, options: RequestInit = {}) => {
-  const method = (options.method || 'GET').toUpperCase();
-
-  try {
-    let response;
-
-    switch (method) {
-      case 'GET':
-        response = await api.get(url);
-        break;
-      case 'POST':
-        response = await api.post(url, toRequestData(options.body), toRequestConfig(options.body));
-        break;
-      case 'PUT':
-        response = await api.put(url, toRequestData(options.body), toRequestConfig(options.body));
-        break;
-      case 'PATCH':
-        response = await api.patch(url, toRequestData(options.body), toRequestConfig(options.body));
-        break;
-      case 'DELETE':
-        response = await api.delete(url);
-        break;
-      default:
-        throw new Error(`Unsupported method: ${method}`);
-    }
-
-    return {
-      ok: response.status >= 200 && response.status < 300,
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers,
-      json: async () => response.data,
-      text: async () => JSON.stringify(response.data),
-    };
-  } catch (caught: unknown) {
-    const error = caught as { response?: { status?: number; data?: unknown }; message?: string };
-    return {
-      ok: false,
-      status: error.response?.status || 500,
-      statusText: error.message,
-      headers: new Headers(),
-      json: async () => error.response?.data || { error: error.message },
-      text: async () => error.message,
-    };
-  }
 };
 
 export default api;
