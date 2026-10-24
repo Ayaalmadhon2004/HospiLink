@@ -425,6 +425,7 @@ model Notification {
   @@index([userId, read])
   @@index([createdAt])
 }
+
 // Closed value sets (were free-form strings). Staff.role / department stay free-form on purpose: they are job
 // titles / hospital-defined names (seed has 'ER Physician', 'Anesthesiologist', ...).
 enum ShiftType {
@@ -477,3 +478,16 @@ enum IncidentStatus {
   RESOLVED
 }
 
+
+// Idempotency ledger for scheduled reminders. A reminder is claimed with an INSERT ... ON CONFLICT DO NOTHING
+// on this unique key, so concurrent runs/instances can never send the same reminder twice.
+model ReminderLog {
+  id        String   @id @default(uuid())
+  userId    String
+  kind      String   // SHIFT | APPOINTMENT
+  dedupeKey String   // shift id, or `<appointmentId>-<scheduledAt ms>` (a rescheduled appointment is reminded again)
+  sentAt    DateTime @default(now())
+
+  @@unique([userId, kind, dedupeKey])
+  @@index([sentAt])
+}

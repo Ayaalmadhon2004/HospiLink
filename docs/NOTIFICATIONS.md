@@ -55,15 +55,31 @@ For a cron job (shift/appointment reminders) call `notify` directly with `hospit
 Notes:
 - `Appointment.doctorId` references `Staff`; the login `User` is found by the shared email. A doctor
   without a login is silently skipped.
-- Scheduled reminders (`services/reminders.service.ts`, ticked every minute by `services/scheduler.ts`, started from
-  `server.ts`, disabled when `NODE_ENV=test`): shifts (type `SHIFT`, link `/staff?shift=<id>`) and non-cancelled
+- Scheduled reminders (`services/reminders.service.ts`): shifts (type `SHIFT`, link `/staff?shift=<id>`) and non-cancelled
   appointments (type `APPOINTMENT`, link `/appointments?reminder=<id>-<scheduledAt ms>`) that start within the next
-  30 minutes. The recipient is the Staff member's login (matched by email; no login => skipped). Idempotent: skipped if
-  the user already has a Notification with the same type + link. A user with the toggle off gets nothing (re-checked
-  each tick until the item starts, no duplicates). Late runs (Render sleeping) still remind while the item has not started.
-- `POST /api/internal/run-reminders` runs one pass on demand (e.g. from an external cron that wakes Render). Send header
-  `x-reminders-secret: <REMINDERS_CRON_SECRET>` (compared in constant time). 404 when the env var is unset, 401 on a
-  wrong secret. Returns `{ success, data: { shifts, appointments } }` (counts sent).
+  30 minutes. The recipient is the Staff member's login (`Staff.userId`; no login => skipped). There is **no in-process
+  timer**: something external must call the endpoint below every minute (see "Scheduling").
+  Idempotent and race-free: each reminder is first claimed with an insert into `ReminderLog` (unique `userId + kind + dedupeKey`,
+  `ON CONFLICT DO NOTHING`), and only the caller that inserted the row sends it, so overlapping runs or several instances never
+  duplicate. If nothing was delivered (the user's toggle is off, `notify` failed) the claim is released and a later run retries
+  until the item starts. Late runs (Render sleeping) still remind while the item has not started. Message times are formatted
+  in the hospital time zone (`Hospital.timezone`). Claims older than 7 days are pruned on each run.
+- `POST /api/internal/run-reminders` runs one pass. Send header `x-reminders-secret: <REMINDERS_CRON_SECRET>` (compared in
+  constant time). 404 when the env var is unset, 401 on a wrong secret. Returns `{ success, data: { shifts, appointments } }`
+  (counts sent). It runs inside the web process on purpose: `new-notification` is pushed over Socket.io from there.
+
+### Scheduling
+
+Create a Render **Cron Job** (schedule `* * * * *`) with command:
+
+```
+curl -fsS -X POST -H "x-reminders-secret: $REMINDERS_CRON_SECRET" "$API_URL/api/internal/run-reminders"
+```
+
+with `API_URL` (the backend's public URL) and `REMINDERS_CRON_SECRET` (same value as on the web service) as env vars.
+The request also wakes a sleeping web service. Any external scheduler works the same way (QStash, cron-job.org); running two
+at once is harmless. After deploying run `prisma migrate deploy` (adds `ReminderLog`).
+
 - Broadcast body: `{ title, message, role?: ADMIN|DOCTOR|NURSE|DISPATCHER, link?: "/internal-path" }`.
 
 ## Frontend
