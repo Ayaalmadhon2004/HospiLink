@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
+import { dayRange, hospitalTimezone, hourKey, formatLocal } from '../utils/time';
 import { notify } from '../services/notification.service';
 import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
 import type { Prisma } from '@prisma/client';
@@ -16,17 +17,18 @@ const handleError = (res: Response, error: unknown, message: string) => {
   res.status(500).json({ success: false, message });
 };
 
-const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }) =>
-  `${a.patient?.name ?? 'Patient'} on ${new Date(a.scheduledAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
+const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }, tz: string) =>
+  `${a.patient?.name ?? 'Patient'} on ${formatLocal(a.scheduledAt, tz)}`;
 
 // Appointment.doctorId points at Staff; its login is Staff.userId (an explicit link, not an email match).
 const notifyAppointmentDoctor = async (
   appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
   title: string,
+  hospitalId: string,
   actorId?: string
 ) => {
   try {
-    const message = describeAppointment(appointment);
+    const message = describeAppointment(appointment, await hospitalTimezone(hospitalId));
     const doctorStaffId = appointment.doctorId;
     const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { userId: true } });
     if (!staff) return;
@@ -55,10 +57,8 @@ export const getAppointments = async (req: Request, res: Response) => {
     const where: Prisma.AppointmentWhereInput = { patient: { hospitalId: hospitalIdOf(req) } };
 
     if (date) {
-      const d = new Date(date as string);
-      const startOfDay = new Date(d.setHours(0, 0, 0, 0));
-      const endOfDay = new Date(d.setHours(23, 59, 59, 999));
-      where.scheduledAt = { gte: startOfDay, lte: endOfDay };
+      const { start, end } = dayRange(await hospitalTimezone(hospitalIdOf(req)), date as string);
+      where.scheduledAt = { gte: start, lt: end };
     }
     if (doctorId) where.doctorId = doctorId as string;
     if (patientId) where.patientId = patientId as string;
@@ -84,14 +84,13 @@ export const getAppointments = async (req: Request, res: Response) => {
 // ─── GET /api/appointments/today ───────────────────────────────────────
 export const getTodaySchedule = async (req: Request, res: Response) => {
   try {
-    const now = new Date();
-    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
-    const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+    const tz = await hospitalTimezone(hospitalIdOf(req));
+    const { start, end } = dayRange(tz);
 
     const appointments = await prisma.appointment.findMany({
       where: {
         patient: { hospitalId: hospitalIdOf(req) },
-        scheduledAt: { gte: startOfDay, lte: endOfDay },
+        scheduledAt: { gte: start, lt: end },
         status: { not: 'CANCELLED' },
       },
       include: {
@@ -104,8 +103,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
 
     // Group by hour for timeline view
     const schedule = appointments.reduce<Record<string, typeof appointments>>((acc, apt) => {
-      const hour = new Date(apt.scheduledAt).getHours();
-      const timeKey = `${hour.toString().padStart(2, '0')}:00`;
+      const timeKey = hourKey(apt.scheduledAt, tz);
       if (!acc[timeKey]) acc[timeKey] = [];
       acc[timeKey].push(apt);
       return acc;
@@ -234,7 +232,7 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-created', appointment);
 
-    await notifyAppointmentDoctor(appointment, 'New appointment', req.user?.id);
+    await notifyAppointmentDoctor(appointment, 'New appointment', hospitalIdOf(req), req.user?.id);
 
     res.status(201).json({ success: true, data: appointment });
   } catch (error: unknown) {
@@ -297,7 +295,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     // Only schedule-relevant changes are worth a notification.
     if (['scheduledAt', 'status', 'doctorId', 'room'].some((k) => k in updateData)) {
-      await notifyAppointmentDoctor(appointment, 'Appointment changed', req.user?.id);
+      await notifyAppointmentDoctor(appointment, 'Appointment changed', hospitalIdOf(req), req.user?.id);
     }
 
     res.status(200).json({ success: true, data: appointment });
@@ -327,7 +325,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
 
     io.to(clinicalRoom(hospitalIdOf(req))).emit('appointment-cancelled', { id });
 
-    await notifyAppointmentDoctor(appointment, 'Appointment cancelled', req.user?.id);
+    await notifyAppointmentDoctor(appointment, 'Appointment cancelled', hospitalIdOf(req), req.user?.id);
 
     res.status(200).json({ success: true, message: 'Appointment cancelled', data: appointment });
   } catch (error: unknown) {
