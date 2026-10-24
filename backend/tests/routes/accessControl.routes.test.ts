@@ -10,6 +10,7 @@ import patientRoutes from '../../src/routes/patient.routes';
 import vitalsRoutes from '../../src/routes/vitals.routes';
 import bedRoutes from '../../src/routes/bed.routes';
 import usersRoutes from '../../src/routes/users.routes';
+import staffRoutes from '../../src/routes/staff.routes';
 
 jest.mock('../../src/middlewares/audit.middleware', () => ({
   logActivity: () => (_req: any, _res: any, next: any) => next(),
@@ -21,6 +22,7 @@ app.use('/patients', patientRoutes);
 app.use('/vitals', vitalsRoutes);
 app.use('/beds', bedRoutes);
 app.use('/users', usersRoutes);
+app.use('/staff', staffRoutes);
 
 const U1 = '3f2b8c1e-6f0a-4a57-9a39-1c1d8b3f7a10';
 
@@ -115,5 +117,28 @@ describe('/users (account administration)', () => {
 
     expect(res.status).toBe(201);
     expect((prismaMock.user.create.mock.calls[0][0] as any).data.hospitalId).toBe('hosp-1');
+  });
+});
+
+describe('PUT /staff/:id/login (link a login to a staff member)', () => {
+  it.each(['DOCTOR', 'NURSE', 'DISPATCHER'])('is ADMIN only: %s -> 403', async (role) => {
+    const res = await request(app).put(`/staff/${U1}/login`).set('Authorization', as(role, 'ACTIVE')).send({ userId: null });
+    expect(res.status).toBe(403);
+    expect(prismaMock.staff.update).not.toHaveBeenCalled();
+  });
+
+  it('validates the body (400) before touching the database', async () => {
+    const res = await request(app).put(`/staff/${U1}/login`).set('Authorization', as('ADMIN', 'ACTIVE')).send({ userId: 'nope' });
+    expect(res.status).toBe(400);
+    expect(prismaMock.staff.update).not.toHaveBeenCalled();
+  });
+
+  it('an ADMIN can unlink', async () => {
+    const authz = as('ADMIN', 'ACTIVE');
+    prismaMock.staff.findFirst.mockResolvedValue({ id: U1 } as any);
+    prismaMock.staff.update.mockResolvedValue({ id: U1, userId: null } as any);
+    const res = await request(app).put(`/staff/${U1}/login`).set('Authorization', authz).send({ userId: null });
+    expect(res.status).toBe(200);
+    expect(res.body.data.hasLogin).toBe(false);
   });
 });

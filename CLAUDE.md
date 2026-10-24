@@ -85,6 +85,12 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - 2FA (TOTP via `otplib`): `User.twoFactorEnabledAt` is the source of truth (`UserSettings.twoFactorAuth` is no longer read; `PUT /settings/security` rejects `twoFactorAuth`).
   Login with 2FA answers `{ twoFactorRequired, challengeToken }` (5 min, no cookie; `protect` rejects it) and `POST /api/auth/2fa/login` sets the cookie. Setup/enable/disable live in
   `controllers/twoFactor.controller.ts`; codes are replay-protected, 5 wrong codes lock the account's 2FA for 15 min, recovery codes are stored hashed. Never return raw `User` rows: use `toPublicUser`.
+- Staff <-> login: `Staff.userId` (unique, nullable FK to `User`, `SetNull`) is the only link. Appointment/shift notifications and reminders go to `staff.userId`; staff without one are
+  logged and skipped (the directory shows a "No login" badge). Never match `Staff.email` with `User.email` at runtime. The link is made once: `POST /staff` (with `loginRole` it also creates the login
+  and emails a set-password link), invite/approve of a user, a staff email correction, or `PUT /staff/:id/login { userId | null }` (ADMIN). Only same-hospital records are ever linked; `userId` is never exposed
+  (the API returns `hasLogin`).
+- Appointments: a doctor cannot have overlapping non-cancelled appointments (`services/appointmentConflicts.ts`, each with its own `duration`, also checked on update) and a DB exclusion constraint closes the race.
+  An appointment always references an existing patient (`patientId`/`patientCode`); it never creates patients.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

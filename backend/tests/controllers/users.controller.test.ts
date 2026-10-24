@@ -42,6 +42,32 @@ describe('users.controller (ADMIN account administration)', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
+    it('links the new login to the unlinked Staff record of the same hospital and email', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue({ id: 'u', email: 'new@h.com', hospitalId: 'hosp-1' } as any);
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
+
+      await inviteUser(mockRequest({ body }), mockResponse());
+
+      expect(prismaMock.staff.findFirst).toHaveBeenCalledWith({
+        where: { hospitalId: 'hosp-1', userId: null, email: { equals: 'new@h.com', mode: 'insensitive' } },
+        select: { id: true },
+      });
+      expect(prismaMock.staff.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { userId: 'u' } });
+    });
+
+    it('still succeeds when linking fails (never blocks the invite)', async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      prismaMock.user.create.mockResolvedValue({ id: 'u', email: 'new@h.com', hospitalId: 'hosp-1' } as any);
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
+      prismaMock.staff.update.mockRejectedValue(new Error('unique'));
+      const res = mockResponse();
+
+      await inviteUser(mockRequest({ body }), res);
+
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
     it('rejects a duplicate email with 400', async () => {
       prismaMock.user.findUnique.mockResolvedValue({ id: 'x' } as any);
       const res = mockResponse();
@@ -66,6 +92,16 @@ describe('users.controller (ADMIN account administration)', () => {
         expect.objectContaining({ where: { id: 'p1' }, data: { accountStatus: 'ACTIVE', role: 'NURSE' } })
       );
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('links the approved login to its Staff record', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'p1', accountStatus: 'PENDING' } as any);
+      prismaMock.user.update.mockResolvedValue({ id: 'p1', email: 'p1@h.com', hospitalId: 'hosp-1' } as any);
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 's9' } as any);
+
+      await approveUser(mockRequest({ params: { id: 'p1' }, body: { role: 'NURSE' } }), mockResponse());
+
+      expect(prismaMock.staff.update).toHaveBeenCalledWith({ where: { id: 's9' }, data: { userId: 'p1' } });
     });
 
     it('404 for a user of another hospital', async () => {

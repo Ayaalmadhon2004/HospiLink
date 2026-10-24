@@ -45,3 +45,16 @@ Setup, once, in GitHub: Settings -> Environments -> `production` -> add the secr
 - If the migration fails, the job stops and the deploy hook is not triggered.
 - Migrations should be additive (add a column, then ship the code that uses it) because the old code keeps serving while the new one builds. Destructive changes need a two-step release.
 - Never use `db push` against production.
+
+## Appointment overlap constraint (`20261026000000_appointment_overlap`)
+
+Adds `CREATE EXTENSION btree_gist` and an exclusion constraint so a doctor cannot have two overlapping non-cancelled appointments
+(checked with each appointment's own `duration`). The API checks first (409), the constraint closes the race between concurrent requests.
+**Run the overlap query written at the top of the migration file against production first**: the migration fails if overlapping appointments
+already exist (cancel or reschedule them, then deploy). Tested on PostgreSQL 16; creating the extension needs a role that may do so (Neon allows it).
+
+## Staff <-> login link (`20261027000000_staff_user_link`)
+
+Adds `Staff.userId` (unique, `ON DELETE SET NULL`). The backfill links a staff member to the `User` with the same email (case-insensitive) in the SAME hospital,
+strictly one-to-one; ambiguous or cross-hospital matches stay unlinked. After deploying, staff shown with a "No login" badge either have no account or had a
+mistyped email: fix the email in the staff form (it re-links when a matching login exists) or use `PUT /api/staff/:id/login`.

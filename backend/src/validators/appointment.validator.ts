@@ -4,9 +4,10 @@ import { idSchema, nonEmpty, dateString } from './common.validator';
 
 const duration = z.number().int().min(1).max(1440);
 
+// An appointment always points at an EXISTING patient (admit the patient first). patientName is no longer
+// accepted: zod strips it, so clients cannot create patients with invented medical data through this route.
 export const createAppointmentSchema = z.object({
   patientId: idSchema.optional(),
-  patientName: z.string().trim().min(1).max(150).optional(),
   patientCode: z.string().trim().min(1).max(50).optional(),
   doctorId: idSchema,
   scheduledAt: dateString('scheduledAt'),
@@ -16,6 +17,9 @@ export const createAppointmentSchema = z.object({
   room: z.string().trim().max(50).optional(),
   notes: z.string().trim().max(2000).optional(),
   duration: duration.optional(),
+}).refine((v) => Boolean(v.patientId || v.patientCode), {
+  message: 'patientId or patientCode is required',
+  path: ['patientId'],
 });
 
 // Update accepts only real Appointment columns; patientName/patientCode sent by the

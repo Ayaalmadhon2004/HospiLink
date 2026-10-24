@@ -25,6 +25,7 @@ interface StaffMember {
   avatar?: string;
   phone?: string;
   isActive: boolean;
+  hasLogin?: boolean;
   shifts?: Shift[];
 }
 
@@ -236,6 +237,14 @@ export const StaffDirectoryPage = () => {
                     <div>
                       <div className="font-medium text-gray-900">{member.name}</div>
                       <div className="text-xs text-gray-400">{member.email}</div>
+                      {member.hasLogin === false && (
+                        <span
+                          className="mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
+                          title={t('staff.noLoginHint')}
+                        >
+                          {t('staff.noLogin')}
+                        </span>
+                      )}
                     </div>
                   </div>
                 </td>

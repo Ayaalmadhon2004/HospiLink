@@ -5,17 +5,16 @@ import { sendShiftReminders, sendAppointmentReminders } from '../../src/services
 const now = new Date('2026-10-21T10:00:00Z');
 const shift = {
   id: 's1', type: 'NIGHT', department: 'ICU', startTime: new Date('2026-10-21T10:20:00Z'),
-  staff: { email: 'nurse@h.com', isActive: true },
+  staff: { id: 'st1', userId: 'u1', isActive: true },
 };
 const appt = {
   id: 'a1', type: 'Checkup', scheduledAt: new Date('2026-10-21T10:15:00Z'),
-  doctor: { email: 'doc@h.com' }, patient: { name: 'Sam Lee' },
+  doctor: { id: 'st2', userId: 'u1' }, patient: { name: 'Sam Lee' },
 };
 
 describe('reminders.service', () => {
   beforeEach(() => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
-    prismaMock.user.findUnique.mockResolvedValue({ id: 'u1' } as any);
     prismaMock.notification.findFirst.mockResolvedValue(null);
     prismaMock.user.findMany.mockResolvedValue([{ id: 'u1', settings: { shiftReminders: true, appointmentReminders: true } }] as any);
     prismaMock.notification.createManyAndReturn.mockImplementation((async ({ data }: any) =>
@@ -46,11 +45,17 @@ describe('reminders.service', () => {
     expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
   });
 
-  it('skips staff without a login', async () => {
-    prismaMock.shift.findMany.mockResolvedValue([shift] as any);
-    prismaMock.user.findUnique.mockResolvedValue(null);
+  it('skips staff without a linked login (and does not guess by email)', async () => {
+    prismaMock.shift.findMany.mockResolvedValue([{ ...shift, staff: { ...shift.staff, userId: null } }] as any);
     expect(await sendShiftReminders(now)).toBe(0);
+    expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
     expect(prismaMock.notification.createManyAndReturn).not.toHaveBeenCalled();
+  });
+
+  it('skips a doctor without a linked login', async () => {
+    prismaMock.appointment.findMany.mockResolvedValue([{ ...appt, doctor: { id: 'st2', userId: null } }] as any);
+    expect(await sendAppointmentReminders(now)).toBe(0);
+    expect(prismaMock.user.findUnique).not.toHaveBeenCalled();
   });
 
   it('sends a due appointment reminder to the doctor, excluding cancelled', async () => {

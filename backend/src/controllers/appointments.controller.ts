@@ -5,7 +5,11 @@ import { io } from '../server';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
+import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
 import type { Prisma } from '@prisma/client';
+
+const CONFLICT_MESSAGE = 'Doctor has a conflicting appointment at this time';
+const DEFAULT_DURATION = 30;
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
@@ -15,7 +19,7 @@ const handleError = (res: Response, error: unknown, message: string) => {
 const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }) =>
   `${a.patient?.name ?? 'Patient'} on ${new Date(a.scheduledAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
-// Appointment.doctorId points at Staff; the matching login (User) shares the same email.
+// Appointment.doctorId points at Staff; its login is Staff.userId (an explicit link, not an email match).
 const notifyAppointmentDoctor = async (
   appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
   title: string,
@@ -24,16 +28,19 @@ const notifyAppointmentDoctor = async (
   try {
     const message = describeAppointment(appointment);
     const doctorStaffId = appointment.doctorId;
-    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { email: true } });
+    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { userId: true } });
     if (!staff) return;
-    const user = await prisma.user.findUnique({ where: { email: staff.email }, select: { id: true } });
-    if (!user) return;
+    if (!staff.userId) {
+      // Not silent: an admin can link or create the login from the staff directory.
+      logger.warn({ staffId: doctorStaffId }, 'Appointment notification skipped: staff member has no linked login');
+      return;
+    }
     await notify({
       type: 'APPOINTMENT',
       title,
       message,
       link: '/appointments',
-      recipients: { userIds: [user.id], excludeUserId: actorId, scopeUserId: actorId },
+      recipients: { userIds: [staff.userId], excludeUserId: actorId, scopeUserId: actorId },
     });
   } catch (error) {
     logger.error({ err: error }, 'Appointment notification failed');
@@ -162,8 +169,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
 export const createAppointment = async (req: Request, res: Response) => {
   try {
     const {
-      patientId,        // ✅ NEW: Existing patient ID from dropdown
-      patientName,
+      patientId,
       patientCode,
       doctorId,
       scheduledAt,
@@ -184,73 +190,28 @@ export const createAppointment = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
 
-    // ✅ PRIORITY 1: Use existing patient by ID (from dropdown)
-    let patient = null;
-    
-    if (patientId) {
-      patient = await prisma.patient.findFirst({
-        where: { id: patientId, hospitalId },
-      });
-      if (patient) {
-        logger.debug({ patientId: patient.id }, "Found existing patient by ID");
-      }
+    // The patient must already exist in this hospital (found by id first, then by code).
+    // Appointments never create patients: that needs real medical data, see POST /api/patients.
+    // Defence in depth (the validator already requires one): an undefined filter would match ANY patient.
+    if (!patientId && !patientCode) {
+      return res.status(400).json({ success: false, message: 'patientId or patientCode is required' });
     }
-
-    // ✅ PRIORITY 2: Find by patientCode
-    if (!patient && patientCode) {
-      patient = await prisma.patient.findFirst({
-        where: { patientCode, hospitalId },
-      });
-      if (patient) {
-        logger.debug({ patientId: patient.id }, "Found existing patient by code");
-      }
-    }
-
-    // ✅ PRIORITY 3: Create new patient ONLY if not found
+    const patient = patientId
+      ? await prisma.patient.findFirst({ where: { id: patientId, hospitalId } })
+      : await prisma.patient.findFirst({ where: { patientCode, hospitalId } });
     if (!patient) {
-      if (!patientName) {
-        return res.status(400).json({
-          success: false,
-          message: 'Patient name is required when creating a new patient',
-        });
-      }
-
-      patient = await prisma.patient.create({
-        data: {
-          name: patientName,
-          patientCode: patientCode || `PT-${Date.now()}`,
-          department: department || 'General',
-          age: 0,
-          gender: 'MALE',
-          diagnosis: 'Pending',
-          hospitalId,
-        },
-      });
-      logger.debug({ patientId: patient.id }, "Created new patient");
+      return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
-    // ✅ Check for conflicts
+    // Overlap with the doctor's other appointments, each with its own duration.
     const appointmentStart = new Date(scheduledAt);
-    const appointmentEnd = new Date(appointmentStart.getTime() + (duration || 30) * 60000);
-
-    const conflict = await prisma.appointment.findFirst({
-      where: {
-        doctorId,
-        status: { not: 'CANCELLED' },
-        scheduledAt: { lt: appointmentEnd },
-        AND: {
-          scheduledAt: {
-            gt: new Date(appointmentStart.getTime() - (duration || 30) * 60000),
-          },
-        },
-      },
+    const conflict = await findDoctorConflict({
+      doctorId,
+      start: appointmentStart,
+      durationMin: duration || DEFAULT_DURATION,
     });
-
     if (conflict) {
-      return res.status(409).json({
-        success: false,
-        message: 'Doctor has a conflicting appointment at this time',
-      });
+      return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     }
 
     const appointment = await prisma.appointment.create({
@@ -263,7 +224,7 @@ export const createAppointment = async (req: Request, res: Response) => {
         department,
         room,
         notes,
-        duration: duration || 30,
+        duration: duration || DEFAULT_DURATION,
       },
       include: {
         patient: { select: { id: true, name: true, patientCode: true } },
@@ -277,6 +238,8 @@ export const createAppointment = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: appointment });
   } catch (error: unknown) {
+    // Lost a race against a concurrent booking: the database exclusion constraint caught it.
+    if (isOverlapViolation(error)) return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     handleError(res, error, 'Failed to create appointment');
   }
 };
@@ -290,7 +253,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     const existing = await prisma.appointment.findFirst({
       where: { id, patient: { hospitalId } },
-      select: { id: true },
+      select: { id: true, doctorId: true, scheduledAt: true, duration: true, status: true },
     });
     if (!existing) {
       return res.status(404).json({ success: false, message: 'Appointment not found' });
@@ -304,6 +267,21 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     if (updateData.scheduledAt) {
       updateData.scheduledAt = new Date(updateData.scheduledAt);
+    }
+
+    // Re-check overlaps whenever the slot changes (time, doctor, length) or a cancelled appointment is revived.
+    const effectiveStatus = updateData.status ?? existing.status;
+    const slotChanged = ['scheduledAt', 'doctorId', 'duration', 'status'].some((k) => k in updateData);
+    if (slotChanged && effectiveStatus !== 'CANCELLED') {
+      const conflict = await findDoctorConflict({
+        doctorId: updateData.doctorId ?? existing.doctorId,
+        start: updateData.scheduledAt ?? existing.scheduledAt,
+        durationMin: updateData.duration ?? existing.duration,
+        excludeId: id,
+      });
+      if (conflict) {
+        return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
+      }
     }
 
     const appointment = await prisma.appointment.update({
@@ -324,6 +302,7 @@ export const updateAppointment = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: appointment });
   } catch (error: unknown) {
+    if (isOverlapViolation(error)) return res.status(409).json({ success: false, message: CONFLICT_MESSAGE });
     handleError(res, error, 'Failed to update appointment');
   }
 };

@@ -92,14 +92,14 @@ describe('appointments.controller', () => {
       await createAppointment(req, res);
 
       expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-p', hospitalId: 'hosp-1' } });
-      expect(res.status).toHaveBeenCalledWith(400); // no patientName -> cannot create
+      expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
     it('يستخدم مريض موجود إذا تم تمرير patientId ولا ينشئ مريض جديد', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', name: 'Ali' } as any);
-      prismaMock.appointment.findFirst.mockResolvedValue(null);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
       prismaMock.appointment.create.mockResolvedValue({ id: 'apt-1' } as any);
 
       const req = mockRequest({
@@ -117,48 +117,57 @@ describe('appointments.controller', () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
-    it('يرفض إنشاء مريض جديد لو ما تم تمرير patientName', async () => {
+    it('يرفض بـ 400 لو ما في patientId ولا patientCode (ما بيدوّر على أي مريض)', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
-      prismaMock.patient.findFirst.mockResolvedValue(null);
 
-      const req = mockRequest({
-        body: { doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' },
-      });
       const res = mockResponse();
-
-      await createAppointment(req, res);
+      await createAppointment(mockRequest({ body: { doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }), res);
 
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.patient.findFirst).not.toHaveBeenCalled();
       expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
-    it('ينشئ مريض جديد لو ما في patientId ولا patientCode لكن في patientName', async () => {
+    it('بيلاقي المريض بالـ patientCode ضمن نفس المستشفى', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
-      prismaMock.patient.create.mockResolvedValue({ id: 'new-p', name: 'Sara' } as any);
-      prismaMock.appointment.findFirst.mockResolvedValue(null);
-      prismaMock.appointment.create.mockResolvedValue({ id: 'apt-2' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p9', name: 'Sara' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
+      prismaMock.appointment.create.mockResolvedValue({ id: 'apt-3' } as any);
 
-      const req = mockRequest({
-        body: {
-          patientName: 'Sara',
-          doctorId: 'doc-1',
-          scheduledAt: '2026-08-01T10:00:00Z',
-        },
-      });
       const res = mockResponse();
+      await createAppointment(
+        mockRequest({ body: { patientCode: 'PT-7', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
 
-      await createAppointment(req, res);
-
-      expect(prismaMock.patient.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ name: 'Sara', hospitalId: 'hosp-1' }) })
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { patientCode: 'PT-7', hospitalId: 'hosp-1' } });
+      expect(prismaMock.appointment.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ patientId: 'p9' }) })
       );
       expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('ما بينشئ مريض أبداً: patientName لوحده (مريض غير موجود) = 404', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue(null);
+
+      const res = mockResponse();
+      await createAppointment(
+        mockRequest({ body: { patientName: 'Sara', patientCode: 'PT-99', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
+      expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
 
     it('يرفض بـ 409 لو في تعارض بمواعيد نفس الدكتور', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
-      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'conflicting-apt' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([
+        { id: 'conflicting-apt', scheduledAt: new Date('2026-08-01T10:00:00Z'), duration: 30 },
+      ] as any);
 
       const req = mockRequest({
         body: { patientId: 'p1', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' },
@@ -173,8 +182,13 @@ describe('appointments.controller', () => {
   });
 
   describe('updateAppointment', () => {
+    const EXISTING = {
+      id: 'apt-1', doctorId: 'doc-1', scheduledAt: new Date('2026-09-01T09:00:00Z'), duration: 30, status: 'SCHEDULED',
+    };
+
     it('يحول scheduledAt لكائن Date قبل التحديث ويبث appointment-updated', async () => {
-      prismaMock.appointment.findFirst.mockResolvedValue({ id: 'apt-1' } as any);
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
       prismaMock.appointment.update.mockResolvedValue({ id: 'apt-1' } as any);
       const req = mockRequest({
         params: { id: 'apt-1' },
@@ -187,6 +201,140 @@ describe('appointments.controller', () => {
       const dataArg = (prismaMock.appointment.update.mock.calls[0][0] as any).data;
       expect(dataArg.scheduledAt).toBeInstanceOf(Date);
       expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:clinical-staff', 'appointment-updated', { id: 'apt-1' });
+    });
+  });
+
+  describe('conflict checks', () => {
+    const at = (iso: string, duration = 30) => ({ id: 'other', scheduledAt: new Date(iso), duration });
+
+    it('create: un موعد طويل موجود (09:00 لمدة 120) بيتعارض مع موعد جديد 10:30 لمدة 30', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-08-01T09:00:00Z', 120)] as any);
+      const res = mockResponse();
+
+      await createAppointment(
+        mockRequest({ body: { patientId: 'p1', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:30:00Z', duration: 30 } }),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(prismaMock.appointment.create).not.toHaveBeenCalled();
+    });
+
+    it('create: موعد ينتهي بالضبط وقت بداية الجديد مش تعارض', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-08-01T09:30:00Z', 30)] as any);
+      prismaMock.appointment.create.mockResolvedValue({ id: 'apt-1' } as any);
+      const res = mockResponse();
+
+      await createAppointment(
+        mockRequest({ body: { patientId: 'p1', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('create: خسارة سباق ضد قيد قاعدة البيانات (23P01) ترجع 409 مش 500', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
+      prismaMock.appointment.create.mockRejectedValue(Object.assign(new Error('exclusion violation'), { code: '23P01' }));
+      const res = mockResponse();
+
+      await createAppointment(
+        mockRequest({ body: { patientId: 'p1', doctorId: 'doc-1', scheduledAt: '2026-08-01T10:00:00Z' } }),
+        res
+      );
+
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
+    const EXISTING = {
+      id: 'apt-1', doctorId: 'doc-1', scheduledAt: new Date('2026-09-01T09:00:00Z'), duration: 30, status: 'SCHEDULED',
+    };
+
+    it('update: تغيير الوقت بيفحص التعارض ويستثني الموعد نفسه', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-09-01T12:00:00Z', 60)] as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { scheduledAt: '2026-09-01T12:30:00Z' } }), res);
+
+      const where = (prismaMock.appointment.findMany.mock.calls[0][0] as any).where;
+      expect(where.doctorId).toBe('doc-1');
+      expect(where.id).toEqual({ not: 'apt-1' });
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(prismaMock.appointment.update).not.toHaveBeenCalled();
+    });
+
+    it('update: تغيير الدكتور بيفحص مواعيد الدكتور الجديد بنفس الوقت والمدة القديمة', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue({ ...EXISTING, duration: 90 } as any);
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 'doc-2' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-09-01T10:00:00Z', 30)] as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { doctorId: 'doc-2' } }), res);
+
+      expect((prismaMock.appointment.findMany.mock.calls[0][0] as any).where.doctorId).toBe('doc-2');
+      expect(res.status).toHaveBeenCalledWith(409); // 09:00 + 90m covers 10:00
+    });
+
+    it('update: تمديد المدة بيفحص التعارض', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-09-01T09:45:00Z', 30)] as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { duration: 60 } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
+    it('update: إرجاع موعد ملغي لـ SCHEDULED بيفحص التعارض', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue({ ...EXISTING, status: 'CANCELLED' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([at('2026-09-01T09:00:00Z', 30)] as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { status: 'SCHEDULED' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
+    it('update: تغيير الملاحظات فقط ما بيفحص التعارض', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.update.mockResolvedValue({ id: 'apt-1' } as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { notes: 'bring labs' } }), res);
+
+      expect(prismaMock.appointment.findMany).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('update: إلغاء الموعد بالتعديل ما بيفحص التعارض', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.update.mockResolvedValue({ id: 'apt-1' } as any);
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { status: 'CANCELLED' } }), res);
+
+      expect(prismaMock.appointment.findMany).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('update: قيد قاعدة البيانات بيرجع 409', async () => {
+      prismaMock.appointment.findFirst.mockResolvedValue(EXISTING as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
+      prismaMock.appointment.update.mockRejectedValue(
+        Object.assign(new Error('x'), { cause: { message: 'violates exclusion constraint "appointment_no_doctor_overlap"' } })
+      );
+      const res = mockResponse();
+
+      await updateAppointment(mockRequest({ params: { id: 'apt-1' }, body: { scheduledAt: '2026-09-02T09:00:00Z' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
     });
   });
 

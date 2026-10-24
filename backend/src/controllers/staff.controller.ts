@@ -4,7 +4,8 @@ import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
 import { hospitalIdOf, departmentRoom } from '../utils/tenant';
-import type { Prisma } from '@prisma/client';
+import { linkStaffToUserByEmail, randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
+import type { Prisma, Role } from '@prisma/client';
 
 type TimelineEntry = {
   id: string;
@@ -24,11 +25,19 @@ const handleError = (res: Response, error: unknown, message: string) => {
   res.status(500).json({ success: false, message });
 };
 
+// The login id stays server-side; clients only learn whether the staff member can sign in / be notified.
+const toStaffDto = <T extends { userId: string | null }>(staff: T) => {
+  const { userId, ...rest } = staff;
+  return { ...rest, hasLogin: Boolean(userId) };
+};
+
+const isUniqueViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2002';
+
 export const getStaff = async (req: Request, res: Response) => {
   try {
     const staff = await prisma.staff.findMany({ where: { hospitalId: hospitalIdOf(req) } });
 
-    res.status(200).json({ success: true, count: staff.length, data: staff });
+    res.status(200).json({ success: true, count: staff.length, data: staff.map(toStaffDto) });
   } catch (error: unknown) {
     logger.error({ err: error }, 'ERROR:');
     handleError(res, error, 'Failed to fetch staff');
@@ -54,23 +63,68 @@ export const getStaffById = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Staff not found' });
     }
 
-    res.status(200).json({ success: true, data: staff });
+    res.status(200).json({ success: true, data: toStaffDto(staff) });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch staff');
   }
 };
 
-// POST /api/staff - Create staff
+// POST /api/staff - Create staff. With `loginRole` it also creates the login (emailed set-password link);
+// an existing unlinked login of the same hospital with the same email is linked instead.
 export const createStaff = async (req: Request, res: Response) => {
   try {
-    const { name, email, role, department, phone, avatar } = req.body;
+    const { name, email, role, department, phone, avatar, loginRole } = req.body as {
+      name: string; email: string; role: string; department: string; phone?: string; avatar?: string; loginRole?: Role;
+    };
+    const hospitalId = hospitalIdOf(req);
 
-    const staff = await prisma.staff.create({
-      data: { name, email, role, department, phone, avatar, hospitalId: hospitalIdOf(req) },
+    // Emails are unique across hospitals for logins: never link (or reveal) a login of another hospital.
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, hospitalId: true, staff: { select: { id: true } } },
+    });
+    if (existingUser && existingUser.hospitalId !== hospitalId && loginRole) {
+      return res.status(409).json({ success: false, message: 'This email is already used by another account' });
+    }
+    const sameHospitalUser = existingUser && existingUser.hospitalId === hospitalId ? existingUser : null;
+    if (sameHospitalUser?.staff && loginRole) {
+      return res.status(409).json({ success: false, message: 'A login with this email is already linked to another staff member' });
+    }
+    const linkUserId = sameHospitalUser && !sameHospitalUser.staff ? sameHospitalUser.id : null;
+    const createLogin = Boolean(loginRole) && !existingUser;
+
+    const { staff, newUserId } = await prisma.$transaction(async (tx) => {
+      let userId = linkUserId;
+      if (createLogin && loginRole) {
+        const user = await tx.user.create({
+          data: {
+            email,
+            password: await randomPasswordHash(),
+            name,
+            role: loginRole,
+            department,
+            shift: 'Day',
+            accountStatus: 'ACTIVE',
+            emailVerifiedAt: new Date(),
+            hospitalId,
+          },
+          select: { id: true },
+        });
+        userId = user.id;
+      }
+      const created = await tx.staff.create({
+        data: { name, email, role, department, phone, avatar, hospitalId, userId },
+      });
+      return { staff: created, newUserId: createLogin ? userId : null };
     });
 
-    res.status(201).json({ success: true, data: staff });
+    if (newUserId) sendSetPasswordMail(newUserId, email);
+
+    res.status(201).json({ success: true, data: toStaffDto(staff) });
   } catch (error: unknown) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ success: false, message: 'A staff member with this email already exists' });
+    }
     handleError(res, error, 'Failed to create staff');
   }
 };
@@ -81,17 +135,64 @@ export const updateStaff = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const updateData = req.body;
 
-    const existing = await prisma.staff.findFirst({ where: { id, hospitalId: hospitalIdOf(req) }, select: { id: true } });
+    const hospitalId = hospitalIdOf(req);
+    const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true, userId: true } });
     if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+
+    // Correcting a mistyped email of a staff member without a login: attach the matching login of this
+    // hospital if there is one (the link itself never depends on the email afterwards).
+    const data: Prisma.StaffUncheckedUpdateInput = { ...updateData };
+    if (typeof updateData.email === 'string' && !existing.userId) {
+      const candidate = await prisma.user.findFirst({
+        where: { hospitalId, email: { equals: updateData.email, mode: 'insensitive' }, staff: null },
+        select: { id: true },
+      });
+      if (candidate) data.userId = candidate.id;
+    }
 
     const staff = await prisma.staff.update({
       where: { id },
-      data: updateData,
+      data,
     });
 
-    res.status(200).json({ success: true, data: staff });
+    res.status(200).json({ success: true, data: toStaffDto(staff) });
   } catch (error: unknown) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ success: false, message: 'A staff member with this email already exists' });
+    }
     handleError(res, error, 'Failed to update staff');
+  }
+};
+
+// PUT /api/staff/:id/login - Link a login (User of the same hospital) to this staff member, or unlink with null.
+// This is how a mistyped email gets fixed: notifications follow the link, not the email.
+export const setStaffLogin = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const { userId } = req.body as { userId: string | null };
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+
+    if (userId !== null) {
+      const user = await prisma.user.findFirst({
+        where: { id: userId, hospitalId },
+        select: { id: true, staff: { select: { id: true } } },
+      });
+      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      if (user.staff && user.staff.id !== id) {
+        return res.status(409).json({ success: false, message: 'This login is already linked to another staff member' });
+      }
+    }
+
+    const staff = await prisma.staff.update({ where: { id }, data: { userId } });
+    res.status(200).json({ success: true, data: toStaffDto(staff) });
+  } catch (error: unknown) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ success: false, message: 'This login is already linked to another staff member' });
+    }
+    handleError(res, error, 'Failed to link staff login');
   }
 };
 

@@ -1,7 +1,7 @@
 // backend/src/services/reminders.service.ts
 //
 // Time-based reminders built on `notify()`: shifts and appointments starting within the
-// next 30 minutes. Idempotent: a reminder is skipped when the user already has a
+// next 30 minutes. Recipients come from Staff.userId (an explicit link; staff without one are logged and skipped). Idempotent: a reminder is skipped when the user already has a
 // Notification with the same type + link (the link carries the shift/appointment id).
 // Tolerant of Render sleeping: every run looks at "starts in (now, now + 30 min]", so a late
 // run still reminds as long as the item has not started. Never throws.
@@ -10,11 +10,6 @@ import logger from '../config/logger';
 import { notify, type NotificationType } from './notification.service';
 
 export const REMINDER_LEAD_MS = 30 * 60 * 1000;
-
-const findLoginId = async (email: string): Promise<string | null> => {
-  const user = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  return user?.id ?? null;
-};
 
 const alreadySent = async (userId: string, type: NotificationType, link: string): Promise<boolean> => {
   const existing = await prisma.notification.findFirst({ where: { userId, type, link }, select: { id: true } });
@@ -28,13 +23,16 @@ export const sendShiftReminders = async (now: Date = new Date()): Promise<number
   try {
     const shifts = await prisma.shift.findMany({
       where: { startTime: { gt: now, lte: new Date(now.getTime() + REMINDER_LEAD_MS) } },
-      include: { staff: { select: { email: true, isActive: true } } },
+      include: { staff: { select: { id: true, userId: true, isActive: true } } },
     });
     for (const shift of shifts ?? []) {
       try {
         if (!shift.staff?.isActive) continue;
-        const userId = await findLoginId(shift.staff.email);
-        if (!userId) continue; // staff without a login
+        const userId = shift.staff.userId;
+        if (!userId) {
+          logger.warn({ staffId: shift.staff.id, shiftId: shift.id }, '[Reminders] shift reminder skipped: staff has no linked login');
+          continue;
+        }
         const link = `/staff?shift=${shift.id}`;
         if (await alreadySent(userId, 'SHIFT', link)) continue;
         const res = await notify({
@@ -64,14 +62,17 @@ export const sendAppointmentReminders = async (now: Date = new Date()): Promise<
         scheduledAt: { gt: now, lte: new Date(now.getTime() + REMINDER_LEAD_MS) },
       },
       include: {
-        doctor: { select: { email: true } },
+        doctor: { select: { id: true, userId: true } },
         patient: { select: { name: true } },
       },
     });
     for (const appt of appointments ?? []) {
       try {
-        const userId = await findLoginId(appt.doctor.email);
-        if (!userId) continue;
+        const userId = appt.doctor.userId;
+        if (!userId) {
+          logger.warn({ staffId: appt.doctor.id, appointmentId: appt.id }, '[Reminders] appointment reminder skipped: doctor has no linked login');
+          continue;
+        }
         // scheduledAt in the link: a rescheduled appointment is reminded again.
         const link = `/appointments?reminder=${appt.id}-${appt.scheduledAt.getTime()}`;
         if (await alreadySent(userId, 'APPOINTMENT', link)) continue;

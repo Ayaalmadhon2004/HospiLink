@@ -25,8 +25,7 @@ export interface Appointment {
 }
 
 export interface CreateAppointmentData {
-  patientId?: string;   
-  patientName?: string;
+  patientId?: string;
   patientCode?: string;
   doctorId: string;
   scheduledAt: string;

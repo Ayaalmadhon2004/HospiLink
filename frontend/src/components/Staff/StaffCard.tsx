@@ -13,6 +13,7 @@ interface StaffMember {
   avatar?: string;
   phone?: string;
   isActive: boolean;
+  hasLogin?: boolean;
   shifts?: Shift[];
 }
 
@@ -68,6 +69,11 @@ export const StaffCard = ({ member }: StaffCardProps) => {
         >
           {statusLabel}
         </span>
+        {member.hasLogin === false && (
+          <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800" title={t('staff.noLoginHint')}>
+            {t('staff.noLogin')}
+          </span>
+        )}
       </div>
 
       {/* Contact Info */}

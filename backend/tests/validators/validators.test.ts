@@ -2,7 +2,7 @@ import { idSchema } from '../../src/validators/common.validator';
 import { createAppointmentSchema, updateAppointmentSchema } from '../../src/validators/appointment.validator';
 import { createBedSchema, updateBedSchema } from '../../src/validators/bed.validator';
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
-import { createStaffSchema, updateStaffSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
+import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
 import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
 import { createCallSchema, assignUnitSchema, updateUnitStatusSchema } from '../../src/validators/dispatch.validator';
 import { notificationsQuerySchema } from '../../src/validators/notification.validator';
@@ -22,14 +22,21 @@ describe('common', () => {
 describe('appointments', () => {
   const base = { doctorId: U1, scheduledAt: '2026-10-20T09:00:00.000Z', type: 'CONSULTATION' };
   it('accepts the payload the UI sends and strips unknown keys', () => {
-    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientName: 'Ann', patientCode: 'PT-1', department: 'ER', duration: 30, evil: 1 });
+    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientCode: 'PT-1', department: 'ER', duration: 30, evil: 1 });
     expect(r).not.toHaveProperty('evil');
     expect(r.duration).toBe(30);
   });
+  it('strips patientName (appointments never create patients) and requires patientId or patientCode', () => {
+    const r = createAppointmentSchema.parse({ ...base, patientId: U2, patientName: 'Ann' });
+    expect(r).not.toHaveProperty('patientName');
+    expect(createAppointmentSchema.safeParse({ ...base, patientCode: 'PT-1' }).success).toBe(true);
+    expect(createAppointmentSchema.safeParse({ ...base }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientName: 'Ann' }).success).toBe(false);
+  });
   it('rejects bad doctorId, date and duration', () => {
-    expect(createAppointmentSchema.safeParse({ ...base, doctorId: 'x' }).success).toBe(false);
-    expect(createAppointmentSchema.safeParse({ ...base, scheduledAt: 'nope' }).success).toBe(false);
-    expect(createAppointmentSchema.safeParse({ ...base, duration: 0 }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, doctorId: 'x' }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, scheduledAt: 'nope' }).success).toBe(false);
+    expect(createAppointmentSchema.safeParse({ ...base, patientId: U2, duration: 0 }).success).toBe(false);
     expect(createAppointmentSchema.safeParse({ doctorId: U1 }).success).toBe(false);
   });
   it('update strips patientName/patientCode (not columns)', () => {
@@ -134,5 +141,24 @@ describe('notifications & settings', () => {
     expect(updateSecuritySettingsSchema.safeParse({ twoFactorAuth: 'yes' }).success).toBe(false);
     expect(updateDisplaySettingsSchema.safeParse({ theme: 'dark', language: 'en', timezone: 'UTC' }).success).toBe(true);
     expect(updateDisplaySettingsSchema.safeParse({ theme: 'neon' }).success).toBe(false);
+  });
+});
+
+describe('staff login link', () => {
+  const staff = { name: 'Nour', email: 'Nour@H.com', role: 'Nurse', department: 'ER' };
+  it('createStaff accepts an optional system loginRole and rejects unknown ones', () => {
+    expect(createStaffSchema.parse({ ...staff, loginRole: 'NURSE' }).loginRole).toBe('NURSE');
+    expect(createStaffSchema.safeParse({ ...staff, loginRole: 'SUPERUSER' }).success).toBe(false);
+    expect(createStaffSchema.parse(staff)).not.toHaveProperty('loginRole');
+  });
+  it('clients can never set userId through create/update (stripped)', () => {
+    expect(createStaffSchema.parse({ ...staff, userId: U1 })).not.toHaveProperty('userId');
+    expect(updateStaffSchema.parse({ name: 'X', userId: U1, loginRole: 'ADMIN' })).toEqual({ name: 'X' });
+  });
+  it('staffLoginSchema takes a uuid or null', () => {
+    expect(staffLoginSchema.safeParse({ userId: U1 }).success).toBe(true);
+    expect(staffLoginSchema.safeParse({ userId: null }).success).toBe(true);
+    expect(staffLoginSchema.safeParse({ userId: 'abc' }).success).toBe(false);
+    expect(staffLoginSchema.safeParse({}).success).toBe(false);
   });
 });
