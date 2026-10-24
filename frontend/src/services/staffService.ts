@@ -11,7 +11,7 @@ export const getStaffById = (id: string) =>
   apiGet(`/staff/${id}`);
 
 // ─── NEW: Staff CRUD ───────────────────────────────────────────────
-export const createStaff = (data: { name: string; email: string; role: string; department: string; phone?: string; status?: string }) =>
+export const createStaff = (data: { name: string; email: string; role: string; department: string; phone?: string; status?: string; loginRole?: string }) =>
   apiPost('/staff', data);
 
 export const updateStaff = (id: string, data: Partial<{ name: string; email: string; role: string; department: string; phone: string; status: string }>) =>

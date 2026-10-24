@@ -1,11 +1,23 @@
 import { prismaMock } from '../mocks/prisma';
 import { mockRoomEmit } from '../mocks/io';
 import { mockRequest, mockResponse } from '../mocks/http';
+
+jest.mock('../../src/services/mailer', () => ({
+  sendMail: jest.fn().mockResolvedValue(undefined),
+  appLink: (path: string, token: string) => `https://app.test${path}#token=${token}`,
+}));
+jest.mock('../../src/services/authTokens', () => ({
+  issueAuthToken: jest.fn().mockResolvedValue('setup-token-0123456789abcdef'),
+  consumeAuthToken: jest.fn(),
+}));
+import { sendMail } from '../../src/services/mailer';
+import { issueAuthToken } from '../../src/services/authTokens';
 import {
   getStaff,
   getStaffById,
   createStaff,
   updateStaff,
+  setStaffLogin,
   deleteStaff,
   getShifts,
   createShift,
@@ -53,20 +65,148 @@ describe('staff.controller', () => {
   });
 
   describe('createStaff', () => {
-    it('ينشئ موظف جديد', async () => {
-      (prismaMock as any).staff.create.mockResolvedValue({ id: 's-new' });
-      const req = mockRequest({
-        body: { name: 'Nour', email: 'nour@hospilink.com', role: 'NURSE', department: 'ER', hospitalId: 'other-hospital' },
-      });
+    const flush = () => new Promise((r) => setImmediate(r));
+    const body = { name: 'Nour', email: 'nour@hospilink.com', role: 'Nurse', department: 'ER' };
+    beforeEach(() => {
+      (prismaMock as any).$transaction.mockImplementation(async (cb: any) => cb(prismaMock));
+      (sendMail as jest.Mock).mockClear();
+      (issueAuthToken as jest.Mock).mockClear();
+      (prismaMock as any).user.findUnique.mockResolvedValue(null);
+      (prismaMock as any).staff.create.mockImplementation(async ({ data }: any) => ({ id: 's-new', ...data }));
+    });
+
+    it('ينشئ موظف جديد بدون حساب دخول، و hospitalId من المستخدم مش من الـ body', async () => {
       const res = mockResponse();
 
-      await createStaff(req, res);
+      await createStaff(mockRequest({ body: { ...body, hospitalId: 'other-hospital' } }), res);
 
-      // hospitalId comes from the caller, never from the body
       expect((prismaMock as any).staff.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ name: 'Nour', hospitalId: 'hosp-1' }),
+        data: expect.objectContaining({ name: 'Nour', hospitalId: 'hosp-1', userId: null }),
       });
+      expect((prismaMock as any).user.create).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
+      const { data } = (res.json as jest.Mock).mock.calls[0][0];
+      expect(data.hasLogin).toBe(false);
+      expect(data).not.toHaveProperty('userId');
+    });
+
+    it('بيربط تلقائياً حساب موجود غير مربوط من نفس المستشفى', async () => {
+      (prismaMock as any).user.findUnique.mockResolvedValue({ id: 'u-1', hospitalId: 'hosp-1', staff: null });
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body }), res);
+
+      expect((prismaMock as any).staff.create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'u-1' }) });
+      expect((res.json as jest.Mock).mock.calls[0][0].data.hasLogin).toBe(true);
+    });
+
+    it('ما بيربط حساب من مستشفى ثاني (حتى لو نفس الإيميل)', async () => {
+      (prismaMock as any).user.findUnique.mockResolvedValue({ id: 'u-x', hospitalId: 'other', staff: null });
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body }), res);
+
+      expect((prismaMock as any).staff.create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: null }) });
+    });
+
+    it('مع loginRole بينشئ حساب ACTIVE ويربطه ويرسل رابط تعيين كلمة المرور', async () => {
+      (prismaMock as any).user.create.mockResolvedValue({ id: 'u-new' });
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body: { ...body, loginRole: 'DOCTOR' } }), res);
+      await flush();
+
+      const userData = (prismaMock as any).user.create.mock.calls[0][0].data;
+      expect(userData).toMatchObject({
+        email: 'nour@hospilink.com', role: 'DOCTOR', accountStatus: 'ACTIVE', hospitalId: 'hosp-1', department: 'ER',
+      });
+      expect(userData.emailVerifiedAt).toBeInstanceOf(Date);
+      expect(userData.password).toMatch(/^\$2[aby]\$/); // hashed random password, never plain
+      expect((prismaMock as any).staff.create).toHaveBeenCalledWith({ data: expect.objectContaining({ userId: 'u-new' }) });
+      expect(issueAuthToken).toHaveBeenCalledWith('u-new', 'PASSWORD_RESET', expect.any(Number));
+      expect(sendMail).toHaveBeenCalledWith('nour@hospilink.com', expect.any(String), expect.stringContaining('/reset-password#token='));
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it('مع loginRole: 409 لو الإيميل لحساب بمستشفى ثاني، ولا ينشئ شي', async () => {
+      (prismaMock as any).user.findUnique.mockResolvedValue({ id: 'u-x', hospitalId: 'other', staff: null });
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body: { ...body, loginRole: 'NURSE' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect((prismaMock as any).staff.create).not.toHaveBeenCalled();
+      expect((prismaMock as any).user.create).not.toHaveBeenCalled();
+    });
+
+    it('مع loginRole: 409 لو الحساب مربوط أصلاً بموظف ثاني', async () => {
+      (prismaMock as any).user.findUnique.mockResolvedValue({ id: 'u-1', hospitalId: 'hosp-1', staff: { id: 's-other' } });
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body: { ...body, loginRole: 'NURSE' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect((prismaMock as any).staff.create).not.toHaveBeenCalled();
+    });
+
+    it('409 لو الإيميل مستخدم لموظف ثاني (unique)', async () => {
+      (prismaMock as any).staff.create.mockRejectedValue(Object.assign(new Error('dup'), { code: 'P2002' }));
+      const res = mockResponse();
+
+      await createStaff(mockRequest({ body }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+  });
+
+  describe('setStaffLogin', () => {
+    it('404 لموظف من مستشفى ثاني', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+
+      await setStaffLogin(mockRequest({ params: { id: 's1' }, body: { userId: 'u1' } }), res);
+
+      expect((prismaMock as any).staff.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 's1', hospitalId: 'hosp-1' } }));
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect((prismaMock as any).staff.update).not.toHaveBeenCalled();
+    });
+
+    it('404 لحساب من مستشفى ثاني', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1' });
+      (prismaMock as any).user.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+
+      await setStaffLogin(mockRequest({ params: { id: 's1' }, body: { userId: 'foreign' } }), res);
+
+      expect((prismaMock as any).user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1' } }));
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it('409 لو الحساب مربوط بموظف ثاني', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1' });
+      (prismaMock as any).user.findFirst.mockResolvedValue({ id: 'u1', staff: { id: 's2' } });
+      const res = mockResponse();
+
+      await setStaffLogin(mockRequest({ params: { id: 's1' }, body: { userId: 'u1' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect((prismaMock as any).staff.update).not.toHaveBeenCalled();
+    });
+
+    it('بيربط الحساب، وبيفك الربط بـ null', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1' });
+      (prismaMock as any).user.findFirst.mockResolvedValue({ id: 'u1', staff: null });
+      (prismaMock as any).staff.update.mockImplementation(async ({ data }: any) => ({ id: 's1', ...data }));
+
+      const res1 = mockResponse();
+      await setStaffLogin(mockRequest({ params: { id: 's1' }, body: { userId: 'u1' } }), res1);
+      expect((prismaMock as any).staff.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { userId: 'u1' } });
+      expect((res1.json as jest.Mock).mock.calls[0][0].data).toMatchObject({ hasLogin: true });
+
+      const res2 = mockResponse();
+      await setStaffLogin(mockRequest({ params: { id: 's1' }, body: { userId: null } }), res2);
+      expect((prismaMock as any).staff.update).toHaveBeenLastCalledWith({ where: { id: 's1' }, data: { userId: null } });
+      expect((res2.json as jest.Mock).mock.calls[0][0].data).toMatchObject({ hasLogin: false });
     });
   });
 
@@ -80,6 +220,33 @@ describe('staff.controller', () => {
       await updateStaff(req, res);
 
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('تصحيح إيميل موظف بدون حساب بيربطه بحساب مطابق من نفس المستشفى', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1', userId: null });
+      (prismaMock as any).user.findFirst.mockResolvedValue({ id: 'u-fix' });
+      (prismaMock as any).staff.update.mockImplementation(async ({ data }: any) => ({ id: 's1', ...data }));
+      const res = mockResponse();
+
+      await updateStaff(mockRequest({ params: { id: 's1' }, body: { email: 'right@h.com' } }), res);
+
+      expect((prismaMock as any).user.findFirst).toHaveBeenCalledWith({
+        where: { hospitalId: 'hosp-1', email: { equals: 'right@h.com', mode: 'insensitive' }, staff: null },
+        select: { id: true },
+      });
+      expect((prismaMock as any).staff.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { email: 'right@h.com', userId: 'u-fix' } });
+    });
+
+    it('تغيير إيميل موظف مربوط ما بيغيّر الربط', async () => {
+      (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1', userId: 'u-1' });
+      (prismaMock as any).staff.update.mockImplementation(async ({ data }: any) => ({ id: 's1', userId: 'u-1', ...data }));
+      const res = mockResponse();
+
+      await updateStaff(mockRequest({ params: { id: 's1' }, body: { email: 'renamed@h.com' } }), res);
+
+      expect((prismaMock as any).user.findFirst).not.toHaveBeenCalled();
+      expect((prismaMock as any).staff.update).toHaveBeenCalledWith({ where: { id: 's1' }, data: { email: 'renamed@h.com' } });
+      expect((res.json as jest.Mock).mock.calls[0][0].data.hasLogin).toBe(true);
     });
 
     it('يرجع 404 لموظف من مستشفى ثاني', async () => {

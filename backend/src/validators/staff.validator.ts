@@ -24,7 +24,13 @@ const staffFields = {
   status: staffStatus.optional(),
 };
 
-export const createStaffSchema = z.object(staffFields).transform(withIsActive);
+// loginRole (system role) creates a login for the new staff member and emails them a set-password link.
+const loginRole = z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']);
+
+export const createStaffSchema = z.object({ ...staffFields, loginRole: loginRole.optional() }).transform(withIsActive);
+
+// Link (userId) or unlink (null) the login of a staff member.
+export const staffLoginSchema = z.object({ userId: idSchema.nullable() });
 export const updateStaffSchema = z
   .object({
     ...staffFields,

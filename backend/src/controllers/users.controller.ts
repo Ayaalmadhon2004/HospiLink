@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
+import { linkStaffToUserByEmail } from '../services/staffLink';
 import type { Prisma } from '@prisma/client';
 
 const USER_SELECT = {
@@ -66,6 +67,7 @@ export const inviteUser = async (req: Request, res: Response) => {
       },
       select: USER_SELECT,
     });
+    await linkStaffToUserByEmail(user);
     res.status(201).json({ success: true, data: user });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to create user');
@@ -92,6 +94,7 @@ export const approveUser = async (req: Request, res: Response) => {
       data: { accountStatus: 'ACTIVE', role, ...(department ? { department } : {}) },
       select: USER_SELECT,
     });
+    await linkStaffToUserByEmail(user);
     res.status(200).json({ success: true, data: user });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to approve user');

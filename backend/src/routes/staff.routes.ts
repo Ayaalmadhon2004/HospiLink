@@ -6,6 +6,7 @@ import {
   createStaff,
   updateStaff,
   deleteStaff,
+  setStaffLogin,
   getShifts,
   createShift,
   updateShift,
@@ -16,7 +17,7 @@ import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { idParams } from '../validators/common.validator';
-import { createStaffSchema, updateStaffSchema, createShiftSchema, updateShiftSchema, shiftQuerySchema, shiftTimelineQuerySchema } from '../validators/staff.validator';
+import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema, shiftQuerySchema, shiftTimelineQuerySchema } from '../validators/staff.validator';
 
 const router = Router();
 
@@ -30,6 +31,9 @@ router.post('/', protect, authorize('ADMIN'), validate({ body: createStaffSchema
 
 // PUT /api/staff/:id - Update staff (ADMIN only)
 router.put('/:id', protect, authorize('ADMIN'), validate({ params: idParams, body: updateStaffSchema }), logActivity('UPDATE_STAFF'), updateStaff);
+
+// PUT /api/staff/:id/login - Link/unlink the staff member's login (ADMIN only)
+router.put('/:id/login', protect, authorize('ADMIN'), validate({ params: idParams, body: staffLoginSchema }), logActivity('LINK_STAFF_LOGIN'), setStaffLogin);
 
 // DELETE /api/staff/:id - Delete staff (ADMIN only)
 router.delete('/:id', protect, authorize('ADMIN'), validate({ params: idParams }), logActivity('DELETE_STAFF'), deleteStaff);

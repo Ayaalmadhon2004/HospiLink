@@ -21,6 +21,7 @@ export const StaffModal = ({ isOpen, onClose, onSuccess, initialData }: StaffMod
   const handleSubmit = async (values: StaffFormValues) => {
     const payload = {
       ...values,
+      loginRole: mode === 'create' ? values.loginRole || undefined : undefined,
       phone: values.phone || undefined,
       shiftStart: values.shiftStart || undefined,
       shiftEnd: values.shiftEnd || undefined,
@@ -40,7 +41,8 @@ export const StaffModal = ({ isOpen, onClose, onSuccess, initialData }: StaffMod
       onClose={onClose}
       title={t('staff.modal.title')}
       subtitle={mode === 'edit' ? t('staff.modal.editSubtitle') : t('staff.modal.createSubtitle')}
-      fields={staffFields}
+      // Creating a login only makes sense when adding a staff member; the link is managed by the server afterwards.
+      fields={mode === 'create' ? staffFields : staffFields.filter((f) => f.name !== 'loginRole')}
       initialValues={initialData}
       onSubmit={handleSubmit}
       submitLabel={mode === 'edit' ? t('staff.modal.save') : t('staff.modal.add')}

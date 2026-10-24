@@ -19,7 +19,7 @@ const handleError = (res: Response, error: unknown, message: string) => {
 const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }) =>
   `${a.patient?.name ?? 'Patient'} on ${new Date(a.scheduledAt).toISOString().slice(0, 16).replace('T', ' ')} UTC`;
 
-// Appointment.doctorId points at Staff; the matching login (User) shares the same email.
+// Appointment.doctorId points at Staff; its login is Staff.userId (an explicit link, not an email match).
 const notifyAppointmentDoctor = async (
   appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
   title: string,
@@ -28,16 +28,19 @@ const notifyAppointmentDoctor = async (
   try {
     const message = describeAppointment(appointment);
     const doctorStaffId = appointment.doctorId;
-    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { email: true } });
+    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { userId: true } });
     if (!staff) return;
-    const user = await prisma.user.findUnique({ where: { email: staff.email }, select: { id: true } });
-    if (!user) return;
+    if (!staff.userId) {
+      // Not silent: an admin can link or create the login from the staff directory.
+      logger.warn({ staffId: doctorStaffId }, 'Appointment notification skipped: staff member has no linked login');
+      return;
+    }
     await notify({
       type: 'APPOINTMENT',
       title,
       message,
       link: '/appointments',
-      recipients: { userIds: [user.id], excludeUserId: actorId, scopeUserId: actorId },
+      recipients: { userIds: [staff.userId], excludeUserId: actorId, scopeUserId: actorId },
     });
   } catch (error) {
     logger.error({ err: error }, 'Appointment notification failed');

@@ -21,6 +21,8 @@ export interface StaffMember {
   avatar?: string | null;
   phone?: string | null;
   isActive?: boolean;
+  /** False when no login is linked: the member cannot sign in and gets no appointment/shift notifications. */
+  hasLogin?: boolean;
   status?: string;
   shifts?: Shift[];
   createdAt?: string;

@@ -160,6 +160,8 @@ export interface StaffFormValues {
   status: 'ACTIVE' | 'ON_LEAVE' | 'INACTIVE';
   shiftStart: string;
   shiftEnd: string;
+  /** Create mode only: also creates a login with this system role and emails a set-password link. */
+  loginRole?: string;
 }
 
 const STAFF_ROLE_OPTIONS = [
@@ -172,6 +174,13 @@ const STAFF_ROLE_OPTIONS = [
   { label: 'staff.roles.Nurse', value: 'Nurse' },
   { label: 'staff.roles.Admin', value: 'Admin' },
   { label: 'staff.roles.Technician', value: 'Technician' },
+];
+
+const STAFF_LOGIN_ROLE_OPTIONS = [
+  { label: 'staff.loginRoles.DOCTOR', value: 'DOCTOR' },
+  { label: 'staff.loginRoles.NURSE', value: 'NURSE' },
+  { label: 'staff.loginRoles.DISPATCHER', value: 'DISPATCHER' },
+  { label: 'staff.loginRoles.ADMIN', value: 'ADMIN' },
 ];
 
 const STAFF_STATUS_OPTIONS = [
@@ -189,6 +198,15 @@ export const staffFields: FieldConfig<StaffFormValues>[] = [
   { name: 'status', label: 'forms.staff.status', type: 'select', required: true, options: STAFF_STATUS_OPTIONS },
   { name: 'shiftStart', label: 'forms.staff.shiftStart', type: 'time', colSpan: 1 },
   { name: 'shiftEnd', label: 'forms.staff.shiftEnd', type: 'time', colSpan: 1 },
+  {
+    name: 'loginRole',
+    label: 'forms.staff.loginRole',
+    type: 'select',
+    options: STAFF_LOGIN_ROLE_OPTIONS,
+    colSpan: 2,
+    placeholder: 'forms.staff.loginRoleNone',
+    helperText: 'forms.staff.loginRoleHelp',
+  },
 ];
 
 export const staffValidationSchema = z.object({
@@ -200,6 +218,7 @@ export const staffValidationSchema = z.object({
   status: z.enum(['ACTIVE', 'ON_LEAVE', 'INACTIVE']),
   shiftStart: z.string().optional(),
   shiftEnd: z.string().optional(),
+  loginRole: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']).optional().or(z.literal('')),
 });
 
 // ─── 5. INCIDENT CONFIG (FIXED) ────────────────────────────────────

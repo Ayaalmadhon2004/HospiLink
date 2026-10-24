@@ -2,7 +2,7 @@ import { idSchema } from '../../src/validators/common.validator';
 import { createAppointmentSchema, updateAppointmentSchema } from '../../src/validators/appointment.validator';
 import { createBedSchema, updateBedSchema } from '../../src/validators/bed.validator';
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
-import { createStaffSchema, updateStaffSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
+import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
 import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
 import { createCallSchema, assignUnitSchema, updateUnitStatusSchema } from '../../src/validators/dispatch.validator';
 import { notificationsQuerySchema } from '../../src/validators/notification.validator';
@@ -141,5 +141,24 @@ describe('notifications & settings', () => {
     expect(updateSecuritySettingsSchema.safeParse({ twoFactorAuth: 'yes' }).success).toBe(false);
     expect(updateDisplaySettingsSchema.safeParse({ theme: 'dark', language: 'en', timezone: 'UTC' }).success).toBe(true);
     expect(updateDisplaySettingsSchema.safeParse({ theme: 'neon' }).success).toBe(false);
+  });
+});
+
+describe('staff login link', () => {
+  const staff = { name: 'Nour', email: 'Nour@H.com', role: 'Nurse', department: 'ER' };
+  it('createStaff accepts an optional system loginRole and rejects unknown ones', () => {
+    expect(createStaffSchema.parse({ ...staff, loginRole: 'NURSE' }).loginRole).toBe('NURSE');
+    expect(createStaffSchema.safeParse({ ...staff, loginRole: 'SUPERUSER' }).success).toBe(false);
+    expect(createStaffSchema.parse(staff)).not.toHaveProperty('loginRole');
+  });
+  it('clients can never set userId through create/update (stripped)', () => {
+    expect(createStaffSchema.parse({ ...staff, userId: U1 })).not.toHaveProperty('userId');
+    expect(updateStaffSchema.parse({ name: 'X', userId: U1, loginRole: 'ADMIN' })).toEqual({ name: 'X' });
+  });
+  it('staffLoginSchema takes a uuid or null', () => {
+    expect(staffLoginSchema.safeParse({ userId: U1 }).success).toBe(true);
+    expect(staffLoginSchema.safeParse({ userId: null }).success).toBe(true);
+    expect(staffLoginSchema.safeParse({ userId: 'abc' }).success).toBe(false);
+    expect(staffLoginSchema.safeParse({}).success).toBe(false);
   });
 });

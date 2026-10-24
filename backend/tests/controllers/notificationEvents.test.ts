@@ -105,13 +105,12 @@ describe('notification events', () => {
   describe('appointments', () => {
     const apt = { id: 'a1', doctorId: 's1', scheduledAt: new Date('2026-10-22T09:00:00Z'), patient: { name: 'Sam' } };
     beforeEach(() => {
-      prismaMock.staff.findUnique.mockResolvedValue({ email: 'doc@h.com' } as any);
-      prismaMock.user.findUnique.mockImplementation(((args: any) =>
-        Promise.resolve(args.where.email ? { id: 'doc-user' } : { hospitalId: 'h1' })) as any);
+      prismaMock.staff.findUnique.mockResolvedValue({ userId: 'doc-user' } as any);
+      prismaMock.user.findUnique.mockResolvedValue({ hospitalId: 'h1' } as any);
       prismaMock.user.findMany.mockResolvedValue([{ id: 'doc-user', settings: null }] as any);
     });
 
-    it('create notifies the doctor (Staff -> User by email)', async () => {
+    it('create notifies the doctor (Staff.userId)', async () => {
       prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
       prismaMock.appointment.findMany.mockResolvedValue([]);
@@ -150,8 +149,8 @@ describe('notification events', () => {
       });
     });
 
-    it('does not notify when the doctor has no login', async () => {
-      prismaMock.user.findUnique.mockResolvedValue(null);
+    it('does not notify (and does not guess by email) when the doctor has no linked login', async () => {
+      prismaMock.staff.findUnique.mockResolvedValue({ userId: null } as any);
       prismaMock.appointment.findFirst.mockResolvedValue({ id: 'a1' } as any);
       prismaMock.appointment.update.mockResolvedValue(apt as any);
       await deleteAppointment(mockRequest({ user: actor, params: { id: 'a1' } }), mockResponse());

@@ -53,6 +53,8 @@ model User {
   twoFactorFailures    Int       @default(0)
   twoFactorLockedUntil DateTime?
   recoveryCodes        TwoFactorRecoveryCode[]
+  // Staff record (doctor, nurse...) of this login, if any. The link is explicit, never matched by email at runtime.
+  staff                Staff?
 }
 
 model TwoFactorRecoveryCode {
@@ -226,9 +228,12 @@ model Staff {
   hospitalId   String
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+  // Login (User) of this staff member. Appointment/shift notifications go to it; null = no login, nobody is notified.
+  userId       String?       @unique
   appointments Appointment[]
   shifts       Shift[]
   hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([hospitalId])
 }

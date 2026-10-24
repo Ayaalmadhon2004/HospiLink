@@ -290,7 +290,10 @@
       "department": "Department",
       "status": "Status",
       "shiftStart": "Shift Start",
-      "shiftEnd": "Shift End"
+      "shiftEnd": "Shift End",
+      "loginRole": "Login account",
+      "loginRoleNone": "No login account",
+      "loginRoleHelp": "Optional. Creates a login with this access level and emails a set-password link."
     },
     "incident": {
       "title": "Incident Title",
@@ -691,7 +694,15 @@
     },
     "timelineSection": "Today's shift timeline",
     "timelineError": "Failed to load the shift timeline.",
-    "cardsLabel": "Staff cards"
+    "cardsLabel": "Staff cards",
+    "noLogin": "No login",
+    "noLoginHint": "No linked login: this person cannot sign in and gets no appointment or shift notifications.",
+    "loginRoles": {
+      "DOCTOR": "Doctor",
+      "NURSE": "Nurse",
+      "DISPATCHER": "Dispatcher",
+      "ADMIN": "Administrator"
+    }
   },
   "dispatch": {
     "dismiss": "Dismiss notification",
