@@ -65,7 +65,8 @@ export const attachDispatchEvents = (socket: Socket) => {
       const { count } = await prisma.dispatchUnit.updateMany({
         where: { id: unitId, hospitalId },
         data: {
-          location: JSON.stringify({ lat: d.lat, lng: d.lng }),
+          lat: d.lat,
+          lng: d.lng,
           status: d.status as UnitStatus | undefined,
           lastUpdated: new Date(),
         },

@@ -23,12 +23,10 @@ export interface DispatchUnit {
   status: UnitStatus;
   currentCall?: string;
   destination?: string;
-  crew: string[];
+  crew: Array<{ id: string; name: string; role: string }>;
   eta?: number;            // minutes
-  location?: {
-    lat: number;
-    lng: number;
-  };
+  lat?: number | null;
+  lng?: number | null;
   department: string;
   lastUpdated: Date;
 }

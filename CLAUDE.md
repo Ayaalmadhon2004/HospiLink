@@ -95,6 +95,10 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Dispatch lifecycle: the unit <-> call link changes ONLY through `POST /dispatch/calls/:id/assign`, `/complete` and `/cancel` (the last two close the call and release the unit in one transaction;
   `PUT /dispatch/units/:id/status` never takes a `callId` and refuses AVAILABLE/OFF_DUTY for a unit that is on a call; EN_ROUTE/ON_SCENE are mirrored on the call). `DispatchCall.assignedUnitId` is history only (not unique).
   Units: `POST/PUT/DELETE /dispatch/units` (delete = ADMIN, refused while on a call). Socket `unit-location-update` (DISPATCHER/ADMIN) is broadcast as `unit-location` to the dispatch and unit rooms.
+- Doctors: `Patient.doctorId` and `Appointment.doctorId` both reference `Staff` (the login, if any, is `Staff.userId`; `notify` recipients use it). Never point a doctor FK at `User`.
+- Patients are soft-deleted: `DELETE /patients/:id` (ADMIN) sets `Patient.deletedAt` and frees the bed; a DB trigger rejects hard deletes. Every read of patients (and of relations scoped through `patient: { ... }`) must include `deletedAt: null`; only `nextPatientNumber` counts deleted rows (codes stay unique).
+- Referential actions are explicit in `schema.prisma`: Bed/Incident/Staff -> Hospital and Bed -> Ward are `Restrict`, `Shift -> Staff` cascades, `AuditLog.userId` is nullable + `SetNull` (the trail outlives users).
+- Dispatch units keep their position in `lat`/`lng` (floats) and their crew in `Staff.dispatchUnitId` (API: `crew: [{id,name,role}]` out, `crewIds` in).
 - Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
   managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
   and a failed threshold lookup is logged as an error and also falls back to the defaults. A reading can therefore never be silently judged "not critical" for lack of configuration.
@@ -132,11 +136,11 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## Frontend conventions (React)
 
-- Function components + hooks only. Pages are default or named exports lazy-loaded in `App.tsx`;
-  add new pages there inside `PrivateRoute` and in `Sidebar`.
+- Function components + hooks only. Pages are default or named exports lazy-loaded in `App.tsx`. The URL is the only navigation state: a section is a route inside the `AppLayout` layout route
+  (`components/Layout`), and its sidebar entry comes from `configs/navigation.ts` (never a tab state or cookie). Full-page screens (patient detail/edit) are routes outside the layout.
 - Server state through React Query; mutations via `hooks/useCrud.ts` (optimistic updates, rollback on error).
-- All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiDelete`). Never call axios/fetch directly
-  in components. Interceptor attaches Bearer token and normalises error messages.
+- All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiPatch/apiDelete/apiUpload`, all generic over the response type). Never call axios/fetch directly
+  in components. Failures reject with `ApiError` (`message` ready to show, `code`, `status`; see `services/normalizeApiError.ts`); read the code with `getErrorCode(err)`.
 - Real-time: one `use*Socket` hook per domain; always clean up listeners in the effect cleanup.
 - Forms: define fields declaratively in `configs/entityConfigs.ts` and render with `components/Form/*`
   instead of hand-writing new modal forms.
@@ -145,7 +149,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Keep bundles small: lazy-load pages and heavy libs; `vite.config.ts` has manualChunks for react/query/charts/icons.
 - Accessibility: labels on inputs, aria attributes on icon-only buttons, sufficient colour contrast
   (Lighthouse a11y is ~93; color-contrast is the known failing audit).
-- TypeScript strict; avoid `any`, type API responses. Lint must pass before merging.
+- TypeScript strict; type API responses. ESLint forbids `any`, `@ts-ignore`, `console.*` (use `utils/logger`) and ALL inline `eslint-disable` comments (`noInlineConfig`): restructure instead
+  (server data -> `useQuery`; reset-on-open -> mount the form per opening; hooks/constants next to a provider -> their own file). Lint must pass before merging.
+- Components over ~250 lines get split: state/effects in a hook (`hooks/use*`), pure logic in `utils/` or a `*State.ts`, markup in small components.
 
 ## How the two sides connect
 

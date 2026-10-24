@@ -31,6 +31,7 @@ export interface RecentPatient {
   name: string;
   status: 'OBSERVATION' | 'CRITICAL' | 'STABLE' | 'DISCHARGED';
   physicianName: string;
+  department?: string;
   bed: { wardName: string; bedNumber: string } | null;
 }
 

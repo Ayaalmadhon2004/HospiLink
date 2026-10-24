@@ -1,6 +1,7 @@
 // pages/IncidentsPage.tsx
 import { logger } from '../utils/logger';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle,
@@ -20,9 +21,13 @@ import {
   updateIncidentStatus,
 } from '../services/incidentsService';
 import { useIncidentsSocket } from '../hooks/useIncidentsSocket';
+import { useNow } from '../hooks/useNow';
 import { IncidentModal } from '../components/IncidentModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+
+const INCIDENTS_KEY = ['incidents'];
+const RELATIVE_TIME_TICK_MS = 60_000;
 
 interface Incident {
   id: string;
@@ -62,11 +67,11 @@ const statusColors = {
 
 export const IncidentsPage = () => {
   const { t } = useTranslation();
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSeverity, setFilterSeverity] = useState('');
   const [updatingStatus, setUpdatingStatus] = useState<string | null>(null);
+  const now = useNow(RELATIVE_TIME_TICK_MS);
 
   // Shared CRUD hooks
   const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } =
@@ -80,48 +85,25 @@ export const IncidentsPage = () => {
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } =
     useCrudModal<Incident>();
 
-  // Refs
-  const isFetching = useRef(false);
-  const lastSocketId = useRef<string | null>(null);
-  const lastFetchTime = useRef<number>(0);
-
   const latestUpdate = useIncidentsSocket();
 
-  const fetchIncidents = useCallback(async () => {
-    const now = Date.now();
-    if (isFetching.current || now - lastFetchTime.current < 5000) return;
+  const { data: incidents = [], isPending: loading } = useQuery({
+    queryKey: INCIDENTS_KEY,
+    queryFn: async () => (await getIncidents())?.data || [],
+  });
+  const refreshIncidents = useCallback(
+    () => queryClient.invalidateQueries({ queryKey: INCIDENTS_KEY }),
+    [queryClient],
+  );
 
-    isFetching.current = true;
-    lastFetchTime.current = now;
-
-    try {
-      setLoading(true);
-      const res = await getIncidents();
-      setIncidents(res?.data || []);
-    } catch (err) {
-      logger.error('Failed to fetch incidents:', err);
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  }, []);
-
+  // A socket update (created / changed / resolved elsewhere) refetches the list.
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    fetchIncidents();
-  }, [fetchIncidents]);
-
-  useEffect(() => {
-    if (!latestUpdate) return;
-    const updateId = (latestUpdate as { id?: string } | null)?.id || JSON.stringify(latestUpdate);
-    if (updateId === lastSocketId.current) return;
-    lastSocketId.current = updateId;
-    fetchIncidents();
-  }, [latestUpdate, fetchIncidents]);
+    if (latestUpdate) void refreshIncidents();
+  }, [latestUpdate, refreshIncidents]);
 
   const handleModalSuccessWithRefresh = () => {
     handleModalSuccess();
-    fetchIncidents();
+    void refreshIncidents();
   };
 
   // ✅ NEW: Update status + progress
@@ -133,7 +115,7 @@ export const IncidentsPage = () => {
     setUpdatingStatus(id);
     try {
       await updateIncidentStatus(id, newStatus, progress);
-      fetchIncidents();
+      void refreshIncidents();
     } catch (err) {
       logger.error('Failed to update status:', err);
     } finally {
@@ -151,8 +133,7 @@ export const IncidentsPage = () => {
   });
 
   const timeAgo = (dateStr: string) => {
-    // eslint-disable-next-line react-hooks/purity -- relative-time label is intentionally computed from the current time at render
-    const diff = Date.now() - new Date(dateStr).getTime();
+    const diff = now - new Date(dateStr).getTime();
     const mins = Math.floor(diff / 60000);
     if (mins < 60) return t('incidents.minutesAgo', { count: mins });
     const hours = Math.floor(mins / 60);

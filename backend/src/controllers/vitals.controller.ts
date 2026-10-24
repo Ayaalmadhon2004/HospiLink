@@ -64,7 +64,7 @@ const checkCriticalVitals = async (
 const escalatePatient = async (patient: { id: string; hospitalId: string }, alertType: string | null): Promise<boolean> => {
   try {
     const { count } = await prisma.patient.updateMany({
-      where: { id: patient.id, hospitalId: patient.hospitalId, status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
+      where: { id: patient.id, hospitalId: patient.hospitalId, deletedAt: null, status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
       data: { status: 'CRITICAL' },
     });
     if (count === 0) return false;
@@ -81,7 +81,7 @@ const escalatePatient = async (patient: { id: string; hospitalId: string }, aler
 
 // Critical vitals go to the assigned doctor plus doctors/nurses of the patient's department.
 const notifyCriticalVitals = (
-  patient: { id: string; name?: string | null; department: string; doctorId?: string | null; hospitalId: string },
+  patient: { id: string; name?: string | null; department: string; doctor?: { userId: string | null } | null; hospitalId: string },
   alertType: string | null,
   actorId?: string
 ) =>
@@ -93,7 +93,8 @@ const notifyCriticalVitals = (
     recipients: {
       roles: ['DOCTOR', 'NURSE'],
       department: patient.department,
-      userIds: patient.doctorId ? [patient.doctorId] : [],
+      // Patient.doctor is a Staff record: its login (if any) is Staff.userId.
+      userIds: patient.doctor?.userId ? [patient.doctor.userId] : [],
       hospitalId: patient.hospitalId,
       scopeUserId: actorId,
     },
@@ -107,8 +108,8 @@ export const recordVitals = async (req: Request, res: Response) => {
     if (invalid.length) return invalidMetricsResponse(res, invalid);
 
     const patient = await prisma.patient.findFirst({
-      where: { id: patientId as string, hospitalId: hospitalIdOf(req) },
-      select: { id: true, name: true, department: true, doctorId: true, hospitalId: true },
+      where: { id: patientId as string, hospitalId: hospitalIdOf(req), deletedAt: null },
+      select: { id: true, name: true, department: true, doctor: { select: { userId: true } }, hospitalId: true },
     });
 
     if (!patient) {
@@ -159,7 +160,7 @@ export const getVitals = async (req: Request, res: Response) => {
     const patientId = typeof req.query.patientId === 'string' ? req.query.patientId : undefined;
     const critical = req.query.critical;
 
-    const where: Prisma.PatientVitalsWhereInput = { patient: { hospitalId: hospitalIdOf(req) } };
+    const where: Prisma.PatientVitalsWhereInput = { patient: { hospitalId: hospitalIdOf(req), deletedAt: null } };
     if (patientId) where.patientId = patientId;
     if (critical === 'true') where.isCritical = true;
 
@@ -193,7 +194,7 @@ export const getCriticalAlerts = async (req: Request, res: Response) => {
 
     const where: Prisma.PatientVitalsWhereInput = {
       isCritical: true,
-      patient: { hospitalId: hospitalIdOf(req), ...(department ? { department } : {}) },
+      patient: { hospitalId: hospitalIdOf(req), deletedAt: null, ...(department ? { department } : {}) },
     };
 
     const alerts = await prisma.patientVitals.findMany({
@@ -219,7 +220,7 @@ export const getVitalsById = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const vitals = await prisma.patientVitals.findFirst({
-      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
+      where: { id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
       include: {
         patient: {
           select: { name: true, patientCode: true, department: true },
@@ -249,8 +250,8 @@ export const updateVitals = async (req: Request, res: Response) => {
     if ('notes' in body) updateData.notes = body.notes;
 
     const currentVitals = await prisma.patientVitals.findFirst({
-      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
-      include: { patient: true },
+      where: { id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
+      include: { patient: { include: { doctor: { select: { userId: true } } } } },
     });
 
     if (!currentVitals) {
@@ -296,7 +297,7 @@ export const deleteVitals = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const existing = await prisma.patientVitals.findFirst({
-      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
+      where: { id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
       select: { id: true },
     });
     if (!existing) return res.status(404).json({ success: false, code: 'VITALS_NOT_FOUND', message: 'Vitals entry not found' });

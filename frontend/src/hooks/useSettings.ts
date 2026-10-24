@@ -1,6 +1,6 @@
 // frontend/src/hooks/useSettings.ts
 // Thin wrapper over SettingsProvider (React Query); kept so pages keep the same API.
-import { useSettingsContext } from '../contexts/SettingsContext';
+import { useSettingsContext } from '../contexts/settingsContext';
 
 export type {
   ProfileSettings,
@@ -8,7 +8,7 @@ export type {
   SecuritySettings,
   DisplaySettings,
   UserSettings,
-} from '../contexts/SettingsContext';
+} from '../contexts/settingsContext';
 
 const useSettings = () => useSettingsContext();
 

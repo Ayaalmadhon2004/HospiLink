@@ -28,7 +28,7 @@ describe('appointments.controller', () => {
 
       const whereArg = (prismaMock.appointment.findMany.mock.calls[0][0] as any).where;
       expect(whereArg).toEqual({
-        patient: { hospitalId: 'hosp-1' },
+        patient: { hospitalId: 'hosp-1', deletedAt: null },
         doctorId: 'doc-1',
         status: 'SCHEDULED',
         department: 'ER',
@@ -61,7 +61,7 @@ describe('appointments.controller', () => {
       await getAppointmentById(req, res);
 
       expect(prismaMock.appointment.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'nope', patient: { hospitalId: 'hosp-1' } } })
+        expect.objectContaining({ where: { id: 'nope', patient: { hospitalId: 'hosp-1', deletedAt: null } } })
       );
       expect(res.status).toHaveBeenCalledWith(404);
     });
@@ -106,7 +106,7 @@ describe('appointments.controller', () => {
 
       await createAppointment(req, res);
 
-      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-p', hospitalId: 'hosp-1' } });
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-p', hospitalId: 'hosp-1', deletedAt: null } });
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.appointment.create).not.toHaveBeenCalled();
     });
@@ -155,7 +155,7 @@ describe('appointments.controller', () => {
         res
       );
 
-      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { patientCode: 'PT-7', hospitalId: 'hosp-1' } });
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith({ where: { patientCode: 'PT-7', hospitalId: 'hosp-1', deletedAt: null } });
       expect(prismaMock.appointment.create).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ patientId: 'p9' }) })
       );

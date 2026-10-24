@@ -27,8 +27,11 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   const { t } = useTranslation();
   const [bedNumber, setBedNumber] = useState(bed?.bedNumber || '');
   const [wardId, setWardId] = useState(bed?.wardId || '');
-  const [status, setStatus] = useState<BedStatus>(bed?.status || 'AVAILABLE');
+  const [chosenStatus, setChosenStatus] = useState<BedStatus>(bed?.status || 'AVAILABLE');
   const [selectedPatientId, setSelectedPatientId] = useState(bed?.patientId || '');
+  // The server enforces OCCUPIED <=> has a patient: a patient makes the bed OCCUPIED, and without one it can only be
+  // AVAILABLE, CLEANING or MAINTENANCE.
+  const status: BedStatus = selectedPatientId ? 'OCCUPIED' : chosenStatus === 'OCCUPIED' ? 'AVAILABLE' : chosenStatus;
   const [wards, setWards] = useState<Ward[]>([]);
   const [saving, setSaving] = useState(false);
   const [toasts, setToasts] = useState<Toast[]>([]);
@@ -60,17 +63,6 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     };
     fetchWards();
   }, []);
-
-  // Auto-set status based on patient selection
-  useEffect(() => {
-    if (selectedPatientId) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-      setStatus('OCCUPIED');
-    } else {
-      // No patient: the bed cannot be OCCUPIED (the server enforces OCCUPIED <=> has a patient). Keep CLEANING / MAINTENANCE.
-      setStatus((s) => (s === 'OCCUPIED' ? 'AVAILABLE' : s));
-    }
-  }, [selectedPatientId, bed]);
 
   // Close dropdowns on Escape
   useEffect(() => {
@@ -331,7 +323,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                     role="option"
                     aria-selected={status === s}
                     onClick={() => {
-                      setStatus(s);
+                      setChosenStatus(s);
                       setShowStatusDropdown(false);
                     }}
                     className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${

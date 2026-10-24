@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
-import { AuthProvider, useAuth } from '../AuthContext';
+import { AuthProvider } from '../AuthContext';
+import { useAuth } from '../authContext';
 
 // A plain function (not vi.fn) backs apiGet: vitest's mock bookkeeping would
 // otherwise flag the intentionally rejected promise as an unhandled rejection.

@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import('./pages/LoginPage').then(m => ({ default: m
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PrivateRoute } from './components/PrivateRoute';
+import { AppLayout } from './components/Layout/AppLayout';
 const SignupPage = lazy(() => import('./pages/SignupPage').then(m => ({ default: m.SignupPage })));
 const ForgotPasswordPage = lazy(() => import('./pages/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
 const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
@@ -46,96 +47,22 @@ function App() {
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
 
-        {/* Protected Routes */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } 
-        />
+        {/* Signed-in sections share the sidebar layout; the URL is the only navigation state */}
+        <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/patients" element={<PatientsPage />} />
+          <Route path="/beds" element={<Beds />} />
+          <Route path="/staff" element={<StaffDirectoryPage />} />
+          <Route path="/appointments" element={<AppointmentsPage />} />
+          <Route path="/vitals" element={<VitalsMonitorPage />} />
+          <Route path="/incidents" element={<IncidentsPage />} />
+          <Route path="/dispatch" element={<DispatchDashboard />} />
+          <Route path="/settings" element={<SettingsPage />} />
+        </Route>
 
-        <Route 
-          path="/patients" 
-          element={
-            <PrivateRoute>
-              <PatientsPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/patients/:id" 
-          element={
-            <PrivateRoute>
-              <PatientDetailPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/patients/:id/edit" 
-          element={
-            <PrivateRoute>
-              <EditPatientPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/beds" 
-          element={
-            <PrivateRoute>
-              <Beds />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/appointments" 
-          element={
-            <PrivateRoute>
-              <AppointmentsPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/dispatch" 
-          element={
-            <PrivateRoute>
-              <DispatchDashboard />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/vitals" 
-          element={
-            <PrivateRoute>
-              <VitalsMonitorPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/incidents" 
-          element={
-            <PrivateRoute>
-              <IncidentsPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/staff" 
-          element={
-            <PrivateRoute>
-              <StaffDirectoryPage />
-            </PrivateRoute>
-          } 
-        />
-        <Route 
-          path="/settings" 
-          element={
-            <PrivateRoute>
-              <SettingsPage />
-            </PrivateRoute>
-          } 
-        />
+        {/* Full-page patient screens (own header, no sidebar) */}
+        <Route path="/patients/:id" element={<PrivateRoute><PatientDetailPage /></PrivateRoute>} />
+        <Route path="/patients/:id/edit" element={<PrivateRoute><EditPatientPage /></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

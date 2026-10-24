@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryWrapper } from '../../../test/QueryWrapper';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { StaffCard } from '../StaffCard';
@@ -31,7 +32,7 @@ describe('staff login link', () => {
     });
 
     it('offers to create a login only when adding a staff member', () => {
-      const { rerender } = render(<StaffModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+      const { rerender } = render(<StaffModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />, { wrapper: QueryWrapper });
       expect(screen.getByText('Login account')).toBeInTheDocument();
       rerender(<StaffModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} initialData={{ id: 's1', name: 'Nour' }} />);
       expect(screen.queryByText('Login account')).not.toBeInTheDocument();
@@ -39,7 +40,7 @@ describe('staff login link', () => {
 
     it('sends the chosen loginRole when creating a staff member', async () => {
       const user = userEvent.setup();
-      const { container } = render(<StaffModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />);
+      const { container } = render(<StaffModal isOpen onClose={vi.fn()} onSuccess={vi.fn()} />, { wrapper: QueryWrapper });
       const fill = async () => {
         await user.type(screen.getByPlaceholderText('Dr. John Doe'), 'Nour Aziz');
         await user.type(screen.getByPlaceholderText('john@hospilink.com'), 'nour@h.com');

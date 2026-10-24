@@ -2,19 +2,10 @@
 import { AlertTriangle, Clock, User } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { formatTime } from '../../utils/datetime';
-
-interface Alert {
-  id: string;
-  patient: { name: string; patientCode: string; department: string };
-  alertType: string;
-  recordedAt: string;
-  heartRate?: number;
-  systolicBP?: number;
-  spO2?: number;
-}
+import type { VitalAlert } from '../../types/vitals';
 
 interface AlertsPanelProps {
-  alerts: Alert[];
+  alerts: readonly VitalAlert[];
 }
 
 const ALERT_COLORS: Record<string, string> = {

@@ -55,7 +55,7 @@ export const getAppointments = async (req: Request, res: Response) => {
   try {
     const { date, doctorId, patientId, status, type, department } = req.query;
 
-    const where: Prisma.AppointmentWhereInput = { patient: { hospitalId: hospitalIdOf(req) } };
+    const where: Prisma.AppointmentWhereInput = { patient: { hospitalId: hospitalIdOf(req), deletedAt: null } };
 
     if (date) {
       const { start, end } = dayRange(await hospitalTimezone(hospitalIdOf(req)), date as string);
@@ -96,7 +96,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        patient: { hospitalId: hospitalIdOf(req) },
+        patient: { hospitalId: hospitalIdOf(req), deletedAt: null },
         scheduledAt: { gte: start, lt: end },
         status: { not: 'CANCELLED' },
       },
@@ -129,7 +129,7 @@ export const getUpcomingAppointments = async (req: Request, res: Response) => {
 
     const appointments = await prisma.appointment.findMany({
       where: {
-        patient: { hospitalId: hospitalIdOf(req) },
+        patient: { hospitalId: hospitalIdOf(req), deletedAt: null },
         scheduledAt: { gte: now },
         status: { not: 'CANCELLED' },
       },
@@ -153,7 +153,7 @@ export const getAppointmentById = async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     const appointment = await prisma.appointment.findFirst({
-      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
+      where: { id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
       include: {
         patient: true,
         doctor: { select: { id: true, name: true, role: true, department: true, phone: true } },
@@ -202,8 +202,8 @@ export const createAppointment = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'patientId or patientCode is required' });
     }
     const patient = patientId
-      ? await prisma.patient.findFirst({ where: { id: patientId, hospitalId } })
-      : await prisma.patient.findFirst({ where: { patientCode, hospitalId } });
+      ? await prisma.patient.findFirst({ where: { id: patientId, hospitalId, deletedAt: null } })
+      : await prisma.patient.findFirst({ where: { patientCode, hospitalId, deletedAt: null } });
     if (!patient) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
@@ -257,13 +257,13 @@ export const updateAppointment = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.appointment.findFirst({
-      where: { id, patient: { hospitalId } },
+      where: { id, patient: { hospitalId, deletedAt: null } },
       select: { id: true, doctorId: true, scheduledAt: true, duration: true, status: true },
     });
     if (!existing) {
       return res.status(404).json({ success: false, code: 'APPOINTMENT_NOT_FOUND', message: 'Appointment not found' });
     }
-    if (updateData.patientId && !(await prisma.patient.findFirst({ where: { id: updateData.patientId, hospitalId }, select: { id: true } }))) {
+    if (updateData.patientId && !(await prisma.patient.findFirst({ where: { id: updateData.patientId, hospitalId, deletedAt: null }, select: { id: true } }))) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
     if (updateData.doctorId && !(await prisma.staff.findFirst({ where: { id: updateData.doctorId, hospitalId }, select: { id: true } }))) {
@@ -318,7 +318,7 @@ export const deleteAppointment = async (req: Request, res: Response) => {
     const id = req.params.id as string;
 
     const existing = await prisma.appointment.findFirst({
-      where: { id, patient: { hospitalId: hospitalIdOf(req) } },
+      where: { id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
       select: { id: true },
     });
     if (!existing) {

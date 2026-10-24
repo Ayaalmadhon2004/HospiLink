@@ -18,5 +18,18 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    // No `eslint-disable` comments anywhere: a rule that gets in the way is fixed in the code (or changed here, in review).
+    linterOptions: { noInlineConfig: true },
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'error',
+      '@typescript-eslint/ban-ts-comment': 'error',
+      // Log through utils/logger (dev-only), never console directly.
+      'no-console': 'error',
+    },
+  },
+  {
+    // The logger is the single place allowed to touch console.
+    files: ['src/utils/logger.ts'],
+    rules: { 'no-console': 'off' },
   },
 ])

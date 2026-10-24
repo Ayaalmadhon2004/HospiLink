@@ -18,7 +18,7 @@ test.describe('dashboard widgets', () => {
     await mockApi(page, { loggedIn: true });
     await page.goto('/dashboard');
     await page.getByRole('button', { name: 'Open menu' }).click();
-    await page.getByRole('button', { name: 'Staff & Shifts' }).first().click();
+    await page.getByRole('link', { name: 'Staff & Shifts' }).first().click();
     await expect(page.getByRole('region', { name: "Today's shift timeline" }).getByText('Cardiology')).toBeVisible();
     await expect(page.getByRole('article', { name: 'Staff card for Sara Ali, Nurse' })).toBeVisible();
   });

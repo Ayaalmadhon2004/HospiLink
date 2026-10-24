@@ -143,7 +143,7 @@ export const updateBedStatus = async (req: Request, res: Response) => {
 
       if (assigning) {
         if (existing.patient?.id !== patientId) {
-          const patient = await tx.patient.findFirst({ where: { id: patientId, hospitalId }, select: { id: true, bedId: true, status: true } });
+          const patient = await tx.patient.findFirst({ where: { id: patientId, hospitalId, deletedAt: null }, select: { id: true, bedId: true, status: true } });
           if (!patient) throw new BedRuleError(404, 'Patient not found');
           if (patient.status === 'DISCHARGED') throw new BedRuleError(400, 'A discharged patient cannot be assigned a bed');
           if (existing.patient) throw new BedRuleError(409, 'The bed is already occupied by another patient');

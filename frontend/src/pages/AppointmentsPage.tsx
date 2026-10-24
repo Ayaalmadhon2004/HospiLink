@@ -1,9 +1,10 @@
 // pages/AppointmentsPage.tsx
-import { logger } from '../utils/logger';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Calendar, Clock, Stethoscope, MapPin, Plus, Search, Trash2, Pencil } from 'lucide-react';
 import { apiGet, apiDelete } from '../services/api';
+import type { Appointment } from '../services/appointmentsService';
 import type { ApiResponse } from '../types/api';
 import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
 import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
@@ -12,25 +13,30 @@ import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { toast } from 'sonner';
 import { formatDate as fmtDate, formatTime as fmtTime } from '../utils/datetime';
 
-interface Appointment {
-  id: string;
-  scheduledAt: string;
-  type: string;
-  status: string;
-  department: string;
-  room?: string;
-  duration: number;
-  patient: {
-    id: string;
-    name: string;
-    patientCode: string;
-  };
-  doctor: {
-    id: string;
-    name: string;
-    role: string;
-  };
+const SCHEDULE_KEY = ['appointments', 'schedule'];
+
+interface Schedule {
+  today: Appointment[];
+  upcoming: Appointment[];
 }
+
+// Today and upcoming load independently: one failing leaves the other list usable.
+const fetchSchedule = async (): Promise<Schedule> => {
+  const [todayRes, upcomingRes] = await Promise.allSettled([
+    // The endpoint returns either a bare list or { appointments }
+    apiGet<ApiResponse<Appointment[] & { appointments?: Appointment[] }>>('/appointments/today'),
+    apiGet<ApiResponse<Appointment[]>>('/appointments/upcoming'),
+  ]);
+  if (todayRes.status === 'rejected' && upcomingRes.status === 'rejected') throw todayRes.reason;
+
+  const todayData = todayRes.status === 'fulfilled' ? todayRes.value?.data : undefined;
+  const todayList = todayData?.appointments || todayData || [];
+  const upcomingList = upcomingRes.status === 'fulfilled' ? upcomingRes.value?.data : undefined;
+  return {
+    today: Array.isArray(todayList) ? todayList : [],
+    upcoming: Array.isArray(upcomingList) ? upcomingList : [],
+  };
+};
 
 const typeColors: Record<string, string> = {
   SURGERY: 'bg-red-100 text-red-700 border-red-200',
@@ -50,9 +56,7 @@ const typeDotColors: Record<string, string> = {
 
 export const AppointmentsPage = () => {
   const { t } = useTranslation();
-  const [todayAppointments, setTodayAppointments] = useState<Appointment[]>([]);
-  const [upcoming, setUpcoming] = useState<Appointment[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState('');
 
@@ -66,65 +70,20 @@ export const AppointmentsPage = () => {
 
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<Appointment>();
 
-  const isFetching = useRef(false);
-  const lastSocketId = useRef<string | null>(null);
-
   const latestUpdate = useAppointmentsSocket();
 
-  const fetchData = useCallback(async () => {
-    if (isFetching.current) return;
-    isFetching.current = true;
-    setLoading(true);
-
-    try {
-      const [todayRes, upcomingRes] = await Promise.allSettled([
-        // The endpoint returns either a bare list or { appointments }
-        apiGet<ApiResponse<Appointment[] & { appointments?: Appointment[] }>>('/appointments/today'),
-        apiGet<ApiResponse<Appointment[]>>('/appointments/upcoming'),
-      ]);
-
-      // ✅ FIX: Handle today's appointments response structure
-      if (todayRes.status === 'fulfilled') {
-        const responseData = todayRes.value?.data;
-        // The API returns { data: { appointments, schedule } }
-        const todayList = responseData?.appointments || responseData || [];
-        setTodayAppointments(Array.isArray(todayList) ? todayList : []);
-      } else {
-        logger.error('Failed to fetch today appointments:', todayRes.reason);
-        setTodayAppointments([]);
-      }
-
-      // ✅ FIX: Handle upcoming appointments response structure
-      if (upcomingRes.status === 'fulfilled') {
-        const responseData = upcomingRes.value?.data;
-        // The API returns { data: appointments[] }
-        const upcomingList = responseData || [];
-        setUpcoming(Array.isArray(upcomingList) ? upcomingList : []);
-      } else {
-        logger.error('Failed to fetch upcoming appointments:', upcomingRes.reason);
-        setUpcoming([]);
-      }
-    } catch (err) {
-      logger.error('Failed to fetch appointments:', err);
-      toast.error(t('appointments.loadError'));
-    } finally {
-      setLoading(false);
-      isFetching.current = false;
-    }
-  }, [t]);
+  const { data, isPending: loading, isError } = useQuery({ queryKey: SCHEDULE_KEY, queryFn: fetchSchedule });
+  const todayAppointments = data?.today ?? [];
+  const upcoming = data?.upcoming ?? [];
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    fetchData();
-  }, [fetchData]);
+    if (isError) toast.error(t('appointments.loadError'));
+  }, [isError, t]);
 
+  // A socket update (booked / moved / cancelled elsewhere) refetches both lists.
   useEffect(() => {
-    if (!latestUpdate) return;
-    const updateId = (latestUpdate as { id?: string } | null)?.id || JSON.stringify(latestUpdate);
-    if (updateId === lastSocketId.current) return;
-    lastSocketId.current = updateId as string;
-    fetchData();
-  }, [latestUpdate, fetchData]);
+    if (latestUpdate) void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
+  }, [latestUpdate, queryClient]);
 
   const formatTime = (dateStr: string) => {
     return fmtTime(dateStr, { hour: '2-digit', minute: '2-digit', hour12: false }, dateStr);
@@ -188,7 +147,7 @@ export const AppointmentsPage = () => {
       <NewAppointmentModal
         isOpen={isModalOpen}
         onClose={handleModalSuccess}
-        onSuccess={() => { fetchData(); handleModalSuccess(); }}
+        onSuccess={() => { void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY }); handleModalSuccess(); }}
         editingAppointment={editingItem}
       />
 

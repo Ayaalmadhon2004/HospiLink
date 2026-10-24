@@ -35,7 +35,7 @@ const nextPatientNumber = async (): Promise<number> => {
 export const getRecentPatients = async (req: Request, res: Response) => {
   try {
     const recentPatients = await prisma.patient.findMany({
-      where: { hospitalId: hospitalIdOf(req) },
+      where: { hospitalId: hospitalIdOf(req), deletedAt: null },
       take: 5,
       orderBy: { admissionDate: 'desc' },
       include: { bed: true },
@@ -61,7 +61,7 @@ export const getRecentPatients = async (req: Request, res: Response) => {
 // ============================================
 export const getCriticalPatientCount = async (req: Request, res: Response) => {
   try {
-    const count = await prisma.patient.count({ where: { status: 'CRITICAL', hospitalId: hospitalIdOf(req) } });
+    const count = await prisma.patient.count({ where: { status: 'CRITICAL', hospitalId: hospitalIdOf(req), deletedAt: null } });
     res.status(200).json({ success: true, data: { count } });
   } catch (error) {
     logger.error({ err: error }, 'getCriticalPatientCount error:');
@@ -88,11 +88,11 @@ export const getPatientFlow = async (req: Request, res: Response) => {
     const [admitted, discharged] = await Promise.all([
       prisma.$queryRaw<DayCount[]>`
         SELECT to_char("admissionDate" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d, COUNT(*)::int AS c
-        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "admissionDate" >= ${start}
+        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "deletedAt" IS NULL AND "admissionDate" >= ${start}
         GROUP BY 1`,
       prisma.$queryRaw<DayCount[]>`
         SELECT to_char("dischargeDate" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d, COUNT(*)::int AS c
-        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "dischargeDate" >= ${start}
+        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "deletedAt" IS NULL AND "dischargeDate" >= ${start}
         GROUP BY 1`,
     ]);
 
@@ -145,7 +145,7 @@ export const admitPatient = async (req: Request, res: Response) => {
           let validBedId = null;
 
           if (doctorId) {
-            const doctor = await tx.user.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
+            const doctor = await tx.staff.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
             if (!doctor) throw new AdmitError('Doctor not found', 404);
           }
 
@@ -206,7 +206,7 @@ export const uploadReport = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Patient ID is required' });
     }
 
-    const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId: hospitalIdOf(req) } });
+    const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId: hospitalIdOf(req), deletedAt: null } });
     if (!patient) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
@@ -239,7 +239,7 @@ export const uploadReport = async (req: Request, res: Response) => {
 export const getReportFile = async (req: Request, res: Response) => {
   try {
     const { reportId } = req.params as { reportId: string };
-    const report = await prisma.report.findFirst({ where: { id: reportId, patient: { hospitalId: hospitalIdOf(req) } } });
+    const report = await prisma.report.findFirst({ where: { id: reportId, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } } });
     if (!report || !report.fileData) {
       return res.status(404).json({ success: false, code: 'FILE_NOT_FOUND', message: 'File not found' });
     }
@@ -263,7 +263,7 @@ export const getPatientReports = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const reports = await prisma.report.findMany({
-      where: { patientId: id, patient: { hospitalId: hospitalIdOf(req) } },
+      where: { patientId: id, patient: { hospitalId: hospitalIdOf(req), deletedAt: null } },
       omit: { fileData: true },
       orderBy: { createdAt: 'desc' },
     });
@@ -290,7 +290,7 @@ export const getPatientById = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
 
     const patient = await prisma.patient.findFirst({
-      where: { id, hospitalId: hospitalIdOf(req) },
+      where: { id, hospitalId: hospitalIdOf(req), deletedAt: null },
       include: {
         bed: { 
           select: { 
@@ -323,7 +323,7 @@ export const getPatients = async (req: Request, res: Response) => {
     const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
     const skip = (pageNum - 1) * limitNum;
 
-    const whereClause: Prisma.PatientWhereInput = { hospitalId: hospitalIdOf(req) };
+    const whereClause: Prisma.PatientWhereInput = { hospitalId: hospitalIdOf(req), deletedAt: null };
 
     if (status && status !== 'undefined' && status !== 'ALL' && status !== '' && status !== 'All') {
       whereClause.status = (status as string).toUpperCase() as PatientStatus;
@@ -431,11 +431,11 @@ export const updatePatient = async (req: Request, res: Response) => {
     };
     const hospitalId = hospitalIdOf(req);
 
-    const existing = await prisma.patient.findFirst({ where: { id, hospitalId }, select: { id: true, bedId: true, status: true } });
+    const existing = await prisma.patient.findFirst({ where: { id, hospitalId, deletedAt: null }, select: { id: true, bedId: true, status: true } });
     if (!existing) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
-    if (fields.doctorId && !(await prisma.user.findFirst({ where: { id: fields.doctorId, hospitalId }, select: { id: true } }))) {
+    if (fields.doctorId && !(await prisma.staff.findFirst({ where: { id: fields.doctorId, hospitalId }, select: { id: true } }))) {
       return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
     }
 
@@ -476,6 +476,33 @@ export const updatePatient = async (req: Request, res: Response) => {
 };
 
 // ============================================
+// DELETE /api/patients/:id  (soft delete)
+// ============================================
+// The row, its vitals, reports and appointments stay in the database (medical history is never destroyed);
+// the patient just disappears from every read (they all filter deletedAt: null). A held bed is freed.
+export const deletePatient = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const hospitalId = hospitalIdOf(req);
+
+    const patient = await prisma.patient.findFirst({ where: { id, hospitalId, deletedAt: null }, select: { id: true, bedId: true } });
+    if (!patient) {
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      if (patient.bedId) await releaseBed(tx, patient.bedId, hospitalId);
+      await tx.patient.update({ where: { id }, data: { deletedAt: new Date(), bedId: null } });
+    });
+
+    res.status(200).json({ success: true, message: 'Patient deleted' });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Delete patient error:');
+    res.status(500).json({ success: false, message: 'Failed to delete patient' });
+  }
+};
+
+// ============================================
 // PUT /api/patients/:id/discharge
 // ============================================
 export const dischargePatient = async (req: Request, res: Response) => {
@@ -484,7 +511,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
 
     const hospitalId = hospitalIdOf(req);
     const patient = await prisma.patient.findFirst({
-      where: { id, hospitalId },
+      where: { id, hospitalId, deletedAt: null },
       include: { bed: true }
     });
 

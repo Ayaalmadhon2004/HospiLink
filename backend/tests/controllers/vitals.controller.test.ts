@@ -32,7 +32,7 @@ describe('vitals.controller', () => {
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patientVitals.create).not.toHaveBeenCalled();
       expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'ghost', hospitalId: 'hosp-1' } })
+        expect.objectContaining({ where: { id: 'ghost', hospitalId: 'hosp-1', deletedAt: null } })
       );
     });
 
@@ -141,7 +141,7 @@ describe('vitals.controller', () => {
       await recordVitals(mockRequest({ body: { patientId: 'p1', heartRate: '170' } }), res);
 
       expect(prismaMock.patient.updateMany).toHaveBeenCalledWith({
-        where: { id: 'p1', hospitalId: 'hosp-1', status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
+        where: { id: 'p1', hospitalId: 'hosp-1', deletedAt: null, status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
         data: { status: 'CRITICAL' },
       });
       expect(mockRoomEmit).toHaveBeenCalledWith('patient-p1', 'patient-status-changed', expect.objectContaining({ status: 'CRITICAL' }));
@@ -191,7 +191,7 @@ describe('vitals.controller', () => {
 
       const whereArg = (prismaMock as any).patientVitals.findMany.mock.calls[0][0].where;
       expect(whereArg.isCritical).toBe(true);
-      expect(whereArg.patient).toEqual({ hospitalId: 'hosp-1' });
+      expect(whereArg.patient).toEqual({ hospitalId: 'hosp-1', deletedAt: null });
     });
 
     it('يستخدم limit افتراضي 50 لو ما تم تحديده', async () => {
@@ -216,7 +216,7 @@ describe('vitals.controller', () => {
 
       const callArg = (prismaMock as any).patientVitals.findMany.mock.calls[0][0];
       expect(callArg.where.isCritical).toBe(true);
-      expect(callArg.where.patient).toEqual({ hospitalId: 'hosp-1' });
+      expect(callArg.where.patient).toEqual({ hospitalId: 'hosp-1', deletedAt: null });
       expect(callArg.take).toBe(20);
     });
   });
@@ -287,7 +287,7 @@ describe('vitals.controller', () => {
       await deleteVitals(mockRequest({ params: { id: 'foreign' } }), res);
 
       expect((prismaMock as any).patientVitals.findFirst).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: 'foreign', patient: { hospitalId: 'hosp-1' } } })
+        expect.objectContaining({ where: { id: 'foreign', patient: { hospitalId: 'hosp-1', deletedAt: null } } })
       );
       expect(res.status).toHaveBeenCalledWith(404);
       expect((prismaMock as any).patientVitals.delete).not.toHaveBeenCalled();

@@ -1,5 +1,5 @@
 // services/patientService.ts
-import { apiFetch, apiGet, apiPost, apiPut } from './api';
+import { apiGet, apiPost, apiPut, apiUpload } from './api';
 import { toQueryString, type ApiResponse, type Pagination, type QueryParams } from '../types/api';
 import type { PatientFlowDay } from '../utils/patientFlow';
 import type { Patient, PatientDetail, PatientReport, RecentPatient } from '../types/patient';
@@ -35,16 +35,8 @@ export const dischargePatient = async (id: string) => {
 export const uploadReport = async (file: File, patientId: string) => {
   const formData = new FormData();
   formData.append('reportFile', file);
-  const res = await apiFetch(`/patients/${patientId}/reports`, {
-    method: 'POST',
-    body: formData,
-  });
-  if (!res.ok) {
-    // apiFetch never throws; surface the failure so the UI does not report a false success.
-    const data = (await res.json()) as { message?: string; error?: string };
-    throw new Error(data.message ?? data.error ?? res.statusText);
-  }
-  return res;
+  // Rejects with an ApiError on failure, so the UI never reports a false success.
+  return await apiUpload(`/patients/${patientId}/reports`, formData);
 };
 
 export const getPatientReports = async (patientId: string) => {

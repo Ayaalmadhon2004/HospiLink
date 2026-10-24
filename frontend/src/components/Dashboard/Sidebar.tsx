@@ -1,42 +1,60 @@
 // frontend/src/components/Dashboard/Sidebar.tsx
-import { 
-  LayoutDashboard, 
-  Users, 
-  BedDouble, 
-  Stethoscope, 
-  Calendar, 
-  Activity, 
-  AlertTriangle, 
-  Truck,
-  Heart,
-  Settings,
-  ChevronRight,
-  Loader2
-} from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { Heart, ChevronRight, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from '../../contexts/authContext';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
+import { NAV_ITEMS, SETTINGS_NAV_ITEM, type NavItem } from '../../configs/navigation';
 
 interface SidebarProps {
-  activeItem: string;
-  onItemClick: (item: string) => void;
+  /** Called after a link is followed (the phone drawer closes itself with it). */
+  onNavigate?: () => void;
 }
 
-const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
+const linkClass = (isActive: boolean): string =>
+  `w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
+    isActive
+      ? 'bg-emerald-400/15 text-emerald-300 font-semibold border-s-2 border-emerald-400'
+      : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
+  }`;
+
+const Sidebar = ({ onNavigate }: SidebarProps) => {
   const { t } = useTranslation();
   const { user, loading } = useAuth();
   const badges = useSidebarBadges(user?.role);
 
-  const menuItems: { id: string; label: string; icon: typeof Users; badge: string | null }[] = [
-    { id: 'Overview', label: t('sidebar.tabs.Overview'), icon: LayoutDashboard, badge: null },
-    { id: 'Patients', label: t('sidebar.tabs.Patients'), icon: Users, badge: badges.Patients },
-    { id: 'Beds & Wards', label: t('sidebar.tabs.Beds & Wards'), icon: BedDouble, badge: null },
-    { id: 'Staff & Shifts', label: t('sidebar.tabs.Staff & Shifts'), icon: Stethoscope, badge: null },
-    { id: 'Appointments', label: t('sidebar.tabs.Appointments'), icon: Calendar, badge: badges.Appointments },
-    { id: 'Vitals Monitor', label: t('sidebar.tabs.Vitals Monitor'), icon: Activity, badge: badges.Vitals },
-    { id: 'Incidents', label: t('sidebar.tabs.Incidents'), icon: AlertTriangle, badge: badges.Incidents },
-    { id: 'Dispatch', label: t('sidebar.tabs.Dispatch'), icon: Truck, badge: null },
-  ];
+  const renderItem = (item: NavItem) => {
+    const badge = item.badge ? badges[item.badge] : null;
+    return (
+      <NavLink
+        key={item.id}
+        to={item.path}
+        end={item.id === 'Overview'}
+        onClick={onNavigate}
+        className={({ isActive }) => linkClass(isActive)}
+      >
+        {({ isActive }) => (
+          <>
+            <item.icon
+              aria-hidden="true"
+              className={`w-5 h-5 transition-colors ${isActive ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'}`}
+            />
+            <span className="flex-1 text-start font-medium">{t(`sidebar.tabs.${item.id}`)}</span>
+            {badge && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
+                  isActive ? 'bg-emerald-500 text-emerald-950' : 'bg-white/20 text-white'
+                }`}
+              >
+                {badge}
+              </span>
+            )}
+            {isActive && <ChevronRight className="w-4 h-4 text-emerald-300 rtl:rotate-180" aria-hidden="true" />}
+          </>
+        )}
+      </NavLink>
+    );
+  };
 
   // Get initials from user name
   const getInitials = (name: string) => {
@@ -68,51 +86,12 @@ const Sidebar = ({ activeItem, onItemClick }: SidebarProps) => {
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-4">
           {t('sidebar.clinicalOperations')}
         </div>
-        {menuItems.map((item) => (
-          <button
-            key={item.id}
-            onClick={() => onItemClick(item.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
-              activeItem === item.id
-                ? 'bg-emerald-400/15 text-emerald-300 font-semibold border-s-2 border-emerald-400'
-                : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
-            }`}
-          >
-            <item.icon className={`w-5 h-5 transition-colors ${
-              activeItem === item.id ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
-            }`} />
-            <span className="flex-1 text-start font-medium">{item.label}</span>
-            {item.badge && (
-              <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${
-                activeItem === item.id 
-                  ? 'bg-emerald-500 text-emerald-950'
-                  : 'bg-white/20 text-white'
-              }`}>
-                {item.badge}
-              </span>
-            )}
-            {activeItem === item.id && (
-              <ChevronRight className="w-4 h-4 text-emerald-300 rtl:rotate-180" aria-hidden="true" />
-            )}
-          </button>
-        ))}
+        {NAV_ITEMS.map(renderItem)}
       </nav>
 
       {/* Settings */}
       <div className="px-4 pb-2 space-y-1">
-        <button
-          onClick={() => onItemClick('Settings')}
-          className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 text-sm group ${
-            activeItem === 'Settings'
-              ? 'bg-emerald-400/15 text-emerald-300 font-semibold border-s-2 border-emerald-400'
-              : 'text-white/90 hover:bg-white/15 hover:text-white border-s-2 border-transparent'
-          }`}
-        >
-          <Settings className={`w-5 h-5 ${
-            activeItem === 'Settings' ? 'text-teal-400' : 'text-slate-300 group-hover:text-white'
-          }`} />
-          <span className="flex-1 text-start font-medium">{t('sidebar.tabs.Settings')}</span>
-        </button>
+        {renderItem(SETTINGS_NAV_ITEM)}
       </div>
 
       {/* Bottom - Dynamic Profile */}

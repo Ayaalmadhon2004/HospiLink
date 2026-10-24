@@ -119,7 +119,7 @@ io.on('connection', (socket: Socket) => {
     if (!hospitalId) return;
     try {
       // Only patients of the user's own hospital can be followed.
-      const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId }, select: { id: true } });
+      const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId, deletedAt: null }, select: { id: true } });
       if (patient) socket.join(`patient-${patientId}`);
     } catch (error) {
       logger.error({ err: error }, 'join-room failed');

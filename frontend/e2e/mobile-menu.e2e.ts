@@ -2,7 +2,7 @@ import { test, expect, type Page } from '@playwright/test';
 import { mockApi } from './mockApi';
 
 // The sidebar item's name carries the badge count ("Patients 2"), so match on the start of the name.
-const patientsItem = (page: Page) => page.locator('aside').getByRole('button', { name: /^Patients/ });
+const patientsItem = (page: Page) => page.locator('aside').getByRole('link', { name: /^Patients/ });
 
 const PHONE = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 800 };

@@ -1,6 +1,7 @@
 // pages/Beds.tsx
-import { logger } from '../utils/logger';
-import { useState, useEffect, useCallback } from 'react';
+// pages/Beds.tsx
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { BedDouble, Plus, Search, Filter, MoreHorizontal, User, Trash2 } from 'lucide-react';
 import { BedModal } from '../components/BedModal';
@@ -12,19 +13,14 @@ import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
-interface Ward {
-  id: string;
-  name: string;
-}
+const BEDS_KEY = ['beds'];
+const UNASSIGNED_PATIENTS_KEY = ['beds', 'unassigned-patients'];
 
 const Beds = () => {
   const { t } = useTranslation();
-  const [beds, setBeds] = useState<BedWithDetails[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useState<'ALL' | BedStatus>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
-  const [patients, setPatients] = useState<PatientOption[]>([]);
-  const [, setWards] = useState<Ward[]>([]);
 
   // ✅ Shared CRUD hooks
   const { confirmDelete, handleDeleteClick, handleConfirmDelete, isDeleting } = useOptimisticDelete<BedWithDetails>({
@@ -36,44 +32,19 @@ const Beds = () => {
 
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<BedWithDetails>();
 
-  const fetchBeds = useCallback(async () => {
-    try {
-      const data = await apiGetAll<BedWithDetails>('/beds');
-      if (data.success) setBeds(data.data);
-    } catch (err) {
-      logger.error('Error fetching beds:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const { data: beds = [], isPending: loading } = useQuery({
+    queryKey: BEDS_KEY,
+    queryFn: async () => (await apiGetAll<BedWithDetails>('/beds')).data,
+  });
 
-  const fetchPatients = useCallback(async () => {
-    try {
-      const data = await apiGet<ApiResponse<Patient[]>>('/patients?status=OBSERVATION');
-      if (data.success) {
-        const unassigned = data.data.filter((p) => !p.bedId);
-        setPatients(unassigned.map((p) => ({ id: p.id, name: p.name, patientCode: p.patientCode })));
-      }
-    } catch (err) {
-      logger.error('Error fetching patients:', err);
-    }
-  }, []);
-
-  const fetchWards = useCallback(async () => {
-    try {
-      const data = await apiGet<ApiResponse<Ward[]>>('/wards');
-      if (data.success) setWards(data.data);
-    } catch (err) {
-      logger.error('Error fetching wards:', err);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
-    fetchBeds();
-    fetchPatients();
-    fetchWards();
-  }, [fetchBeds, fetchPatients, fetchWards]);
+  // Patients that can still be given a bed
+  const { data: patients = [] } = useQuery({
+    queryKey: UNASSIGNED_PATIENTS_KEY,
+    queryFn: async (): Promise<PatientOption[]> => {
+      const res = await apiGet<ApiResponse<Patient[]>>('/patients?status=OBSERVATION');
+      return res.data.filter((p) => !p.bedId).map((p) => ({ id: p.id, name: p.name, patientCode: p.patientCode }));
+    },
+  });
 
   const filteredBeds = beds.filter(bed => {
     const matchesFilter = filter === 'ALL' || bed.status === filter;
@@ -307,7 +278,7 @@ const Beds = () => {
           bed={editingItem}
           patients={patients}
           onClose={() => handleModalSuccess()}
-          onSuccess={() => { fetchBeds(); fetchPatients(); handleModalSuccess(); }}
+          onSuccess={() => { void queryClient.invalidateQueries({ queryKey: BEDS_KEY }); handleModalSuccess(); }}
         />
       )}
     </div>

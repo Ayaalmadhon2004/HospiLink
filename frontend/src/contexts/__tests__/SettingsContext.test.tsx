@@ -2,7 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { SettingsProvider, useSettingsContext, IDLE_TIMEOUT_MS, type UserSettings } from '../SettingsContext';
+import { SettingsProvider } from '../SettingsContext';
+import { useSettingsContext, IDLE_TIMEOUT_MS, type UserSettings } from '../settingsContext';
 import { apiGet, apiPut } from '../../services/api';
 import { logout } from '../../services/authService';
 import { DISPLAY_CACHE_KEY } from '../../utils/settingsDom';
@@ -11,7 +12,7 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../../services/api', () => ({ apiGet: vi.fn(), apiPut: vi.fn() }));
 vi.mock('../../services/authService', () => ({ logout: vi.fn() }));
 let mockUser: { id: string } | null = { id: 'u1' };
-vi.mock('../AuthContext', () => ({ useAuth: () => ({ user: mockUser, loading: false }) }));
+vi.mock('../authContext', () => ({ useAuth: () => ({ user: mockUser, loading: false }) }));
 
 const TICK = 1000;
 const base: UserSettings = {
