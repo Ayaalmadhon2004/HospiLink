@@ -109,6 +109,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   (`patient: { hospitalId }`, `staff: { hospitalId }`). Related ids from the client (bed, ward, doctor, patient) must be verified to belong to the same hospital.
   Socket rooms are per hospital via the helpers in `utils/tenant.ts` (`clinicalRoom`, `departmentRoom`, `dispatchRoom`, `unitRoom`).
   `notify()` refuses role/department broadcasts without a `hospitalId`.
+- Time: the server runs in UTC. "Today" ranges, hour grouping and times inside notifications use `Hospital.timezone` (IANA, default UTC; ADMIN sets it with `PUT /settings/hospital`) through `utils/time.ts` (`dayRange`, `hourKey`, `formatLocal`, `hospitalTimezone`). Never use `Date#setHours`/`setDate` or mutate a `Date`; day ranges are half-open `[start, end)` (`gte`/`lt`).
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
 - Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.

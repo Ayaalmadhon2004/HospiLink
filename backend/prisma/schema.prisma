@@ -12,6 +12,8 @@ model Hospital {
   location  String
   // Public signup code (uppercase). An admin shares it with staff who should join this hospital.
   code      String    @unique
+  // IANA time zone used for "today" ranges, hour grouping and times in notifications.
+  timezone  String    @default("UTC")
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   beds      Bed[]

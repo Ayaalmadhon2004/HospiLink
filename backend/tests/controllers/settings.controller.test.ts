@@ -6,6 +6,7 @@ import {
   updateNotifications,
   updateSecurity,
   updateDisplay,
+  updateHospital,
 } from '../../src/controllers/settings.controller';
 
 describe('settings.controller', () => {
@@ -99,7 +100,7 @@ describe('settings.controller', () => {
 
       expect(prismaMock.hospital.findUnique).toHaveBeenCalledWith({
         where: { id: 'hosp-1' },
-        select: { name: true, code: true },
+        select: { name: true, timezone: true, code: true },
       });
       expect((res.json as jest.Mock).mock.calls[0][0].data.hospital).toEqual({ name: 'H', code: 'NORTH-1' });
     });
@@ -114,7 +115,7 @@ describe('settings.controller', () => {
 
       expect(prismaMock.hospital.findUnique).toHaveBeenCalledWith({
         where: { id: 'hosp-1' },
-        select: { name: true, code: false },
+        select: { name: true, timezone: true, code: false },
       });
     });
   });
@@ -228,6 +229,20 @@ describe('settings.controller', () => {
           update: { theme: 'dark', language: 'ar', timezone: undefined },
         })
       );
+    });
+  });
+
+  describe('updateHospital', () => {
+    it('يحدث timezone للمستشفى الخاص بالمستخدم فقط', async () => {
+      prismaMock.hospital.update.mockResolvedValue({ name: 'H', timezone: 'Asia/Amman' } as any);
+      const res = mockResponse();
+
+      await updateHospital(authedReq({ body: { timezone: 'Asia/Amman' } }), res);
+
+      expect(prismaMock.hospital.update).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { id: 'hosp-1' }, data: { timezone: 'Asia/Amman' } })
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 });

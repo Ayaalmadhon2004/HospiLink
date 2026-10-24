@@ -20,7 +20,7 @@ jest.mock('../../src/controllers/vitals.controller', () => ({
   getThresholds: jest.fn(), upsertThreshold: jest.fn(), deleteThreshold: jest.fn(),
 }));
 jest.mock('../../src/controllers/settings.controller', () => ({
-  getUserSettings: jest.fn(), updateProfile: jest.fn(), updateNotifications: jest.fn(), updateSecurity: jest.fn(),
+  getUserSettings: jest.fn(), updateProfile: jest.fn(), updateNotifications: jest.fn(), updateSecurity: jest.fn(), updateHospital: jest.fn((req: any, res: any) => res.status(200).json({ success: true, body: req.body })),
   updateDisplay: jest.fn((req: any, res: any) => res.status(200).json({ success: true, body: req.body })),
 }));
 jest.mock('../../src/controllers/notifications.controller', () => ({
@@ -82,6 +82,11 @@ describe('validation on routes', () => {
   it('PUT /settings/display validates theme', async () => {
     expect((await request(app).put('/settings/display').send({ theme: 'neon' })).status).toBe(400);
     expect((await request(app).put('/settings/display').send({ theme: 'dark' })).status).toBe(200);
+  });
+
+  it('PUT /settings/hospital validates the time zone', async () => {
+    expect((await request(app).put('/settings/hospital').send({ timezone: 'Nope/Nope' })).status).toBe(400);
+    expect((await request(app).put('/settings/hospital').send({ timezone: 'Asia/Amman' })).status).toBe(200);
   });
 
   it('POST /notifications/broadcast validates the body', async () => {

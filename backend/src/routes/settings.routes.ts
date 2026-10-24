@@ -6,11 +6,12 @@ import {
   updateNotifications,
   updateSecurity,
   updateDisplay,
+  updateHospital,
 } from '../controllers/settings.controller';
-import { protect } from '../middlewares/auth.middleware';
+import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
-import { updateProfileSchema, updateNotificationSettingsSchema, updateSecuritySettingsSchema, updateDisplaySettingsSchema } from '../validators/settings.validator';
+import { updateProfileSchema, updateNotificationSettingsSchema, updateSecuritySettingsSchema, updateDisplaySettingsSchema, updateHospitalSettingsSchema } from '../validators/settings.validator';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ router.put('/profile', protect, validate({ body: updateProfileSchema }), logActi
 router.put('/notifications', protect, validate({ body: updateNotificationSettingsSchema }), logActivity('UPDATE_NOTIFICATIONS'), updateNotifications);
 router.put('/security', protect, validate({ body: updateSecuritySettingsSchema }), logActivity('UPDATE_SECURITY'), updateSecurity);
 router.put('/display', protect, validate({ body: updateDisplaySettingsSchema }), logActivity('UPDATE_DISPLAY'), updateDisplay);
+router.put('/hospital', protect, authorize('ADMIN'), validate({ body: updateHospitalSettingsSchema }), logActivity('UPDATE_HOSPITAL'), updateHospital);
 
 export default router;

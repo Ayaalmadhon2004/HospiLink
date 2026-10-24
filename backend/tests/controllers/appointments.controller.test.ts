@@ -37,6 +37,21 @@ describe('appointments.controller', () => {
     });
   });
 
+  describe('getAppointments date filter', () => {
+    it('يفلتر اليوم حسب timezone المستشفى بنطاق نصف مفتوح', async () => {
+      prismaMock.hospital.findUnique.mockResolvedValue({ timezone: 'Asia/Amman' } as any);
+      prismaMock.appointment.findMany.mockResolvedValue([]);
+
+      await getAppointments(mockRequest({ query: { date: '2026-08-10' } }), mockResponse());
+
+      const whereArg = (prismaMock.appointment.findMany.mock.calls[0][0] as any).where;
+      expect(whereArg.scheduledAt).toEqual({
+        gte: new Date('2026-08-09T21:00:00Z'),
+        lt: new Date('2026-08-10T21:00:00Z'),
+      });
+    });
+  });
+
   describe('getAppointmentById', () => {
     it('يرجع 404 لو الموعد مش موجود', async () => {
       prismaMock.appointment.findFirst.mockResolvedValue(null);
