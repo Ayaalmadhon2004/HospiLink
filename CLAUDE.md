@@ -136,11 +136,11 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 
 ## Frontend conventions (React)
 
-- Function components + hooks only. Pages are default or named exports lazy-loaded in `App.tsx`;
-  add new pages there inside `PrivateRoute` and in `Sidebar`.
+- Function components + hooks only. Pages are default or named exports lazy-loaded in `App.tsx`. The URL is the only navigation state: a section is a route inside the `AppLayout` layout route
+  (`components/Layout`), and its sidebar entry comes from `configs/navigation.ts` (never a tab state or cookie). Full-page screens (patient detail/edit) are routes outside the layout.
 - Server state through React Query; mutations via `hooks/useCrud.ts` (optimistic updates, rollback on error).
-- All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiDelete`). Never call axios/fetch directly
-  in components. Interceptor attaches Bearer token and normalises error messages.
+- All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiPatch/apiDelete/apiUpload`, all generic over the response type). Never call axios/fetch directly
+  in components. Failures reject with `ApiError` (`message` ready to show, `code`, `status`; see `services/normalizeApiError.ts`); read the code with `getErrorCode(err)`.
 - Real-time: one `use*Socket` hook per domain; always clean up listeners in the effect cleanup.
 - Forms: define fields declaratively in `configs/entityConfigs.ts` and render with `components/Form/*`
   instead of hand-writing new modal forms.
@@ -149,7 +149,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Keep bundles small: lazy-load pages and heavy libs; `vite.config.ts` has manualChunks for react/query/charts/icons.
 - Accessibility: labels on inputs, aria attributes on icon-only buttons, sufficient colour contrast
   (Lighthouse a11y is ~93; color-contrast is the known failing audit).
-- TypeScript strict; avoid `any`, type API responses. Lint must pass before merging.
+- TypeScript strict; type API responses. ESLint forbids `any`, `@ts-ignore`, `console.*` (use `utils/logger`) and ALL inline `eslint-disable` comments (`noInlineConfig`): restructure instead
+  (server data -> `useQuery`; reset-on-open -> mount the form per opening; hooks/constants next to a provider -> their own file). Lint must pass before merging.
+- Components over ~250 lines get split: state/effects in a hook (`hooks/use*`), pure logic in `utils/` or a `*State.ts`, markup in small components.
 
 ## How the two sides connect
 
