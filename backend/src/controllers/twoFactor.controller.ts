@@ -11,9 +11,11 @@ import {
   twoFactorLoginSchema,
   twoFactorEnableSchema,
   twoFactorDisableSchema,
+  twoFactorRegenerateSchema,
   formatZodError,
 } from '../validators/auth.validator';
 import { completeLogin } from './auth.controller';
+import { sendSecurityNotice } from '../services/securityNotices';
 import {
   verifySecondFactor,
   verifyTotp,
@@ -73,6 +75,15 @@ export const twoFactorLogin = async (req: Request, res: Response) => {
     if (result !== 'ok') {
       respondFactorFailure(res, result);
       return;
+    }
+
+    if (recoveryCode) {
+      const remaining = await prisma.twoFactorRecoveryCode.count({ where: { userId: user.id, usedAt: null } });
+      sendSecurityNotice(
+        user.email,
+        'A recovery code was used to sign in',
+        `A two-factor recovery code was just used to sign in to your HospiLink account. Recovery codes left: ${remaining}.`,
+      );
     }
 
     completeLogin(res, user, rememberMe);
@@ -139,7 +150,7 @@ export const twoFactorEnable = async (req: Request, res: Response) => {
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, twoFactorSecretEnc: true, twoFactorLastStep: true, twoFactorEnabledAt: true },
+      select: { id: true, email: true, twoFactorSecretEnc: true, twoFactorLastStep: true, twoFactorEnabledAt: true },
     });
     if (!user) {
       res.status(404).json({ success: false, message: 'User not found' });
@@ -168,6 +179,8 @@ export const twoFactorEnable = async (req: Request, res: Response) => {
       prisma.twoFactorRecoveryCode.createMany({ data: hashes.map((codeHash) => ({ userId, codeHash })) }),
     ]);
 
+    sendSecurityNotice(user.email, 'Two-factor authentication enabled', 'Two-factor authentication was turned on for your HospiLink account.');
+
     res.status(200).json({ success: true, data: { recoveryCodes: plain } });
   } catch (error: unknown) {
     logger.error({ err: error }, 'TwoFactorEnable error:');
@@ -175,46 +188,53 @@ export const twoFactorEnable = async (req: Request, res: Response) => {
   }
 };
 
+// Password + second factor, required for the sensitive actions below. Answers the request itself on
+// failure (and returns null); on success returns the full user row.
+const confirmIdentity = async (req: Request, res: Response, schema: typeof twoFactorDisableSchema) => {
+  const userId = req.user?.id;
+  if (!userId) {
+    res.status(401).json({ success: false, message: 'Not authenticated' });
+    return null;
+  }
+  const parsed = schema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ success: false, message: formatZodError(parsed.error) });
+    return null;
+  }
+  const { password, code, recoveryCode } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    res.status(404).json({ success: false, message: 'User not found' });
+    return null;
+  }
+  if (!user.twoFactorEnabledAt) {
+    res.status(409).json({ success: false, message: 'Two-factor authentication is not enabled' });
+    return null;
+  }
+  if (!(await bcrypt.compare(password, user.password))) {
+    res.status(400).json({ success: false, message: 'Current password is incorrect' });
+    return null;
+  }
+  const result = await verifySecondFactor(user, { code, recoveryCode });
+  if (result !== 'ok') {
+    respondFactorFailure(res, result);
+    return null;
+  }
+  return user;
+};
+
 // ============================================
 // POST /api/auth/2fa/disable — { password, code | recoveryCode }
 // ============================================
 export const twoFactorDisable = async (req: Request, res: Response) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      res.status(401).json({ success: false, message: 'Not authenticated' });
-      return;
-    }
-    const parsed = twoFactorDisableSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ success: false, message: formatZodError(parsed.error) });
-      return;
-    }
-    const { password, code, recoveryCode } = parsed.data;
-
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      res.status(404).json({ success: false, message: 'User not found' });
-      return;
-    }
-    if (!user.twoFactorEnabledAt) {
-      res.status(409).json({ success: false, message: 'Two-factor authentication is not enabled' });
-      return;
-    }
-    if (!(await bcrypt.compare(password, user.password))) {
-      res.status(400).json({ success: false, message: 'Current password is incorrect' });
-      return;
-    }
-
-    const result = await verifySecondFactor(user, { code, recoveryCode });
-    if (result !== 'ok') {
-      respondFactorFailure(res, result);
-      return;
-    }
+    const user = await confirmIdentity(req, res, twoFactorDisableSchema);
+    if (!user) return;
 
     await prisma.$transaction([
       prisma.user.update({
-        where: { id: userId },
+        where: { id: user.id },
         data: {
           twoFactorSecretEnc: null,
           twoFactorEnabledAt: null,
@@ -223,12 +243,41 @@ export const twoFactorDisable = async (req: Request, res: Response) => {
           twoFactorLockedUntil: null,
         },
       }),
-      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId } }),
+      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: user.id } }),
     ]);
+
+    sendSecurityNotice(user.email, 'Two-factor authentication disabled', 'Two-factor authentication was turned off for your HospiLink account.');
 
     res.status(200).json({ success: true, message: 'Two-factor authentication disabled' });
   } catch (error: unknown) {
     logger.error({ err: error }, 'TwoFactorDisable error:');
     res.status(500).json({ success: false, message: 'Failed to disable two-factor authentication' });
+  }
+};
+
+// ============================================
+// POST /api/auth/2fa/recovery-codes — { password, code | recoveryCode }; replaces all codes, returns the new ones once
+// ============================================
+export const twoFactorRegenerateRecoveryCodes = async (req: Request, res: Response) => {
+  try {
+    const user = await confirmIdentity(req, res, twoFactorRegenerateSchema);
+    if (!user) return;
+
+    const { plain, hashes } = generateRecoveryCodes();
+    await prisma.$transaction([
+      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: user.id } }),
+      prisma.twoFactorRecoveryCode.createMany({ data: hashes.map((codeHash) => ({ userId: user.id, codeHash })) }),
+    ]);
+
+    sendSecurityNotice(
+      user.email,
+      'Recovery codes regenerated',
+      'The two-factor recovery codes of your HospiLink account were regenerated. The old codes no longer work.',
+    );
+
+    res.status(200).json({ success: true, data: { recoveryCodes: plain } });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'TwoFactorRegenerate error:');
+    res.status(500).json({ success: false, message: 'Failed to regenerate recovery codes' });
   }
 };

@@ -58,3 +58,20 @@ already exist (cancel or reschedule them, then deploy). Tested on PostgreSQL 16;
 Adds `Staff.userId` (unique, `ON DELETE SET NULL`). The backfill links a staff member to the `User` with the same email (case-insensitive) in the SAME hospital,
 strictly one-to-one; ambiguous or cross-hospital matches stay unlinked. After deploying, staff shown with a "No login" badge either have no account or had a
 mistyped email: fix the email in the staff form (it re-links when a matching login exists) or use `PUT /api/staff/:id/login`.
+
+## Dispatch call history (`20261028000000_dispatch_call_history`)
+
+Drops the UNIQUE index on `DispatchCall.assignedUnitId` (a unit could be assigned to only one call in its whole life) and replaces it with a plain index.
+The live unit <-> call link is still `DispatchUnit.currentCallId` (unique). Nothing to check before deploying; units that stayed `EN_ROUTE` on calls that never got closed
+can be freed by completing or cancelling those calls through the new endpoints.
+
+## Per-hospital vital thresholds (`20261029000000_vital_thresholds_hospital`)
+
+`VitalThresholds` had no `hospitalId` (one table shared by all hospitals). The migration adds it, **copies every existing row to every hospital**, removes the global rows and
+makes (hospitalId, department, vitalType) unique. Checked on PostgreSQL 16 with existing rows and two hospitals. After deploying, review `GET /api/vitals/thresholds` for each hospital:
+a hospital that never configured anything now relies on the built-in defaults (adult ranges) instead of silently having no alerts.
+
+## Bed / patient reconciliation (`20261030000000_reconcile_beds`)
+
+Data-only. Enforces "bed OCCUPIED <=> patient assigned" on existing rows: a DISCHARGED patient loses their bed (the bed becomes AVAILABLE); a bed with a patient becomes OCCUPIED
+(even if it was CLEANING/MAINTENANCE, the patient is there); an OCCUPIED bed with nobody becomes AVAILABLE. To preview what it will change, run the three `UPDATE ... WHERE` conditions as `SELECT`s first.

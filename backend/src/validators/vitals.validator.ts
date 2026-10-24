@@ -26,3 +26,28 @@ export const vitalsQuerySchema = z.object({
 export const vitalsAlertsQuerySchema = z.object({
   department: z.string().trim().min(1).max(100).optional(),
 });
+
+// ── Threshold management ──────────────────────────────────────────────
+const vitalTypeEnum = z.enum(['HEART_RATE', 'BP_SYSTOLIC', 'BP_DIASTOLIC', 'SPO2', 'TEMPERATURE', 'RESPIRATORY_RATE']);
+const limit = z.number().finite().min(0).max(1000).nullable().optional();
+
+// minCritical <= minNormal <= maxNormal <= maxCritical for the limits that are set.
+const limitsAreOrdered = (v: { minCritical?: number | null; minNormal?: number | null; maxNormal?: number | null; maxCritical?: number | null }) => {
+  const set = [v.minCritical, v.minNormal, v.maxNormal, v.maxCritical].filter((n): n is number => typeof n === 'number');
+  return set.every((n, i) => i === 0 || n >= set[i - 1]);
+};
+
+export const upsertThresholdSchema = z
+  .object({
+    department: z.string().trim().min(1).max(100),
+    vitalType: vitalTypeEnum,
+    minNormal: limit,
+    maxNormal: limit,
+    minCritical: limit,
+    maxCritical: limit,
+    alertEnabled: z.boolean().optional(),
+    autoNotify: z.boolean().optional(),
+  })
+  .refine(limitsAreOrdered, { message: 'Limits must satisfy minCritical <= minNormal <= maxNormal <= maxCritical', path: ['minCritical'] });
+
+export const thresholdsQuerySchema = z.object({ department: z.string().trim().min(1).max(100).optional() });

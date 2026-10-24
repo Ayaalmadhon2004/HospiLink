@@ -3,7 +3,8 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { io } from '../server';
 import logger from '../config/logger';
-import { hospitalIdOf } from '../utils/tenant';
+import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
+import { loadEffectiveThresholds, evaluateReading } from '../services/vitalThresholds';
 import { notify } from '../services/notification.service';
 import type { Prisma } from '@prisma/client';
 
@@ -89,48 +90,31 @@ export const createVital = async (req: Request, res: Response) => {
   }
 };
 
-// Helper: Check if vitals are critical
+// Judges a reading against the thresholds of the patient's department (own rows + built-in defaults).
 const checkCriticalVitals = async (
+  hospitalId: string,
   department: string,
   vitals: MetricValues
-): Promise<{ isCritical: boolean; alertType: string | null }> => {
+): Promise<{ isCritical: boolean; alertType: string | null }> =>
+  evaluateReading(vitals, await loadEffectiveThresholds(hospitalId, department));
+
+// A critical reading escalates the patient to CRITICAL. It never downgrades (a clinician does that) and never
+// touches a DISCHARGED patient. Returns true when the status actually changed.
+const escalatePatient = async (patient: { id: string; hospitalId: string }, alertType: string | null): Promise<boolean> => {
   try {
-    const thresholds = await prisma.vitalThresholds.findMany({
-      where: { department, alertEnabled: true },
+    const { count } = await prisma.patient.updateMany({
+      where: { id: patient.id, hospitalId: patient.hospitalId, status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
+      data: { status: 'CRITICAL' },
     });
-
-    let isCritical = false;
-    let alertType: string | null = null;
-
-    for (const t of thresholds) {
-      const value = {
-        HEART_RATE: vitals.heartRate,
-        BP_SYSTOLIC: vitals.systolicBP,
-        BP_DIASTOLIC: vitals.diastolicBP,
-        SPO2: vitals.spO2,
-        TEMPERATURE: vitals.temperature,
-        RESPIRATORY_RATE: vitals.respiratoryRate,
-      }[t.vitalType as string];
-
-      // Missing/invalid metric: skip its threshold (never compare against NaN/null).
-      if (typeof value !== 'number' || !Number.isFinite(value)) continue;
-
-      if (t.minCritical !== null && value < t.minCritical) {
-        isCritical = true;
-        alertType = `${t.vitalType}_LOW`;
-        break;
-      }
-      if (t.maxCritical !== null && value > t.maxCritical) {
-        isCritical = true;
-        alertType = `${t.vitalType}_HIGH`;
-        break;
-      }
-    }
-
-    return { isCritical, alertType };
-  } catch (e) {
-    logger.debug({ err: e }, 'Thresholds check skipped');
-    return { isCritical: false, alertType: null };
+    if (count === 0) return false;
+    const payload = { patientId: patient.id, status: 'CRITICAL', reason: alertType, timestamp: new Date() };
+    io.to(`patient-${patient.id}`).emit('patient-status-changed', payload);
+    io.to(clinicalRoom(patient.hospitalId)).emit('patient-status-changed', payload);
+    return true;
+  } catch (err) {
+    // The reading is already saved and the alert goes out: do not fail the request, but make the failure visible.
+    logger.error({ err, patientId: patient.id }, 'Could not escalate the patient to CRITICAL');
+    return false;
   }
 };
 
@@ -170,7 +154,7 @@ export const recordVitals = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, message: 'Patient not found' });
     }
 
-    const { isCritical, alertType } = await checkCriticalVitals(patient.department, values);
+    const { isCritical, alertType } = await checkCriticalVitals(patient.hospitalId, patient.department, values);
 
     const vitals = await prisma.patientVitals.create({
       data: {
@@ -191,12 +175,16 @@ export const recordVitals = async (req: Request, res: Response) => {
     // ✅ Emit للـ room تبع المريض
     io.to(`patient-${patientId}`).emit('new-vital', vitals);
 
-    if (isCritical) await notifyCriticalVitals(patient, alertType, req.user?.id);
+    let patientStatus: string | null = null;
+    if (isCritical) {
+      if (await escalatePatient(patient, alertType)) patientStatus = 'CRITICAL';
+      await notifyCriticalVitals(patient, alertType, req.user?.id);
+    }
 
     res.status(201).json({
       success: true,
       data: vitals,
-      alert: isCritical ? { type: alertType, message: 'Critical vital detected!' } : null,
+      alert: isCritical ? { type: alertType, message: 'Critical vital detected!', patientStatus } : null,
     });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Record vitals error:');
@@ -310,6 +298,7 @@ export const updateVitals = async (req: Request, res: Response) => {
     }
 
     const { isCritical, alertType } = await checkCriticalVitals(
+      currentVitals.patient.hospitalId,
       currentVitals.patient.department,
       newVitalsData
     );
@@ -324,6 +313,7 @@ export const updateVitals = async (req: Request, res: Response) => {
     });
 
     // Only alert when the reading BECOMES critical (not on every edit of an already critical one).
+    if (isCritical) await escalatePatient(currentVitals.patient, alertType);
     if (isCritical && !currentVitals.isCritical) {
       await notifyCriticalVitals(currentVitals.patient, alertType, req.user?.id);
     }
@@ -350,5 +340,57 @@ export const deleteVitals = async (req: Request, res: Response) => {
   } catch (error: unknown) {
     logger.error({ err: error }, 'Delete vitals error:');
     res.status(500).json({ success: false, message: 'Failed to delete vitals' });
+  }
+};
+// ─── Thresholds ────────────────────────────────────────────────────────
+
+// GET /api/vitals/thresholds?department=ICU — with a department: the 6 rules that apply (own rows + defaults,
+// each flagged with its `source`); without: every custom row of the hospital.
+export const getThresholds = async (req: Request, res: Response) => {
+  try {
+    const hospitalId = hospitalIdOf(req);
+    const department = typeof req.query.department === 'string' ? req.query.department : undefined;
+
+    const data = department
+      ? await loadEffectiveThresholds(hospitalId, department)
+      : await prisma.vitalThresholds.findMany({ where: { hospitalId }, orderBy: [{ department: 'asc' }, { vitalType: 'asc' }] });
+
+    res.status(200).json({ success: true, count: data.length, data });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Get thresholds error:');
+    res.status(500).json({ success: false, message: 'Failed to fetch thresholds' });
+  }
+};
+
+// PUT /api/vitals/thresholds — create or update the rule of one (department, vitalType) of this hospital
+export const upsertThreshold = async (req: Request, res: Response) => {
+  try {
+    const hospitalId = hospitalIdOf(req);
+    const { department, vitalType, minNormal, maxNormal, minCritical, maxCritical, alertEnabled, autoNotify } = req.body;
+    const limits = { minNormal, maxNormal, minCritical, maxCritical, alertEnabled, autoNotify };
+
+    const threshold = await prisma.vitalThresholds.upsert({
+      where: { hospitalId_department_vitalType: { hospitalId, department, vitalType } },
+      update: limits,
+      create: { hospitalId, department, vitalType, ...limits },
+    });
+
+    res.status(200).json({ success: true, data: threshold });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Upsert threshold error:');
+    res.status(500).json({ success: false, message: 'Failed to save threshold' });
+  }
+};
+
+// DELETE /api/vitals/thresholds/:id — drop the custom rule; the built-in default applies again
+export const deleteThreshold = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const { count } = await prisma.vitalThresholds.deleteMany({ where: { id, hospitalId: hospitalIdOf(req) } });
+    if (count === 0) return res.status(404).json({ success: false, message: 'Threshold not found' });
+    res.status(200).json({ success: true, message: 'Threshold removed; the default applies' });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Delete threshold error:');
+    res.status(500).json({ success: false, message: 'Failed to delete threshold' });
   }
 };

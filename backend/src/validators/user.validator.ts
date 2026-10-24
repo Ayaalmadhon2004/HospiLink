@@ -23,4 +23,6 @@ export const approveUserSchema = z.object({
 
 export const listUsersQuerySchema = z.object({
   accountStatus: accountStatusEnum.optional(),
+  // Only logins that are not yet linked to a staff member (for the "link login" picker).
+  linkable: z.literal('true').optional(),
 });

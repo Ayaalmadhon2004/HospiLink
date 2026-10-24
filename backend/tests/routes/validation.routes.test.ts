@@ -17,6 +17,7 @@ jest.mock('../../src/controllers/vitals.controller', () => ({
   recordVitals: jest.fn((req: any, res: any) => res.status(201).json({ success: true, body: req.body })),
   getVitals: jest.fn((req: any, res: any) => res.status(200).json({ success: true, query: req.query })),
   getCriticalAlerts: jest.fn(), getVitalsById: jest.fn(), updateVitals: jest.fn(), deleteVitals: jest.fn(),
+  getThresholds: jest.fn(), upsertThreshold: jest.fn(), deleteThreshold: jest.fn(),
 }));
 jest.mock('../../src/controllers/settings.controller', () => ({
   getUserSettings: jest.fn(), updateProfile: jest.fn(), updateNotifications: jest.fn(), updateSecurity: jest.fn(),

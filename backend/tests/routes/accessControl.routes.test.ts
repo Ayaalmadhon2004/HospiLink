@@ -11,6 +11,7 @@ import vitalsRoutes from '../../src/routes/vitals.routes';
 import bedRoutes from '../../src/routes/bed.routes';
 import usersRoutes from '../../src/routes/users.routes';
 import staffRoutes from '../../src/routes/staff.routes';
+import dispatchRoutes from '../../src/routes/dispatch.routes';
 
 jest.mock('../../src/middlewares/audit.middleware', () => ({
   logActivity: () => (_req: any, _res: any, next: any) => next(),
@@ -23,6 +24,7 @@ app.use('/vitals', vitalsRoutes);
 app.use('/beds', bedRoutes);
 app.use('/users', usersRoutes);
 app.use('/staff', staffRoutes);
+app.use('/dispatch', dispatchRoutes);
 
 const U1 = '3f2b8c1e-6f0a-4a57-9a39-1c1d8b3f7a10';
 
@@ -140,5 +142,75 @@ describe('PUT /staff/:id/login (link a login to a staff member)', () => {
     const res = await request(app).put(`/staff/${U1}/login`).set('Authorization', authz).send({ userId: null });
     expect(res.status).toBe(200);
     expect(res.body.data.hasLogin).toBe(false);
+  });
+});
+
+describe('POST /users/:id/2fa/reset', () => {
+  it.each(['DOCTOR', 'NURSE', 'DISPATCHER'])('is ADMIN only: %s -> 403', async (role) => {
+    const res = await request(app).post(`/users/${U1}/2fa/reset`).set('Authorization', as(role, 'ACTIVE'));
+    expect(res.status).toBe(403);
+    expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('dispatch lifecycle routes', () => {
+  it.each([
+    ['POST', '/dispatch/units'],
+    ['PUT', `/dispatch/units/${U1}`],
+    ['DELETE', `/dispatch/units/${U1}`],
+    ['POST', `/dispatch/calls/${U1}/complete`],
+    ['POST', `/dispatch/calls/${U1}/cancel`],
+  ])('%s %s is forbidden to a NURSE', async (method, url) => {
+    const res = await (request(app) as any)[method.toLowerCase()](url).set('Authorization', as('NURSE', 'ACTIVE')).send({});
+    expect(res.status).toBe(403);
+  });
+
+  it('deleting a unit is ADMIN only (a DISPATCHER gets 403)', async () => {
+    const res = await request(app).delete(`/dispatch/units/${U1}`).set('Authorization', as('DISPATCHER', 'ACTIVE'));
+    expect(res.status).toBe(403);
+    expect(prismaMock.dispatchUnit.deleteMany).not.toHaveBeenCalled();
+  });
+
+  it('a DISPATCHER can create a unit and close a call; bad input is rejected with 400', async () => {
+    const authz = as('DISPATCHER', 'ACTIVE');
+    prismaMock.dispatchUnit.create.mockResolvedValue({ id: 'u9' } as any);
+    const ok = await request(app).post('/dispatch/units').set('Authorization', authz).send({ unitCode: 'AMB-9', unitType: 'AMBULANCE' });
+    expect(ok.status).toBe(201);
+
+    const bad = await request(app).post('/dispatch/units').set('Authorization', authz).send({ unitCode: 'AMB-9', unitType: 'TANK' });
+    expect(bad.status).toBe(400);
+
+    const badId = await request(app).post('/dispatch/calls/not-a-uuid/complete').set('Authorization', authz);
+    expect(badId.status).toBe(400);
+  });
+});
+
+describe('vitals thresholds routes', () => {
+  it('reading is for clinical roles; DISPATCHER gets 403', async () => {
+    const res = await request(app).get('/vitals/thresholds').set('Authorization', as('DISPATCHER', 'ACTIVE'));
+    expect(res.status).toBe(403);
+  });
+
+  it.each(['NURSE', 'DISPATCHER'])('changing thresholds needs a DOCTOR or ADMIN: %s -> 403', async (role) => {
+    const authz = as(role, 'ACTIVE');
+    const put = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2' });
+    const del = await request(app).delete(`/vitals/thresholds/${U1}`).set('Authorization', authz);
+    expect(put.status).toBe(403);
+    expect(del.status).toBe(403);
+    expect(prismaMock.vitalThresholds.upsert).not.toHaveBeenCalled();
+  });
+
+  it('a DOCTOR can save a threshold; disordered limits are a 400; /thresholds is not swallowed by /:id', async () => {
+    const authz = as('DOCTOR', 'ACTIVE');
+    prismaMock.vitalThresholds.upsert.mockResolvedValue({ id: 't1' } as any);
+    const ok = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2', minCritical: 88 });
+    expect(ok.status).toBe(200);
+    const bad = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2', minCritical: 99, maxCritical: 90 });
+    expect(bad.status).toBe(400);
+
+    prismaMock.vitalThresholds.findMany.mockResolvedValue([] as any);
+    const list = await request(app).get('/vitals/thresholds').set('Authorization', authz);
+    expect(list.status).toBe(200);
+    expect(prismaMock.patientVitals.findFirst).not.toHaveBeenCalled();
   });
 });

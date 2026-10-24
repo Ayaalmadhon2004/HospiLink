@@ -11,6 +11,9 @@ const log = (...args: unknown[]) => {
 };
 
 const DISPATCH_ROLES = ['ADMIN', 'DISPATCHER'];
+// A location ping may move a unit between on-the-road states, but never free it: AVAILABLE / OFF_DUTY
+// would contradict a unit that is on a call (use PUT /dispatch/units/:id/status, which enforces that).
+const MOVING_STATUSES: readonly UnitStatus[] = ['EN_ROUTE', 'ON_SCENE', 'TRANSPORTING', 'AT_HOSPITAL'];
 const DISPATCH_JOIN_ROLES = ['ADMIN', 'DISPATCHER', 'DOCTOR'];
 
 const isNonEmptyString = (v: unknown): v is string =>
@@ -53,19 +56,26 @@ export const attachDispatchEvents = (socket: Socket) => {
     if (!d || typeof d !== 'object') return;
     if (!isNonEmptyString(d.unitId) || !isFiniteNumber(d.lat) || !isFiniteNumber(d.lng)) return;
     if (d.lat < -90 || d.lat > 90 || d.lng < -180 || d.lng > 180) return;
-    if (d.status !== undefined && typeof d.status !== 'string') return;
+    if (d.status !== undefined && !MOVING_STATUSES.includes(d.status as UnitStatus)) return;
     const hospitalId = socketHospitalId(socket);
     if (!hospitalId) return;
 
     try {
-      await prisma.dispatchUnit.updateMany({
-        where: { id: d.unitId, hospitalId },
+      const unitId = d.unitId;
+      const { count } = await prisma.dispatchUnit.updateMany({
+        where: { id: unitId, hospitalId },
         data: {
           location: JSON.stringify({ lat: d.lat, lng: d.lng }),
-          status: (d.status as UnitStatus) || undefined,
+          status: d.status as UnitStatus | undefined,
           lastUpdated: new Date(),
         },
       });
+      if (count === 0) return; // not a unit of this hospital
+      // Tracking: everyone in the dispatch room and the ones following this unit see the new position.
+      socket
+        .to(dispatchRoom(hospitalId))
+        .to(unitRoom(hospitalId, unitId))
+        .emit('unit-location', { unitId, lat: d.lat, lng: d.lng, status: d.status, timestamp: new Date() });
     } catch (error) {
       if (isDev) logger.error({ err: error }, 'Failed to update unit location');
     }

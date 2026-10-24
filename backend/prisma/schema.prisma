@@ -22,6 +22,7 @@ model Hospital {
   incidents Incident[]
   dispatchUnits DispatchUnit[]
   dispatchCalls DispatchCall[]
+  vitalThresholds VitalThresholds[]
 }
 
 model User {
@@ -202,8 +203,11 @@ model PatientVitals {
   @@index([isCritical])
 }
 
+// Per hospital and department. A (department, vitalType) without a row falls back to the built-in defaults
+// in services/vitalThresholds.ts, so a missing row never means "no alerts".
 model VitalThresholds {
   id           String  @id @default(uuid())
+  hospitalId   String
   department   String
   vitalType    String
   minNormal    Float?
@@ -212,8 +216,10 @@ model VitalThresholds {
   maxCritical  Float?
   alertEnabled Boolean @default(true)
   autoNotify   Boolean @default(false)
+  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
-  @@unique([department, vitalType])
+  @@unique([hospitalId, department, vitalType])
+  @@index([hospitalId])
 }
 
 model Staff {
@@ -326,7 +332,8 @@ model DispatchCall {
   priority       Priority      @default(MEDIUM)
   status         CallStatus    @default(PENDING)
   notes          String?
-  assignedUnitId String?       @unique
+  // History of which unit handled the call. Not unique: a unit handles many calls over time (the live link is DispatchUnit.currentCallId).
+  assignedUnitId String?
   hospitalId     String
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -334,6 +341,7 @@ model DispatchCall {
   hospital       Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@index([hospitalId])
+  @@index([assignedUnitId])
 }
 
 enum AccountStatus {

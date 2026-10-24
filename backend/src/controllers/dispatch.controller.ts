@@ -2,7 +2,7 @@
 import { Request, Response } from 'express';
 import { io } from '../server';
 import prisma from '../config/db';
-import type { CallStatus } from '@prisma/client';
+import type { CallStatus, UnitStatus, UnitType } from '@prisma/client';
 import logger from '../config/logger';
 import { hospitalIdOf, dispatchRoom, departmentRoom, unitRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
@@ -70,29 +70,56 @@ export const getCalls = async (req: Request, res: Response) => {
   }
 };
 
-// POST /api/dispatch/units/:id/status — تحديث حالة الوحدة
+// Thrown inside transactions to answer with a specific status.
+class LifecycleError extends Error {
+  constructor(readonly statusCode: 404 | 409, message: string) {
+    super(message);
+  }
+}
+
+const isUniqueViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2002';
+
+// A call that is not finished yet.
+const ACTIVE_CALL_STATUSES: CallStatus[] = ['PENDING', 'ASSIGNED', 'EN_ROUTE', 'ON_SCENE'];
+
+// Unit status -> call status, for the statuses the call can mirror (CallStatus has no TRANSPORTING/AT_HOSPITAL).
+const CALL_STATUS_FOR_UNIT: Partial<Record<UnitStatus, CallStatus>> = { EN_ROUTE: 'EN_ROUTE', ON_SCENE: 'ON_SCENE' };
+
+// PUT /api/dispatch/units/:id/status — تحديث حالة الوحدة
+// Rules: a unit on an active call cannot become AVAILABLE/OFF_DUTY (complete or cancel the call first), and
+// EN_ROUTE / ON_SCENE are mirrored on its call. The call link itself is never set from here.
 export const updateUnitStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const { status, location, eta, callId } = req.body;
+    const { status, location, eta } = req.body as { status?: UnitStatus; location?: unknown; eta?: number | null };
     const hospitalId = hospitalIdOf(req);
+    const freeing = status === 'AVAILABLE' || status === 'OFF_DUTY';
 
-    const existing = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Unit not found' });
-    if (callId && !(await prisma.dispatchCall.findFirst({ where: { id: callId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'Call not found' });
-    }
+    const unit = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.dispatchUnit.updateMany({
+        // freeing a unit that still has a call matches nothing -> 409 below
+        where: { id, hospitalId, ...(freeing ? { currentCallId: null } : {}) },
+        data: {
+          status,
+          location: location ? JSON.stringify(location) : undefined,
+          eta,
+          lastUpdated: new Date(),
+        },
+      });
+      if (claimed.count === 0) {
+        const exists = await tx.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
+        throw new LifecycleError(exists ? 409 : 404, exists ? 'Unit is on an active call: complete or cancel the call first' : 'Unit not found');
+      }
 
-    const unit = await prisma.dispatchUnit.update({
-      where: { id },
-      data: {
-        status,
-        location: location ? JSON.stringify(location) : undefined,
-        eta,
-        currentCallId: callId,
-        lastUpdated: new Date()
-      },
-      include: { currentCall: true }
+      const updated = await tx.dispatchUnit.findUniqueOrThrow({ where: { id } });
+      const mirrored = status ? CALL_STATUS_FOR_UNIT[status] : undefined;
+      if (mirrored && updated.currentCallId) {
+        await tx.dispatchCall.updateMany({
+          where: { id: updated.currentCallId, hospitalId, status: { in: ACTIVE_CALL_STATUSES } },
+          data: { status: mirrored },
+        });
+      }
+      return tx.dispatchUnit.findUniqueOrThrow({ where: { id }, include: { currentCall: true } });
     });
 
     // 🔥 بث التحديث لكل المشتركين
@@ -113,7 +140,78 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, data: unit });
   } catch (error: unknown) {
+    if (error instanceof LifecycleError) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
     handleError(res, error, 'Failed to update unit status');
+  }
+};
+
+// POST /api/dispatch/units — add a unit to the fleet of the caller's hospital
+export const createUnit = async (req: Request, res: Response) => {
+  try {
+    const { unitCode, unitType, department, crew } = req.body as {
+      unitCode: string; unitType: UnitType; department?: string; crew?: string[];
+    };
+    const hospitalId = hospitalIdOf(req);
+
+    const unit = await prisma.dispatchUnit.create({
+      data: { unitCode, unitType, department, crew, hospitalId },
+    });
+
+    io.to(dispatchRoom(hospitalId)).emit('unit-created', { unitId: unit.id, unitCode: unit.unitCode, timestamp: new Date() });
+    res.status(201).json({ success: true, data: unit });
+  } catch (error: unknown) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ success: false, message: 'A unit with this code already exists' });
+    }
+    handleError(res, error, 'Failed to create unit');
+  }
+};
+
+// PUT /api/dispatch/units/:id — edit the unit's identity (code, type, department, crew); status has its own route
+export const updateUnit = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const hospitalId = hospitalIdOf(req);
+
+    const existing = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    if (!existing) return res.status(404).json({ success: false, message: 'Unit not found' });
+
+    const { unitCode, unitType, department, crew } = req.body as {
+      unitCode?: string; unitType?: UnitType; department?: string; crew?: string[];
+    };
+    const unit = await prisma.dispatchUnit.update({ where: { id }, data: { unitCode, unitType, department, crew } });
+
+    io.to(dispatchRoom(hospitalId)).emit('unit-updated', { unitId: id, timestamp: new Date() });
+    res.status(200).json({ success: true, data: unit });
+  } catch (error: unknown) {
+    if (isUniqueViolation(error)) {
+      return res.status(409).json({ success: false, message: 'A unit with this code already exists' });
+    }
+    handleError(res, error, 'Failed to update unit');
+  }
+};
+
+// DELETE /api/dispatch/units/:id — only a unit that is not on a call
+export const deleteUnit = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const hospitalId = hospitalIdOf(req);
+
+    const { count } = await prisma.dispatchUnit.deleteMany({ where: { id, hospitalId, currentCallId: null } });
+    if (count === 0) {
+      const exists = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
+      return res.status(exists ? 409 : 404).json({
+        success: false,
+        message: exists ? 'Unit is on an active call: complete or cancel the call first' : 'Unit not found',
+      });
+    }
+
+    io.to(dispatchRoom(hospitalId)).emit('unit-deleted', { unitId: id, timestamp: new Date() });
+    res.status(200).json({ success: true, message: 'Unit deleted' });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to delete unit');
   }
 };
 
@@ -234,3 +332,53 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
     handleError(res, error, 'Failed to assign unit');
   }
 };
+// Closes a call (COMPLETED or CANCELLED) and releases its unit in the same transaction, so the unit never stays
+// EN_ROUTE on a finished call. An OFF_DUTY unit keeps that status; otherwise it becomes AVAILABLE with no ETA.
+const closeCall = (target: 'COMPLETED' | 'CANCELLED') => async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    const hospitalId = hospitalIdOf(req);
+
+    const { call, unit } = await prisma.$transaction(async (tx) => {
+      const claimed = await tx.dispatchCall.updateMany({
+        where: { id, hospitalId, status: { in: ACTIVE_CALL_STATUSES } },
+        data: { status: target },
+      });
+      if (claimed.count === 0) {
+        const exists = await tx.dispatchCall.findFirst({ where: { id, hospitalId }, select: { id: true } });
+        throw new LifecycleError(exists ? 409 : 404, exists ? 'Call is already completed or cancelled' : 'Call not found');
+      }
+
+      const closed = await tx.dispatchCall.findUniqueOrThrow({ where: { id } });
+      const unitId = closed.assignedUnitId;
+      if (!unitId) return { call: closed, unit: null };
+
+      await tx.dispatchUnit.updateMany({ where: { id: unitId, hospitalId, currentCallId: id }, data: { currentCallId: null, eta: null } });
+      await tx.dispatchUnit.updateMany({
+        where: { id: unitId, hospitalId, currentCallId: null, status: { not: 'OFF_DUTY' } },
+        data: { status: 'AVAILABLE' },
+      });
+      return { call: closed, unit: await tx.dispatchUnit.findFirst({ where: { id: unitId, hospitalId } }) };
+    });
+
+    const event = target === 'COMPLETED' ? 'call-completed' : 'call-cancelled';
+    io.to(dispatchRoom(hospitalId)).emit(event, { callId: id, unitId: unit?.id ?? null, timestamp: new Date() });
+    if (unit) {
+      io.to(dispatchRoom(hospitalId)).emit('unit-status-update', { unitId: unit.id, status: unit.status, eta: null, timestamp: new Date() });
+      io.to(unitRoom(hospitalId, unit.id)).emit('unit-released', { callId: id, status: unit.status });
+    }
+
+    res.status(200).json({ success: true, data: { call, unit } });
+  } catch (error: unknown) {
+    if (error instanceof LifecycleError) {
+      return res.status(error.statusCode).json({ success: false, message: error.message });
+    }
+    handleError(res, error, target === 'COMPLETED' ? 'Failed to complete call' : 'Failed to cancel call');
+  }
+};
+
+// POST /api/dispatch/calls/:id/complete
+export const completeCall = closeCall('COMPLETED');
+
+// POST /api/dispatch/calls/:id/cancel
+export const cancelCall = closeCall('CANCELLED');

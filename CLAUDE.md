@@ -84,13 +84,22 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   users and pre-existing users are verified. `User.passwordChangedAt` revokes older tokens in `protect` and `socketAuth`.
 - 2FA (TOTP via `otplib`): `User.twoFactorEnabledAt` is the source of truth (`UserSettings.twoFactorAuth` is no longer read; `PUT /settings/security` rejects `twoFactorAuth`).
   Login with 2FA answers `{ twoFactorRequired, challengeToken }` (5 min, no cookie; `protect` rejects it) and `POST /api/auth/2fa/login` sets the cookie. Setup/enable/disable live in
-  `controllers/twoFactor.controller.ts`; codes are replay-protected, 5 wrong codes lock the account's 2FA for 15 min, recovery codes are stored hashed. Never return raw `User` rows: use `toPublicUser`.
+  `controllers/twoFactor.controller.ts`; codes are replay-protected, 5 wrong codes lock the account's 2FA for 15 min, recovery codes are stored hashed (`POST /auth/2fa/recovery-codes` regenerates them with password + code; `POST /users/:id/2fa/reset` lets an ADMIN of the same hospital clear a user's 2FA and revoke their sessions). Enabling/disabling/resetting 2FA, regenerating codes and using a recovery code email a notice (`services/securityNotices.ts`). Never return raw `User` rows: use `toPublicUser`.
 - Staff <-> login: `Staff.userId` (unique, nullable FK to `User`, `SetNull`) is the only link. Appointment/shift notifications and reminders go to `staff.userId`; staff without one are
   logged and skipped (the directory shows a "No login" badge). Never match `Staff.email` with `User.email` at runtime. The link is made once: `POST /staff` (with `loginRole` it also creates the login
   and emails a set-password link), invite/approve of a user, a staff email correction, or `PUT /staff/:id/login { userId | null }` (ADMIN). Only same-hospital records are ever linked; `userId` is never exposed
   (the API returns `hasLogin`).
 - Appointments: a doctor cannot have overlapping non-cancelled appointments (`services/appointmentConflicts.ts`, each with its own `duration`, also checked on update) and a DB exclusion constraint closes the race.
   An appointment always references an existing patient (`patientId`/`patientCode`); it never creates patients.
+- Dispatch lifecycle: the unit <-> call link changes ONLY through `POST /dispatch/calls/:id/assign`, `/complete` and `/cancel` (the last two close the call and release the unit in one transaction;
+  `PUT /dispatch/units/:id/status` never takes a `callId` and refuses AVAILABLE/OFF_DUTY for a unit that is on a call; EN_ROUTE/ON_SCENE are mirrored on the call). `DispatchCall.assignedUnitId` is history only (not unique).
+  Units: `POST/PUT/DELETE /dispatch/units` (delete = ADMIN, refused while on a call). Socket `unit-location-update` (DISPATCHER/ADMIN) is broadcast as `unit-location` to the dispatch and unit rooms.
+- Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
+  managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
+  and a failed threshold lookup is logged as an error and also falls back to the defaults. A reading can therefore never be silently judged "not critical" for lack of configuration.
+- Beds <-> patients: a bed is OCCUPIED if and only if a patient is assigned to it (`Patient.bedId`). Everything that changes either side goes through `services/bedAssignment.ts` (`claimBed` is an atomic
+  AVAILABLE-and-empty -> OCCUPIED update, `releaseBed` frees it) inside a transaction: admit, `PUT /patients/:id` (bedId change, or status DISCHARGED which frees the bed), discharge, `PUT /beds/:id` (patientId assign/unassign;
+  a status that contradicts the patient is 400, switching a bed that has a patient away from OCCUPIED is 409) and `DELETE /beds/:id` (409 while it has a patient). Migration `20261030000000_reconcile_beds` repaired old rows.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

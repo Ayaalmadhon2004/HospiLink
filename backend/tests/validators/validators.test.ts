@@ -2,9 +2,10 @@ import { idSchema } from '../../src/validators/common.validator';
 import { createAppointmentSchema, updateAppointmentSchema } from '../../src/validators/appointment.validator';
 import { createBedSchema, updateBedSchema } from '../../src/validators/bed.validator';
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
+import { upsertThresholdSchema } from '../../src/validators/vitals.validator';
 import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
 import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
-import { createCallSchema, assignUnitSchema, updateUnitStatusSchema } from '../../src/validators/dispatch.validator';
+import { createCallSchema, assignUnitSchema, updateUnitStatusSchema, createUnitSchema, updateUnitSchema } from '../../src/validators/dispatch.validator';
 import { notificationsQuerySchema } from '../../src/validators/notification.validator';
 import { updateDisplaySettingsSchema, updateProfileSchema, updateSecuritySettingsSchema } from '../../src/validators/settings.validator';
 
@@ -160,5 +161,36 @@ describe('staff login link', () => {
     expect(staffLoginSchema.safeParse({ userId: null }).success).toBe(true);
     expect(staffLoginSchema.safeParse({ userId: 'abc' }).success).toBe(false);
     expect(staffLoginSchema.safeParse({}).success).toBe(false);
+  });
+});
+
+describe('dispatch unit lifecycle', () => {
+  it('updateUnitStatus strips callId: the call link only changes through assign/complete/cancel', () => {
+    const r = updateUnitStatusSchema.parse({ status: 'EN_ROUTE', callId: U1 });
+    expect(r).toEqual({ status: 'EN_ROUTE' });
+  });
+  it('createUnit needs a code and a valid type; crew and department are optional', () => {
+    expect(createUnitSchema.safeParse({ unitCode: 'AMB-9', unitType: 'AMBULANCE' }).success).toBe(true);
+    expect(createUnitSchema.safeParse({ unitCode: 'AMB-9', unitType: 'AMBULANCE', crew: ['A', 'B'], department: 'ER' }).success).toBe(true);
+    expect(createUnitSchema.safeParse({ unitCode: '', unitType: 'AMBULANCE' }).success).toBe(false);
+    expect(createUnitSchema.safeParse({ unitCode: 'X', unitType: 'TANK' }).success).toBe(false);
+    expect(createUnitSchema.parse({ unitCode: 'X', unitType: 'POLICE', hospitalId: 'h', status: 'OFF_DUTY', currentCallId: U1 })).toEqual({ unitCode: 'X', unitType: 'POLICE' });
+  });
+  it('updateUnit accepts partial identity fields only (no status, no call)', () => {
+    expect(updateUnitSchema.parse({ unitCode: 'N', status: 'OFF_DUTY', currentCallId: U1 })).toEqual({ unitCode: 'N' });
+  });
+});
+
+describe('upsertThresholdSchema', () => {
+  const base = { department: 'ICU', vitalType: 'HEART_RATE' };
+  it('accepts ordered limits, partial limits and null (clears a limit)', () => {
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 40, minNormal: 60, maxNormal: 100, maxCritical: 130 }).success).toBe(true);
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 90, maxCritical: null, alertEnabled: false }).success).toBe(true);
+  });
+  it('rejects disordered limits, unknown vital types, hospitalId-like extras are stripped', () => {
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 100, maxCritical: 50 }).success).toBe(false);
+    expect(upsertThresholdSchema.safeParse({ ...base, minNormal: 120, maxNormal: 60 }).success).toBe(false);
+    expect(upsertThresholdSchema.safeParse({ ...base, vitalType: 'MOOD' }).success).toBe(false);
+    expect(upsertThresholdSchema.parse({ ...base, hospitalId: 'x' })).not.toHaveProperty('hospitalId');
   });
 });

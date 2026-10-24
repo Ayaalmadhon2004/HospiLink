@@ -8,6 +8,7 @@ import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
 import { linkStaffToUserByEmail } from '../services/staffLink';
+import { sendSecurityNotice } from '../services/securityNotices';
 import type { Prisma } from '@prisma/client';
 
 const USER_SELECT = {
@@ -30,9 +31,13 @@ const handleError = (res: Response, error: unknown, message: string) => {
 // GET /api/users?accountStatus=PENDING
 export const listUsers = async (req: Request, res: Response) => {
   try {
-    const { accountStatus } = req.query as { accountStatus?: 'PENDING' | 'ACTIVE' | 'DISABLED' };
+    const { accountStatus, linkable } = req.query as { accountStatus?: 'PENDING' | 'ACTIVE' | 'DISABLED'; linkable?: 'true' };
     const users = await prisma.user.findMany({
-      where: { hospitalId: hospitalIdOf(req), ...(accountStatus ? { accountStatus } : {}) },
+      where: {
+        hospitalId: hospitalIdOf(req),
+        ...(accountStatus ? { accountStatus } : {}),
+        ...(linkable ? { staff: null } : {}),
+      },
       select: USER_SELECT,
       orderBy: { createdAt: 'desc' },
     });
@@ -148,5 +153,50 @@ export const deactivateUser = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: user });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to deactivate user');
+  }
+};
+
+// POST /api/users/:id/2fa/reset — lost authenticator and recovery codes: an ADMIN of the same hospital clears the
+// user's 2FA (they can enrol again after signing in) and revokes their sessions. Own account: use the settings page.
+export const resetUserTwoFactor = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params as { id: string };
+    if (id === req.user?.id) {
+      return res.status(400).json({ success: false, message: 'Manage your own two-factor authentication from your settings' });
+    }
+
+    const target = await prisma.user.findFirst({
+      where: { id, hospitalId: hospitalIdOf(req) },
+      select: { id: true, email: true, twoFactorEnabledAt: true },
+    });
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (!target.twoFactorEnabledAt) {
+      return res.status(409).json({ success: false, message: 'Two-factor authentication is not enabled for this user' });
+    }
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id },
+        data: {
+          twoFactorSecretEnc: null,
+          twoFactorEnabledAt: null,
+          twoFactorLastStep: null,
+          twoFactorFailures: 0,
+          twoFactorLockedUntil: null,
+          passwordChangedAt: new Date(), // revokes the sessions that exist now
+        },
+      }),
+      prisma.twoFactorRecoveryCode.deleteMany({ where: { userId: id } }),
+    ]);
+
+    sendSecurityNotice(
+      target.email,
+      'Two-factor authentication was reset',
+      'An administrator reset two-factor authentication on your HospiLink account and signed you out everywhere. Sign in again and set it up again.',
+    );
+
+    res.status(200).json({ success: true, message: 'Two-factor authentication reset' });
+  } catch (error: unknown) {
+    handleError(res, error, 'Failed to reset two-factor authentication');
   }
 };
