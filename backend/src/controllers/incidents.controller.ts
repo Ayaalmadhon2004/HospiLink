@@ -1,7 +1,7 @@
 // backend/src/controllers/incidents.controller.ts
 import { Request, Response } from 'express';
 import prisma from '../config/db';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
 import logger from '../config/logger';
@@ -129,7 +129,7 @@ export const createIncident = async (req: Request, res: Response) => {
       },
     });
 
-    io.to(clinicalRoom(hospitalId)).emit('incident-created', incident);
+    getIO().to(clinicalRoom(hospitalId)).emit('incident-created', incident);
 
     await notify({
       type: 'INCIDENT',
@@ -169,7 +169,7 @@ export const updateIncident = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    io.to(clinicalRoom(hospitalId)).emit('incident-updated', incident);
+    getIO().to(clinicalRoom(hospitalId)).emit('incident-updated', incident);
 
     if (isEscalation(previous?.severity, incident.severity)) {
       await notify({
@@ -208,7 +208,7 @@ export const updateIncidentStatus = async (req: Request, res: Response) => {
       data: updateData,
     });
 
-    io.to(clinicalRoom(hospitalId)).emit('incident-status-updated', incident);
+    getIO().to(clinicalRoom(hospitalId)).emit('incident-status-updated', incident);
 
     // Notify when incident is resolved
     if (status === 'RESOLVED') {
@@ -233,7 +233,7 @@ export const deleteIncident = async (req: Request, res: Response) => {
 
     await prisma.incident.delete({ where: { id } });
 
-    io.to(clinicalRoom(hospitalId)).emit('incident-deleted', { id });
+    getIO().to(clinicalRoom(hospitalId)).emit('incident-deleted', { id });
     res.status(200).json({ success: true, message: 'Incident deleted successfully' });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to delete incident');

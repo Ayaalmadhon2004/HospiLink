@@ -1,6 +1,6 @@
 // src/controllers/dispatch.controller.ts
 import { Request, Response } from 'express';
-import { io } from '../server';
+import { getIO } from '../utils/socket';
 import prisma from '../config/db';
 import type { CallStatus, UnitStatus, UnitType } from '@prisma/client';
 import logger from '../config/logger';
@@ -123,7 +123,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث التحديث لكل المشتركين
-    io.to(dispatchRoom(hospitalId)).emit('unit-status-update', {
+    getIO().to(dispatchRoom(hospitalId)).emit('unit-status-update', {
       unitId: id,
       status,
       location,
@@ -132,7 +132,7 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
     });
 
     // لو فيه قسم محدد، بث للقسم كمان
-    io.to(departmentRoom(hospitalId, unit.department)).emit('unit-status-update', {
+    getIO().to(departmentRoom(hospitalId, unit.department)).emit('unit-status-update', {
       unitId: id,
       status,
       unitCode: unit.unitCode
@@ -159,7 +159,7 @@ export const createUnit = async (req: Request, res: Response) => {
       data: { unitCode, unitType, department, crew, hospitalId },
     });
 
-    io.to(dispatchRoom(hospitalId)).emit('unit-created', { unitId: unit.id, unitCode: unit.unitCode, timestamp: new Date() });
+    getIO().to(dispatchRoom(hospitalId)).emit('unit-created', { unitId: unit.id, unitCode: unit.unitCode, timestamp: new Date() });
     res.status(201).json({ success: true, data: unit });
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
@@ -183,7 +183,7 @@ export const updateUnit = async (req: Request, res: Response) => {
     };
     const unit = await prisma.dispatchUnit.update({ where: { id }, data: { unitCode, unitType, department, crew } });
 
-    io.to(dispatchRoom(hospitalId)).emit('unit-updated', { unitId: id, timestamp: new Date() });
+    getIO().to(dispatchRoom(hospitalId)).emit('unit-updated', { unitId: id, timestamp: new Date() });
     res.status(200).json({ success: true, data: unit });
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
@@ -208,7 +208,7 @@ export const deleteUnit = async (req: Request, res: Response) => {
       });
     }
 
-    io.to(dispatchRoom(hospitalId)).emit('unit-deleted', { unitId: id, timestamp: new Date() });
+    getIO().to(dispatchRoom(hospitalId)).emit('unit-deleted', { unitId: id, timestamp: new Date() });
     res.status(200).json({ success: true, message: 'Unit deleted' });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to delete unit');
@@ -233,7 +233,7 @@ export const createCall = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث النداء الجديد لكل الديسباتش
-    io.to(dispatchRoom(hospitalId)).emit('new-call', {
+    getIO().to(dispatchRoom(hospitalId)).emit('new-call', {
       callId: call.id,
       type,
       location,
@@ -243,7 +243,7 @@ export const createCall = async (req: Request, res: Response) => {
 
     // إذا CRITICAL، بث تنبيه خاص
     if (priority === 'CRITICAL') {
-      io.to(dispatchRoom(hospitalId)).emit('critical-alert', {
+      getIO().to(dispatchRoom(hospitalId)).emit('critical-alert', {
         message: `CRITICAL: ${type} at ${location}`,
         callId: call.id
       });
@@ -304,13 +304,13 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
     });
 
     // 🔥 بث التعيين
-    io.to(dispatchRoom(hospitalId)).emit('call-assigned', {
+    getIO().to(dispatchRoom(hospitalId)).emit('call-assigned', {
       callId: id,
       unitId,
       status: 'EN_ROUTE'
     });
 
-    io.to(unitRoom(hospitalId, unitId)).emit('unit-assigned', {
+    getIO().to(unitRoom(hospitalId, unitId)).emit('unit-assigned', {
       callId: id,
       callType: updatedCall.type,
       location: updatedCall.location
@@ -362,10 +362,10 @@ const closeCall = (target: 'COMPLETED' | 'CANCELLED') => async (req: Request, re
     });
 
     const event = target === 'COMPLETED' ? 'call-completed' : 'call-cancelled';
-    io.to(dispatchRoom(hospitalId)).emit(event, { callId: id, unitId: unit?.id ?? null, timestamp: new Date() });
+    getIO().to(dispatchRoom(hospitalId)).emit(event, { callId: id, unitId: unit?.id ?? null, timestamp: new Date() });
     if (unit) {
-      io.to(dispatchRoom(hospitalId)).emit('unit-status-update', { unitId: unit.id, status: unit.status, eta: null, timestamp: new Date() });
-      io.to(unitRoom(hospitalId, unit.id)).emit('unit-released', { callId: id, status: unit.status });
+      getIO().to(dispatchRoom(hospitalId)).emit('unit-status-update', { unitId: unit.id, status: unit.status, eta: null, timestamp: new Date() });
+      getIO().to(unitRoom(hospitalId, unit.id)).emit('unit-released', { callId: id, status: unit.status });
     }
 
     res.status(200).json({ success: true, data: { call, unit } });

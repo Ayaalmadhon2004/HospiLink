@@ -6,7 +6,6 @@ import {
   getThresholds,
   upsertThreshold,
   deleteThreshold,
-  createVital,
   recordVitals,
   getVitals,
   getCriticalAlerts,
@@ -21,29 +20,6 @@ describe('vitals.controller', () => {
     jest.spyOn(console, 'log').mockImplementation(() => {});
   });
   afterEach(() => jest.restoreAllMocks());
-
-  describe('createVital', () => {
-    it('ينشئ قراءة سريعة ويبثها لغرفة المريض', async () => {
-      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
-      prismaMock.patientVitals.create.mockResolvedValue({
-        id: 'v1',
-        patientId: 'p1',
-      } as any);
-
-      const req = mockRequest({
-        body: { patientId: 'p1', heartRate: '80', systolicBP: '120', spO2: '98', temperature: '37', respiratoryRate: '16' },
-      });
-      const res = mockResponse();
-
-      await createVital(req, res);
-
-      const dataArg = (prismaMock.patientVitals.create.mock.calls[0][0] as any).data;
-      expect(dataArg.heartRate).toBe(80); // لازم يترحول لرقم
-      expect(dataArg.recordedBy).toBe('user-1'); // the authenticated user
-      expect(mockRoomEmit).toHaveBeenCalledWith('patient-p1', 'new-vital', expect.objectContaining({ id: 'v1' }));
-      expect(res.status).toHaveBeenCalledWith(201);
-    });
-  });
 
   describe('recordVitals', () => {
     it('يرجع 404 لو المريض مش موجود', async () => {
@@ -405,16 +381,16 @@ describe('vitals.controller', () => {
       expect(prismaMock.patientVitals.create).not.toHaveBeenCalled();
     });
 
-    it('createVital: missing metrics become null, invalid ones return 400', async () => {
+    it('recordVitals: missing metrics become null, invalid ones return 400', async () => {
       const res = mockResponse();
-      await createVital(mockRequest({ body: { patientId: 'p1', heartRate: '80' } }), res);
+      await recordVitals(mockRequest({ body: { patientId: 'p1', heartRate: '80' } }), res);
       const data = createdData();
       expect(data.heartRate).toBe(80);
       expect(data.spO2).toBeNull();
       expect(Object.values(data).some((v) => typeof v === 'number' && Number.isNaN(v))).toBe(false);
 
       const res2 = mockResponse();
-      await createVital(mockRequest({ body: { patientId: 'p1', heartRate: 'abc' } }), res2);
+      await recordVitals(mockRequest({ body: { patientId: 'p1', heartRate: 'abc' } }), res2);
       expect(res2.status).toHaveBeenCalledWith(400);
     });
 
