@@ -36,15 +36,18 @@ describe('staff.controller', () => {
   describe('getStaff', () => {
     it('يرجع كل الطاقم الطبي', async () => {
       (prismaMock as any).staff.findMany.mockResolvedValue([{ id: 's1' }]);
+      (prismaMock as any).staff.count.mockResolvedValue(1);
       const req = mockRequest();
       const res = mockResponse();
 
       await getStaff(req, res);
 
-      expect((prismaMock as any).staff.findMany).toHaveBeenCalledWith({ where: { hospitalId: 'hosp-1' } });
+      expect((prismaMock as any).staff.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { hospitalId: 'hosp-1' }, skip: 0, take: 100 })
+      );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: true, count: 1 })
+        expect.objectContaining({ success: true, count: 1, pagination: expect.objectContaining({ page: 1, totalCount: 1 }) })
       );
     });
   });

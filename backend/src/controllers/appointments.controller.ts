@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
+import { pageParams, pageInfo } from '../utils/pagination';
 import { dayRange, hospitalTimezone, hourKey, formatLocal } from '../utils/time';
 import { notify } from '../services/notification.service';
 import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
@@ -66,16 +67,22 @@ export const getAppointments = async (req: Request, res: Response) => {
     if (type) where.type = type as AppointmentType;
     if (department) where.department = department as string;
 
-    const appointments = await prisma.appointment.findMany({
-      where,
-      include: {
-        patient: { select: { id: true, name: true, patientCode: true, gender: true, age: true } },
-        doctor: { select: { id: true, name: true, role: true, department: true } },
-      },
-      orderBy: { scheduledAt: 'asc' },
-    });
+    const page = pageParams(req.query);
+    const [appointments, totalCount] = await Promise.all([
+      prisma.appointment.findMany({
+        where,
+        include: {
+          patient: { select: { id: true, name: true, patientCode: true, gender: true, age: true } },
+          doctor: { select: { id: true, name: true, role: true, department: true } },
+        },
+        orderBy: [{ scheduledAt: 'asc' }, { id: 'asc' }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.appointment.count({ where }),
+    ]);
 
-    res.status(200).json({ success: true, count: appointments.length, data: appointments });
+    res.status(200).json({ success: true, count: appointments.length, data: appointments, pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch appointments');
   }

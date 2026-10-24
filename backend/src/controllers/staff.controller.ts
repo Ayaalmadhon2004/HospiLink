@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, departmentRoom } from '../utils/tenant';
+import { pageParams, pageInfo } from '../utils/pagination';
 import { dayRange, hospitalTimezone } from '../utils/time';
 import { randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
 import type { Prisma, Role } from '@prisma/client';
@@ -36,9 +37,14 @@ const isUniqueViolation = (error: unknown): boolean => (error as { code?: unknow
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
-    const staff = await prisma.staff.findMany({ where: { hospitalId: hospitalIdOf(req) } });
+    const page = pageParams(req.query);
+    const where = { hospitalId: hospitalIdOf(req) };
+    const [staff, totalCount] = await Promise.all([
+      prisma.staff.findMany({ where, orderBy: [{ name: 'asc' }, { id: 'asc' }], skip: page.skip, take: page.take }),
+      prisma.staff.count({ where }),
+    ]);
 
-    res.status(200).json({ success: true, count: staff.length, data: staff.map(toStaffDto) });
+    res.status(200).json({ success: true, count: staff.length, data: staff.map(toStaffDto), pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     logger.error({ err: error }, 'ERROR:');
     handleError(res, error, 'Failed to fetch staff');
@@ -229,13 +235,19 @@ export const getShifts = async (req: Request, res: Response) => {
       where.endTime = { lte: new Date(d.getTime() + 24 * 60 * 60 * 1000) };
     }
 
-    const shifts = await prisma.shift.findMany({
-      where,
-      include: { staff: { select: { name: true, role: true, avatar: true } } },
-      orderBy: { startTime: 'asc' },
-    });
+    const page = pageParams(req.query);
+    const [shifts, totalCount] = await Promise.all([
+      prisma.shift.findMany({
+        where,
+        include: { staff: { select: { name: true, role: true, avatar: true } } },
+        orderBy: [{ startTime: 'asc' }, { id: 'asc' }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.shift.count({ where }),
+    ]);
 
-    res.status(200).json({ success: true, count: shifts.length, data: shifts });
+    res.status(200).json({ success: true, count: shifts.length, data: shifts, pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch shifts');
   }

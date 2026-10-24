@@ -4,6 +4,7 @@ import prisma from '../config/db';
 import logger from '../config/logger';
 import type { Prisma } from '@prisma/client';
 import { notify } from '../services/notification.service';
+import { pageParams, pageInfo } from '../utils/pagination';
 
 const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, `[Notifications] ${message}:`);
@@ -16,21 +17,22 @@ export const getNotifications = async (req: Request, res: Response) => {
     const userId = req.user?.id;
     if (!userId) return res.status(401).json({ success: false, message: 'Not authenticated' });
 
-    const { limit = '20', unreadOnly = 'false' } = req.query;
+    const page = pageParams(req.query, 20);
     const where: Prisma.NotificationWhereInput = { userId };
-    if (unreadOnly === 'true') where.read = false;
+    if (req.query.unreadOnly === 'true') where.read = false;
 
-    const notifications = await prisma.notification.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      take: Number(limit),
-    });
+    const [notifications, totalCount, unreadCount] = await Promise.all([
+      prisma.notification.findMany({
+        where,
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.notification.count({ where }),
+      prisma.notification.count({ where: { userId, read: false } }),
+    ]);
 
-    const unreadCount = await prisma.notification.count({
-      where: { userId, read: false },
-    });
-
-    res.status(200).json({ success: true, data: notifications, unreadCount });
+    res.status(200).json({ success: true, data: notifications, unreadCount, pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     handleError(res, error, 'Failed to fetch notifications');
   }

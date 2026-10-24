@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
+import { pageParams, pageInfo } from '../utils/pagination';
 import { BedRuleError, claimBed, releaseBed } from '../services/bedAssignment';
 import type { Prisma } from '@prisma/client';
 
@@ -16,14 +17,19 @@ const BED_INCLUDE = {
 // جلب كل السراير
 export const getAllBeds = async (req: Request, res: Response) => {
   try {
-    const beds = await prisma.bed.findMany({
-      where: { hospitalId: hospitalIdOf(req) },
-      include: {
-        ward: { select: { name: true } },
-        patient: { select: { name: true, id: true } }
-      }
-    });
-    res.status(200).json({ success: true, data: beds });
+    const page = pageParams(req.query);
+    const where = { hospitalId: hospitalIdOf(req) };
+    const [beds, totalCount] = await Promise.all([
+      prisma.bed.findMany({
+        where,
+        include: BED_INCLUDE,
+        orderBy: [{ bedNumber: 'asc' }, { id: 'asc' }],
+        skip: page.skip,
+        take: page.take,
+      }),
+      prisma.bed.count({ where }),
+    ]);
+    res.status(200).json({ success: true, count: beds.length, data: beds, pagination: pageInfo(page, totalCount) });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get beds error:');
     res.status(500).json({ success: false, message: 'Internal server error' });

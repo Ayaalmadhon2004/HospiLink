@@ -1,7 +1,7 @@
 // backend/src/validators/appointment.validator.ts
 import { z } from 'zod';
 import { AppointmentStatus, AppointmentType } from '@prisma/client';
-import { idSchema, dateString, enumValue } from './common.validator';
+import { idSchema, dateString, enumValue, pageQueryShape } from './common.validator';
 
 const duration = z.number().int().min(1).max(1440);
 
@@ -38,6 +38,7 @@ export const updateAppointmentSchema = z.object({
 });
 
 export const appointmentQuerySchema = z.object({
+  ...pageQueryShape,
   date: dateString('date').optional(),
   doctorId: z.string().trim().min(1).optional(),
   patientId: z.string().trim().min(1).optional(),

@@ -37,3 +37,6 @@ export const looseNumber = (min: number, max: number, opts: { int?: boolean } = 
 
 // Digits only. Accepts "20", rejects "-1", "2.5" and "abc".
 export const digitsString = z.string().regex(/^\d+$/, 'must be a positive integer');
+
+// Optional page/limit for list endpoints. They stay strings: `pageParams()` (utils/pagination) parses and clamps them.
+export const pageQueryShape = { page: digitsString.optional(), limit: digitsString.optional() } as const;

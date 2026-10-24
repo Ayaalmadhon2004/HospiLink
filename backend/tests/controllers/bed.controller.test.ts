@@ -18,15 +18,34 @@ describe('bed.controller', () => {
     it('يرجع كل الأسرة مع الـ ward و patient', async () => {
       const beds = [{ id: 'b1' }, { id: 'b2' }];
       prismaMock.bed.findMany.mockResolvedValue(beds as any);
+      prismaMock.bed.count.mockResolvedValue(2);
 
       const req = mockRequest();
       const res = mockResponse();
 
       await getAllBeds(req, res);
 
-      expect(prismaMock.bed.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { hospitalId: 'hosp-1' } }));
+      expect(prismaMock.bed.findMany).toHaveBeenCalledWith(expect.objectContaining({ where: { hospitalId: 'hosp-1' }, skip: 0, take: 100 }));
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith({ success: true, data: beds });
+      expect(res.json).toHaveBeenCalledWith({
+        success: true,
+        count: 2,
+        data: beds,
+        pagination: { page: 1, limit: 100, totalCount: 2, totalPages: 1, hasNextPage: false, hasPrevPage: false },
+      });
+    });
+
+    it('يطبّق page و limit ويحدّ الـ limit بـ 200', async () => {
+      prismaMock.bed.findMany.mockResolvedValue([] as any);
+      prismaMock.bed.count.mockResolvedValue(450);
+      const res = mockResponse();
+
+      await getAllBeds(mockRequest({ query: { page: '3', limit: '500' } }), res);
+
+      expect(prismaMock.bed.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 400, take: 200 }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
+        pagination: { page: 3, limit: 200, totalCount: 450, totalPages: 3, hasNextPage: false, hasPrevPage: true },
+      }));
     });
 
     it('يرجع 500 لو صار خطأ بالداتابيز', async () => {
