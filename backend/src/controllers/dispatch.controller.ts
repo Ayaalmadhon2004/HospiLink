@@ -176,7 +176,7 @@ export const updateUnit = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Unit not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'UNIT_NOT_FOUND', message: 'Unit not found' });
 
     const { unitCode, unitType, department, crew } = req.body as {
       unitCode?: string; unitType?: UnitType; department?: string; crew?: string[];

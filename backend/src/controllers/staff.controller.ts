@@ -61,7 +61,7 @@ export const getStaffById = async (req: Request, res: Response) => {
     });
 
     if (!staff) {
-      return res.status(404).json({ success: false, message: 'Staff not found' });
+      return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
     }
 
     res.status(200).json({ success: true, data: toStaffDto(staff) });
@@ -138,7 +138,7 @@ export const updateStaff = async (req: Request, res: Response) => {
 
     const hospitalId = hospitalIdOf(req);
     const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true, userId: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
 
     // Correcting a mistyped email of a staff member without a login: attach the matching login of this
     // hospital if there is one (the link itself never depends on the email afterwards).
@@ -174,14 +174,14 @@ export const setStaffLogin = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
 
     if (userId !== null) {
       const user = await prisma.user.findFirst({
         where: { id: userId, hospitalId },
         select: { id: true, staff: { select: { id: true } } },
       });
-      if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+      if (!user) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
       if (user.staff && user.staff.id !== id) {
         return res.status(409).json({ success: false, message: 'This login is already linked to another staff member' });
       }
@@ -203,7 +203,7 @@ export const deleteStaff = async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
 
     const existing = await prisma.staff.findFirst({ where: { id, hospitalId: hospitalIdOf(req) }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Staff not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
 
     await prisma.staff.delete({ where: { id } });
 
@@ -248,7 +248,7 @@ export const createShift = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const owner = await prisma.staff.findFirst({ where: { id: staffId, hospitalId }, select: { id: true } });
-    if (!owner) return res.status(404).json({ success: false, message: 'Staff not found' });
+    if (!owner) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
 
     const shift = await prisma.shift.create({
       data: {
@@ -279,7 +279,7 @@ export const updateShift = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.shift.findFirst({ where: { id, staff: { hospitalId } }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Shift not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'SHIFT_NOT_FOUND', message: 'Shift not found' });
 
     const shift = await prisma.shift.update({
       where: { id },
@@ -308,7 +308,7 @@ export const deleteShift = async (req: Request, res: Response) => {
     const hospitalId = hospitalIdOf(req);
 
     const existing = await prisma.shift.findFirst({ where: { id, staff: { hospitalId } }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, message: 'Shift not found' });
+    if (!existing) return res.status(404).json({ success: false, code: 'SHIFT_NOT_FOUND', message: 'Shift not found' });
 
     const shift = await prisma.shift.delete({
       where: { id },

@@ -51,7 +51,7 @@ export const getRecentPatients = async (req: Request, res: Response) => {
     logger.error({ err: error }, "🔥 getRecentPatients error:");
     res.status(500).json({ 
       success: false, 
-      message: 'فشل جلب قائمة المرضى' });
+      message: 'Failed to fetch recent patients' });
   }
 };
 
@@ -181,7 +181,7 @@ export const admitPatient = async (req: Request, res: Response) => {
     logger.error({ err: error }, '🔥 Admit error:');
     res.status(500).json({ 
       success: false, 
-      message: 'فشل إدخال المريض' });
+      message: 'Failed to admit patient' });
   }
 };
 // ============================================
@@ -200,7 +200,7 @@ export const uploadReport = async (req: Request, res: Response) => {
 
     const patient = await prisma.patient.findFirst({ where: { id: patientId, hospitalId: hospitalIdOf(req) } });
     if (!patient) {
-      return res.status(404).json({ success: false, message: 'Patient not found' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
 
     const reportId = randomUUID();
@@ -233,7 +233,7 @@ export const getReportFile = async (req: Request, res: Response) => {
     const { reportId } = req.params as { reportId: string };
     const report = await prisma.report.findFirst({ where: { id: reportId, patient: { hospitalId: hospitalIdOf(req) } } });
     if (!report || !report.fileData) {
-      return res.status(404).json({ success: false, message: 'File not found' });
+      return res.status(404).json({ success: false, code: 'FILE_NOT_FOUND', message: 'File not found' });
     }
 
     res.setHeader('Content-Type', report.fileType);
@@ -294,13 +294,13 @@ export const getPatientById = async (req: Request, res: Response) => {
     });
 
     if (!patient) {
-      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
 
     res.status(200).json({ success: true, data: patient });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get patient error:');
-    res.status(500).json({ success: false, message: 'فشل جلب بيانات المريض' });
+    res.status(500).json({ success: false, message: 'Failed to fetch patient' });
   }
 };
 
@@ -377,7 +377,7 @@ export const getPatients = async (req: Request, res: Response) => {
     });
   } catch (error: unknown) {
     logger.error({ err: error }, "🔥 Error:");
-    res.status(500).json({ success: false, message: 'فشل جلب المرضى' });
+    res.status(500).json({ success: false, message: 'Failed to fetch patients' });
   }
 };
 
@@ -406,7 +406,7 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, count: beds.length, data: beds, groupedByWard });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Get available beds error:');
-    res.status(500).json({ success: false, message: 'فشل جلب الأسرة المتاحة' });
+    res.status(500).json({ success: false, message: 'Failed to fetch available beds' });
   }
 };
 
@@ -425,10 +425,10 @@ export const updatePatient = async (req: Request, res: Response) => {
 
     const existing = await prisma.patient.findFirst({ where: { id, hospitalId }, select: { id: true, bedId: true, status: true } });
     if (!existing) {
-      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
     if (fields.doctorId && !(await prisma.user.findFirst({ where: { id: fields.doctorId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'Doctor not found' });
+      return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
     }
 
     // Bed rules (OCCUPIED <=> has a patient): a DISCHARGED patient holds no bed and cannot be given one.
@@ -463,7 +463,7 @@ export const updatePatient = async (req: Request, res: Response) => {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     logger.error({ err: error }, 'Update patient error:');
-    res.status(500).json({ success: false, message: 'فشل تحديث المريض' });
+    res.status(500).json({ success: false, message: 'Failed to update patient' });
   }
 };
 
@@ -481,7 +481,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
     });
 
     if (!patient) {
-      return res.status(404).json({ success: false, message: 'المريض غير موجود' });
+      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
 
     const result = await prisma.$transaction(async (tx) => {
@@ -502,6 +502,6 @@ export const dischargePatient = async (req: Request, res: Response) => {
     res.status(200).json({ success: true, data: result });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Discharge patient error:');
-    res.status(500).json({ success: false, message: 'فشل تسريح المريض' });
+    res.status(500).json({ success: false, message: 'Failed to discharge patient' });
   }
 };

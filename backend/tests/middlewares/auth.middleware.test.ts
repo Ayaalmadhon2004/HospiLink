@@ -15,7 +15,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: expect.stringContaining('Unauthorized') })
+        expect.objectContaining({ success: false, error: expect.objectContaining({ code: 'UNAUTHORIZED', message: expect.stringContaining('Unauthorized') }) })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -116,7 +116,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false, error: 'Account pending admin approval', code: 'ACCOUNT_PENDING' })
+        expect.objectContaining({ success: false, error: { code: 'ACCOUNT_PENDING', message: 'Account pending admin approval' }, code: 'ACCOUNT_PENDING' })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -146,7 +146,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: 'Invalid or expired token' })
+        expect.objectContaining({ error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -163,7 +163,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(401);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ error: 'User not found' })
+        expect.objectContaining({ error: { code: 'UNAUTHORIZED', message: 'User not found' } })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -190,7 +190,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ required: ['ADMIN'], current: 'NURSE' })
+        expect.objectContaining({ error: expect.objectContaining({ code: 'FORBIDDEN', details: { required: ['ADMIN'], current: 'NURSE' } }) })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -204,7 +204,7 @@ describe('auth.middleware', () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ current: 'none' })
+        expect.objectContaining({ error: expect.objectContaining({ code: 'FORBIDDEN', details: { required: ['ADMIN'], current: 'none' } }) })
       );
       expect(next).not.toHaveBeenCalled();
     });

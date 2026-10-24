@@ -20,10 +20,11 @@ describe('error.middleware', () => {
     errorHandler(err, req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       success: false,
       message: 'Not found',
-    });
+      error: { code: 'NOT_FOUND', message: 'Not found' },
+    }));
   });
 
   it('يرجع 500 ورسالة افتراضية لما ما يكون فيه status أو message', () => {
@@ -36,10 +37,10 @@ describe('error.middleware', () => {
     errorHandler(err, req, res, next);
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({
       success: false,
-      message: 'حدث خطأ غير متوقع في السيرفر',
-    });
+      error: { code: 'INTERNAL_ERROR', message: 'Unexpected server error' },
+    }));
   });
 
   it('لا يكشف رسالة الخطأ الداخلية لما يكون status >= 500 أو مفقود', () => {
@@ -51,7 +52,8 @@ describe('error.middleware', () => {
     expect(res.status).toHaveBeenNthCalledWith(1, 503);
     expect(res.status).toHaveBeenNthCalledWith(2, 500);
     (res.json as jest.Mock).mock.calls.forEach(([body]) => {
-      expect(body).toEqual({ success: false, message: 'حدث خطأ غير متوقع في السيرفر' });
+      expect(body.error).toEqual({ code: 'INTERNAL_ERROR', message: 'Unexpected server error' });
+      expect(JSON.stringify(body)).not.toContain('secret db detail');
     });
   });
 });

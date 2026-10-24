@@ -4,20 +4,27 @@ import { apiPost, apiGet } from './api';
 // ============================================
 // LOGIN
 // ============================================
-export interface LoginResponse {
-  success?: boolean;
-  message?: string;
+interface LoginPayload {
   user?: { id: string };
   // Set instead of `user` when the account has 2FA: finish with verifyTwoFactor().
   twoFactorRequired?: boolean;
   challengeToken?: string;
 }
 
+// The payload lives in `data`; older servers also put it at the top level, so callers get both flattened.
+export interface LoginResponse extends LoginPayload {
+  success?: boolean;
+  message?: string;
+  data?: LoginPayload;
+}
+
+const unwrapLogin = (res: LoginResponse): LoginResponse => ({ ...res, ...res.data });
+
 export const login = async (credentials: { email: string; password: string; rememberMe?: boolean }) => {
   const data = await apiPost<LoginResponse>('/auth/login', credentials);
 
   // الـ token بينحفظ بكوكي httpOnly من السيرفر — ما منخزنه بالـ localStorage
-  return data;
+  return unwrapLogin(data);
 };
 
 // ============================================
@@ -56,8 +63,8 @@ export const logout = async () => {
 // ============================================
 export const getCurrentUser = async () => {
   try {
-    const data = await apiGet('/auth/me');
-    return data.user || null;
+    const data = await apiGet<{ user?: unknown; data?: { user?: unknown } }>('/auth/me');
+    return data.data?.user || data.user || null;
   } catch {
     return null;
   }
@@ -68,8 +75,8 @@ export const getCurrentUser = async () => {
 // ============================================
 export const isAuthenticated = async () => {
   try {
-    const data = await apiGet('/auth/me');
-    return !!data.user;
+    const data = await apiGet<{ user?: unknown; data?: { user?: unknown } }>('/auth/me');
+    return !!(data.data?.user || data.user);
   } catch {
     return false;
   }
@@ -93,7 +100,7 @@ export const resendVerification = (email: string) => apiPost('/auth/resend-verif
 export type SecondFactor = { code: string } | { recoveryCode: string };
 
 export const verifyTwoFactor = (challengeToken: string, factor: SecondFactor) =>
-  apiPost<LoginResponse>('/auth/2fa/login', { challengeToken, ...factor });
+  apiPost<LoginResponse>('/auth/2fa/login', { challengeToken, ...factor }).then(unwrapLogin);
 
 export const setupTwoFactor = () =>
   apiPost<{ data: { secret: string; otpauthUrl: string } }>('/auth/2fa/setup');

@@ -108,7 +108,7 @@ export const twoFactorSetup = async (req: Request, res: Response) => {
       select: { id: true, email: true, twoFactorEnabledAt: true },
     });
     if (!user) {
-      res.status(404).json({ success: false, message: 'User not found' });
+      res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
       return;
     }
     if (user.twoFactorEnabledAt) {
@@ -153,7 +153,7 @@ export const twoFactorEnable = async (req: Request, res: Response) => {
       select: { id: true, email: true, twoFactorSecretEnc: true, twoFactorLastStep: true, twoFactorEnabledAt: true },
     });
     if (!user) {
-      res.status(404).json({ success: false, message: 'User not found' });
+      res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
       return;
     }
     if (user.twoFactorEnabledAt) {
@@ -205,7 +205,7 @@ const confirmIdentity = async (req: Request, res: Response, schema: typeof twoFa
 
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) {
-    res.status(404).json({ success: false, message: 'User not found' });
+    res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
     return null;
   }
   if (!user.twoFactorEnabledAt) {
