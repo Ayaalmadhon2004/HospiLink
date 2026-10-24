@@ -74,11 +74,10 @@ describe('patient.controller', () => {
 
     it('buckets admissions and discharges per UTC day, oldest first', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-10-21T10:00:00Z'));
-      prismaMock.patient.findMany.mockResolvedValue([
-        { admissionDate: new Date('2026-10-21T01:00:00Z'), dischargeDate: null },
-        { admissionDate: new Date('2026-10-20T23:00:00Z'), dischargeDate: new Date('2026-10-21T09:00:00Z') },
-        { admissionDate: new Date('2026-09-01T00:00:00Z'), dischargeDate: new Date('2026-10-19T12:00:00Z') },
-      ]);
+      // first call = admissions per day, second = discharges per day (aggregated by the DB)
+      prismaMock.$queryRaw
+        .mockResolvedValueOnce([{ d: '2026-10-21', c: 1 }, { d: '2026-10-20', c: 1 }])
+        .mockResolvedValueOnce([{ d: '2026-10-21', c: 1 }, { d: '2026-10-19', c: 1 }]);
       const res = mockResponse();
 
       await getPatientFlow(mockRequest({ query: { days: '3' } }), res);
@@ -95,7 +94,7 @@ describe('patient.controller', () => {
     });
 
     it('defaults to 7 days', async () => {
-      prismaMock.patient.findMany.mockResolvedValue([]);
+      prismaMock.$queryRaw.mockResolvedValue([]);
       const res = mockResponse();
 
       await getPatientFlow(mockRequest(), res);
@@ -104,8 +103,21 @@ describe('patient.controller', () => {
       expect(body.data).toHaveLength(7);
     });
 
+    it('ignores aggregated days outside the requested window', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-10-21T10:00:00Z'));
+      prismaMock.$queryRaw.mockResolvedValue([{ d: '2026-01-01', c: 9 }]);
+      const res = mockResponse();
+
+      await getPatientFlow(mockRequest({ query: { days: '2' } }), res);
+
+      expect((res.json as jest.Mock).mock.calls[0][0].data).toEqual([
+        { date: '2026-10-20', admissions: 0, discharges: 0 },
+        { date: '2026-10-21', admissions: 0, discharges: 0 },
+      ]);
+    });
+
     it('returns 500 without leaking the error message', async () => {
-      prismaMock.patient.findMany.mockRejectedValue(new Error('db secret'));
+      prismaMock.$queryRaw.mockRejectedValue(new Error('db secret'));
       const res = mockResponse();
 
       await getPatientFlow(mockRequest(), res);
