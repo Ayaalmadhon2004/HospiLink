@@ -110,6 +110,7 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
   Socket rooms are per hospital via the helpers in `utils/tenant.ts` (`clinicalRoom`, `departmentRoom`, `dispatchRoom`, `unitRoom`).
   `notify()` refuses role/department broadcasts without a `hospitalId`.
 - Time: the server runs in UTC. "Today" ranges, hour grouping and times inside notifications use `Hospital.timezone` (IANA, default UTC; ADMIN sets it with `PUT /settings/hospital`) through `utils/time.ts` (`dayRange`, `hourKey`, `formatLocal`, `hospitalTimezone`). Never use `Date#setHours`/`setDate` or mutate a `Date`; day ranges are half-open `[start, end)` (`gte`/`lt`).
+- Reminders: no in-process timer. An external scheduler (Render Cron Job, every minute) calls `POST /api/internal/run-reminders` (`x-reminders-secret` = `REMINDERS_CRON_SECRET`; 404 when unset). `services/reminders.service.ts` claims each reminder via `ReminderLog` (unique key, `createMany skipDuplicates`) before `notify()` — never `findFirst` then `create`. See `docs/NOTIFICATIONS.md`.
 - Wrap mutating routes in `logActivity('ACTION_NAME')` (audit.middleware) so they land in `AuditLog`.
 - Validate request bodies with zod (`src/validators/`), return 400 with a clear message. Do not trust `req.body`.
 - Response shape: `{ success, message?, data? }` on success/failure; auth middleware currently uses `{ error }`.
