@@ -75,3 +75,18 @@ a hospital that never configured anything now relies on the built-in defaults (a
 
 Data-only. Enforces "bed OCCUPIED <=> patient assigned" on existing rows: a DISCHARGED patient loses their bed (the bed becomes AVAILABLE); a bed with a patient becomes OCCUPIED
 (even if it was CLEANING/MAINTENANCE, the patient is there); an OCCUPIED bed with nobody becomes AVAILABLE. To preview what it will change, run the three `UPDATE ... WHERE` conditions as `SELECT`s first.
+
+## Schema integrity pass (`20261101000000` … `20261101000400`)
+
+Five small migrations, applied in order. All were run on PostgreSQL 16 against a database holding legacy-shaped rows; `prisma migrate diff` against `schema.prisma` is empty afterwards.
+
+| Migration | What it does | Check before deploying |
+| --- | --- | --- |
+| `audit_log_relations` | `AuditLog.userId` becomes a nullable FK to `User` (`ON DELETE SET NULL`) + indexes `(userId, createdAt)`, `(entityId)`, `(action, createdAt)`, `(createdAt)`. Rows whose user no longer exists keep their data but get `userId = NULL`. | `SELECT count(*) FROM "AuditLog" a WHERE NOT EXISTS (SELECT 1 FROM "User" u WHERE u.id = a."userId")` = rows that will be detached. |
+| `patient_doctor_is_staff` | `Patient.doctorId` now references `Staff` (like `Appointment.doctorId`). Existing User ids are translated to the Staff row with `Staff.userId = <user id>` (same hospital). **A doctor without a linked Staff record cannot be kept: the patient's `doctorId` is cleared.** | `SELECT count(*) FROM "Patient" p WHERE p."doctorId" IS NOT NULL AND NOT EXISTS (SELECT 1 FROM "Staff" s WHERE s."userId" = p."doctorId" AND s."hospitalId" = p."hospitalId")` = patients that lose their doctor. Link those users first (`PUT /api/staff/:id/login`). |
+| `explicit_on_delete` | `Bed -> Ward/Hospital`, `Incident -> Hospital`, `Staff -> Hospital` become `RESTRICT`; `Shift -> Staff` becomes `CASCADE`. Adds `Bed(wardId)` and `Shift(staffId, startTime)` indexes. | Anything that deleted a hospital/ward with children relied on `CASCADE`: delete the children first now. |
+| `dispatch_unit_geo_and_crew` | `DispatchUnit.location` -> `lat`/`lng` (only `{"lat":..,"lng":..}` values inside range survive; free text such as "Main gate" is dropped). `DispatchUnit.crew text[]` -> `Staff.dispatchUnitId`: a name is linked when it matches exactly one Staff of the same hospital (case-insensitive); others are dropped. The migration prints a `NOTICE` with both counts. | Run `SELECT "unitCode", "location", "crew" FROM "DispatchUnit"` and make sure each crew name exists in the staff directory; add missing ones, then deploy. |
+| `patient_soft_delete` | `Patient.deletedAt` + index `(hospitalId, deletedAt)` + a `BEFORE DELETE` trigger that raises on any hard delete. | None. A script that really needs to erase a patient (legal request) must `ALTER TABLE "Patient" DISABLE TRIGGER "Patient_no_hard_delete"` explicitly. |
+
+API changes that go with it: `DELETE /api/patients/:id` (ADMIN, soft delete, frees the bed); dispatch units return `lat`, `lng` and `crew: [{ id, name, role }]`; `POST/PUT /api/dispatch/units` take
+`crewIds: string[]` (Staff ids of the caller's hospital) instead of `crew`; `PUT /api/dispatch/units/:id/status` takes `lat`/`lng` instead of `location`; `DELETE /api/staff/:id` answers 409 while the staff member has appointments.

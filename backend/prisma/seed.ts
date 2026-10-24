@@ -85,6 +85,11 @@ async function main() {
     { name: 'Nurse Maria Garcia', email: 'maria@hospilink.com', role: 'Nurse', department: 'Emergency', phone: '+1-555-0108' },
     { name: 'Dr. James Wilson', email: 'james@hospilink.com', role: 'Anesthesiologist', department: 'Surgery', phone: '+1-555-0109' },
     { name: 'Nurse Emily Park', email: 'emily@hospilink.com', role: 'Nurse', department: 'Maternity', phone: '+1-555-0110' },
+    // Ambulance crews (linked to their unit in step 12)
+    { name: 'Crew Alpha', email: 'crew.alpha@hospilink.com', role: 'Paramedic', department: 'ER', phone: '+1-555-0111' },
+    { name: 'Crew Bravo', email: 'crew.bravo@hospilink.com', role: 'Paramedic', department: 'ER', phone: '+1-555-0112' },
+    { name: 'Crew Charlie', email: 'crew.charlie@hospilink.com', role: 'Paramedic', department: 'ER', phone: '+1-555-0113' },
+    { name: 'Paramedic Smith', email: 'smith@hospilink.com', role: 'Paramedic', department: 'ICU', phone: '+1-555-0114' },
   ];
 
   const createdStaff: Record<string, string> = {};
@@ -443,7 +448,6 @@ async function main() {
         unitType: 'AMBULANCE',
         status: 'EN_ROUTE',
         department: 'ER',
-        crew: ['Crew Alpha'],
         eta: 4,
       },
       {
@@ -451,25 +455,33 @@ async function main() {
         unitType: 'AMBULANCE',
         status: 'ON_SCENE',
         department: 'ER',
-        crew: ['Crew Bravo'],
       },
       {
         unitCode: 'AMB-12',
         unitType: 'AMBULANCE',
         status: 'AVAILABLE',
         department: 'ER',
-        crew: ['Crew Charlie'],
       },
       {
         unitCode: 'PAR-01',
         unitType: 'PARAMEDIC',
         status: 'AVAILABLE',
         department: 'ICU',
-        crew: ['Paramedic Smith'],
       },
-    ] as const).map((u) => ({ ...u, crew: [...u.crew], hospitalId: hospital.id })),
+    ] as const).map((u) => ({ ...u, hospitalId: hospital.id })),
   });
   console.log(`🚑 Created ${units.count} dispatch units`);
+
+  // Crew = Staff.dispatchUnitId
+  for (const [unitCode, crewEmail] of [
+    ['AMB-04', 'crew.alpha@hospilink.com'],
+    ['AMB-09', 'crew.bravo@hospilink.com'],
+    ['AMB-12', 'crew.charlie@hospilink.com'],
+    ['PAR-01', 'smith@hospilink.com'],
+  ] as const) {
+    const unit = await prisma.dispatchUnit.findUnique({ where: { hospitalId_unitCode: { hospitalId: hospital.id, unitCode } } });
+    if (unit) await prisma.staff.update({ where: { email: crewEmail }, data: { dispatchUnitId: unit.id } });
+  }
 
   // 13. Create Dispatch Calls
   const calls = await prisma.dispatchCall.createMany({

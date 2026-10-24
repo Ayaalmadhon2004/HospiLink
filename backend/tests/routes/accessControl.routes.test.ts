@@ -64,7 +64,7 @@ describe('PENDING / DISABLED accounts', () => {
     const res = await request(app).get('/patients').set('Authorization', as('NURSE', 'ACTIVE'));
     expect(res.status).toBe(200);
     expect(prismaMock.patient.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { hospitalId: 'hosp-1' } })
+      expect.objectContaining({ where: { hospitalId: 'hosp-1', deletedAt: null } })
     );
   });
 });

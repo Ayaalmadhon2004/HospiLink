@@ -264,6 +264,14 @@ describe('staff.controller', () => {
   });
 
   describe('deleteStaff', () => {
+    it('409 when the staff member still has appointments (ON DELETE RESTRICT)', async () => {
+      prismaMock.staff.findFirst.mockResolvedValue({ id: 's1' } as any);
+      prismaMock.staff.delete.mockRejectedValue(Object.assign(new Error('fk'), { code: 'P2003' }));
+      const res = mockResponse();
+      await deleteStaff(mockRequest({ params: { id: 's1' } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
     it('يحذف الموظف', async () => {
       (prismaMock as any).staff.findFirst.mockResolvedValue({ id: 's1' });
       (prismaMock as any).staff.delete.mockResolvedValue({});

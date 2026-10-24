@@ -34,6 +34,7 @@ const toStaffDto = <T extends { userId: string | null }>(staff: T) => {
 };
 
 const isUniqueViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2002';
+const isForeignKeyViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2003';
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
@@ -215,6 +216,10 @@ export const deleteStaff = async (req: Request, res: Response) => {
 
     res.status(200).json({ success: true, message: 'Staff deleted' });
   } catch (error: unknown) {
+    // Appointments keep their doctor (ON DELETE RESTRICT): history is never orphaned.
+    if (isForeignKeyViolation(error)) {
+      return res.status(409).json({ success: false, message: 'Staff member has appointments: reassign or cancel them first' });
+    }
     handleError(res, error, 'Failed to delete staff');
   }
 };

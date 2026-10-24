@@ -309,7 +309,7 @@ describe('bed.controller', () => {
 
       await updateBedStatus(mockRequest({ params: { id: 'b1' }, body: { patientId: 'foreign-patient' } }), res);
 
-      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-patient', hospitalId: 'hosp-1' } }));
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-patient', hospitalId: 'hosp-1', deletedAt: null } }));
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.bed.update).not.toHaveBeenCalled();
     });

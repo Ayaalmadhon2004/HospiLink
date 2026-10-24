@@ -37,6 +37,6 @@ describe('GET /patients/critical-count', () => {
     const res = await request(app).get('/patients/critical-count').set('Authorization', asRole(role));
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true, data: { count: 3 } });
-    expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL', hospitalId: 'hosp-1' } });
+    expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL', hospitalId: 'hosp-1', deletedAt: null } });
   });
 });

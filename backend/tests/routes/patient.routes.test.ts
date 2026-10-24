@@ -26,6 +26,7 @@ jest.mock('../../src/controllers/patient.controller', () => {
     getPatientById: echo(),
     updatePatient: echo(),
     dischargePatient: echo(),
+    deletePatient: echo(),
     getPatientReports: echo(),
     getAvailableBeds: echo(),
     getReportFile: echo(),
@@ -75,6 +76,13 @@ describe('patient routes validation', () => {
     expect((await request(app).put('/patients/abc/discharge')).status).toBe(400);
     expect(controller.dischargePatient).not.toHaveBeenCalled();
     expect((await request(app).put(`/patients/${U1}/discharge`)).status).toBe(200);
+  });
+
+  it('DELETE /patients/:id validates the id and reaches the soft-delete handler', async () => {
+    expect((await request(app).delete('/patients/abc')).status).toBe(400);
+    expect(controller.deletePatient).not.toHaveBeenCalled();
+    expect((await request(app).delete(`/patients/${U1}`)).status).toBe(200);
+    expect(controller.deletePatient).toHaveBeenCalledTimes(1);
   });
 
   it('GET /patients validates and strips the query', async () => {

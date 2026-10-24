@@ -6,6 +6,19 @@ import type { CallStatus, UnitStatus, UnitType } from '@prisma/client';
 import logger from '../config/logger';
 import { hospitalIdOf, dispatchRoom, departmentRoom, unitRoom } from '../utils/tenant';
 import { notify } from '../services/notification.service';
+import type { Prisma } from '@prisma/client';
+
+// A unit always travels with its live call and its crew (Staff members linked through Staff.dispatchUnitId).
+const unitInclude = {
+  currentCall: true,
+  crew: { select: { id: true, name: true, role: true }, orderBy: { name: 'asc' } },
+} satisfies Prisma.DispatchUnitInclude;
+
+// Every crew id must be a Staff of this hospital; returns false when one is unknown or from another hospital.
+const crewBelongsToHospital = async (crewIds: string[], hospitalId: string): Promise<boolean> => {
+  const unique = [...new Set(crewIds)];
+  return (await prisma.staff.count({ where: { id: { in: unique }, hospitalId } })) === unique.length;
+};
 
 // Dispatch events go to dispatchers and admins, never the actor.
 const dispatchRecipients = (hospitalId: string, actorId?: string) => ({
@@ -31,7 +44,7 @@ export const getAllUnits = async (req: Request, res: Response) => {
   try {
     const units = await prisma.dispatchUnit.findMany({
       where: { hospitalId: hospitalIdOf(req) },
-      include: { currentCall: true },
+      include: unitInclude,
       orderBy: { unitCode: 'asc' }
     });
     res.status(200).json({ success: true, data: units });
@@ -48,7 +61,8 @@ export const getActiveUnits = async (req: Request, res: Response) => {
         hospitalId: hospitalIdOf(req),
         status: { not: 'OFF_DUTY' }
       },
-      include: { currentCall: true }
+      include: unitInclude,
+      orderBy: { unitCode: 'asc' }
     });
     res.status(200).json({ success: true, data: units });
   } catch (error: unknown) {
@@ -91,7 +105,7 @@ const CALL_STATUS_FOR_UNIT: Partial<Record<UnitStatus, CallStatus>> = { EN_ROUTE
 export const updateUnitStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const { status, location, eta } = req.body as { status?: UnitStatus; location?: unknown; eta?: number | null };
+    const { status, lat, lng, eta } = req.body as { status?: UnitStatus; lat?: number; lng?: number; eta?: number | null };
     const hospitalId = hospitalIdOf(req);
     const freeing = status === 'AVAILABLE' || status === 'OFF_DUTY';
 
@@ -101,7 +115,8 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
         where: { id, hospitalId, ...(freeing ? { currentCallId: null } : {}) },
         data: {
           status,
-          location: location ? JSON.stringify(location) : undefined,
+          lat,
+          lng,
           eta,
           lastUpdated: new Date(),
         },
@@ -119,14 +134,15 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
           data: { status: mirrored },
         });
       }
-      return tx.dispatchUnit.findUniqueOrThrow({ where: { id }, include: { currentCall: true } });
+      return tx.dispatchUnit.findUniqueOrThrow({ where: { id }, include: unitInclude });
     });
 
     // 🔥 بث التحديث لكل المشتركين
     getIO().to(dispatchRoom(hospitalId)).emit('unit-status-update', {
       unitId: id,
       status,
-      location,
+      lat,
+      lng,
       eta,
       timestamp: new Date()
     });
@@ -150,13 +166,18 @@ export const updateUnitStatus = async (req: Request, res: Response) => {
 // POST /api/dispatch/units — add a unit to the fleet of the caller's hospital
 export const createUnit = async (req: Request, res: Response) => {
   try {
-    const { unitCode, unitType, department, crew } = req.body as {
-      unitCode: string; unitType: UnitType; department?: string; crew?: string[];
+    const { unitCode, unitType, department, crewIds } = req.body as {
+      unitCode: string; unitType: UnitType; department?: string; crewIds?: string[];
     };
     const hospitalId = hospitalIdOf(req);
 
+    if (crewIds?.length && !(await crewBelongsToHospital(crewIds, hospitalId))) {
+      return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Crew member not found' });
+    }
+
     const unit = await prisma.dispatchUnit.create({
-      data: { unitCode, unitType, department, crew, hospitalId },
+      data: { unitCode, unitType, department, hospitalId, crew: { connect: crewIds?.map((id) => ({ id })) ?? [] } },
+      include: unitInclude,
     });
 
     getIO().to(dispatchRoom(hospitalId)).emit('unit-created', { unitId: unit.id, unitCode: unit.unitCode, timestamp: new Date() });
@@ -169,7 +190,7 @@ export const createUnit = async (req: Request, res: Response) => {
   }
 };
 
-// PUT /api/dispatch/units/:id — edit the unit's identity (code, type, department, crew); status has its own route
+// PUT /api/dispatch/units/:id — edit the unit's identity (code, type, department, crewIds); status has its own route
 export const updateUnit = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
@@ -178,10 +199,18 @@ export const updateUnit = async (req: Request, res: Response) => {
     const existing = await prisma.dispatchUnit.findFirst({ where: { id, hospitalId }, select: { id: true } });
     if (!existing) return res.status(404).json({ success: false, code: 'UNIT_NOT_FOUND', message: 'Unit not found' });
 
-    const { unitCode, unitType, department, crew } = req.body as {
-      unitCode?: string; unitType?: UnitType; department?: string; crew?: string[];
+    const { unitCode, unitType, department, crewIds } = req.body as {
+      unitCode?: string; unitType?: UnitType; department?: string; crewIds?: string[];
     };
-    const unit = await prisma.dispatchUnit.update({ where: { id }, data: { unitCode, unitType, department, crew } });
+    if (crewIds?.length && !(await crewBelongsToHospital(crewIds, hospitalId))) {
+      return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Crew member not found' });
+    }
+    // `set` replaces the whole crew: members not listed are released (Staff.dispatchUnitId -> null).
+    const unit = await prisma.dispatchUnit.update({
+      where: { id },
+      data: { unitCode, unitType, department, ...(crewIds ? { crew: { set: crewIds.map((cid) => ({ id: cid })) } } : {}) },
+      include: unitInclude,
+    });
 
     getIO().to(dispatchRoom(hospitalId)).emit('unit-updated', { unitId: id, timestamp: new Date() });
     res.status(200).json({ success: true, data: unit });
@@ -299,7 +328,7 @@ export const assignUnitToCall = async (req: Request, res: Response) => {
 
       return {
         updatedCall: await tx.dispatchCall.findUniqueOrThrow({ where: { id } }),
-        updatedUnit: await tx.dispatchUnit.findUniqueOrThrow({ where: { id: unitId } }),
+        updatedUnit: await tx.dispatchUnit.findUniqueOrThrow({ where: { id: unitId }, include: unitInclude }),
       };
     });
 
@@ -358,7 +387,7 @@ const closeCall = (target: 'COMPLETED' | 'CANCELLED') => async (req: Request, re
         where: { id: unitId, hospitalId, currentCallId: null, status: { not: 'OFF_DUTY' } },
         data: { status: 'AVAILABLE' },
       });
-      return { call: closed, unit: await tx.dispatchUnit.findFirst({ where: { id: unitId, hospitalId } }) };
+      return { call: closed, unit: await tx.dispatchUnit.findFirst({ where: { id: unitId, hospitalId }, include: unitInclude }) };
     });
 
     const event = target === 'COMPLETED' ? 'call-completed' : 'call-cancelled';

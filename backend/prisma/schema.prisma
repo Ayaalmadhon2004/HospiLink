@@ -41,7 +41,6 @@ model User {
   hospitalId String
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
-  patients   Patient[]
   hospital   Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
   settings   UserSettings?
   notifications Notification[]
@@ -58,6 +57,7 @@ model User {
   recoveryCodes        TwoFactorRecoveryCode[]
   // Staff record (doctor, nurse...) of this login, if any. The link is explicit, never matched by email at runtime.
   staff                Staff?
+  auditLogs            AuditLog[]
 }
 
 model TwoFactorRecoveryCode {
@@ -108,13 +108,20 @@ model UserSettings {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Append-only trail of mutating requests. userId is nullable + SetNull so the trail outlives a deleted login.
 model AuditLog {
   id        String   @id @default(uuid())
   action    String
-  userId    String
+  userId    String?
   entityId  String
   details   String?
   createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([entityId])
+  @@index([action, createdAt])
+  @@index([createdAt])
 }
 
 model Patient {
@@ -129,18 +136,22 @@ model Patient {
   department    String
   diagnosis     String
   dischargeDate DateTime?
+  // Attending doctor: a Staff record (same target as Appointment.doctorId). Its login, if any, is Staff.userId.
   doctorId      String?
+  // Soft delete: patient rows are never hard-deleted (a DB trigger enforces it). Every read must filter deletedAt: null.
+  deletedAt     DateTime?
   gender        Gender
   patientCode   String          @unique
   updatedAt     DateTime        @updatedAt
   appointments  Appointment[]
-  bed           Bed?            @relation("BedPatient", fields: [bedId], references: [id])
-  doctor        User?           @relation(fields: [doctorId], references: [id])
-  hospital      Hospital        @relation(fields: [hospitalId], references: [id])
+  bed           Bed?            @relation("BedPatient", fields: [bedId], references: [id], onDelete: SetNull)
+  doctor        Staff?          @relation("PatientDoctor", fields: [doctorId], references: [id], onDelete: SetNull)
+  hospital      Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
   vitals        PatientVitals[]
   reports       Report[]
 
-  @@index([hospitalId])
+  @@index([hospitalId, deletedAt])
+  @@index([doctorId])
 }
 
 model Report {
@@ -176,12 +187,13 @@ model Bed {
   status     BedStatus @default(AVAILABLE)
   hospitalId String
   wardId     String
-  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
-  ward       Ward      @relation(fields: [wardId], references: [id], onDelete: Cascade)
+  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  ward       Ward      @relation(fields: [wardId], references: [id], onDelete: Restrict)
   patient    Patient?  @relation("BedPatient")
 
   @@unique([bedNumber, wardId])
   @@index([hospitalId])
+  @@index([wardId])
 }
 
 model PatientVitals {
@@ -238,12 +250,17 @@ model Staff {
   updatedAt    DateTime      @updatedAt
   // Login (User) of this staff member. Appointment/shift notifications go to it; null = no login, nobody is notified.
   userId       String?       @unique
+  // Crew membership: a staff member crews at most one unit at a time (null = not on a unit).
+  dispatchUnitId String?
   appointments Appointment[]
+  patients     Patient[]     @relation("PatientDoctor")
   shifts       Shift[]
-  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
   user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  dispatchUnit DispatchUnit? @relation("UnitCrew", fields: [dispatchUnitId], references: [id], onDelete: SetNull)
 
   @@index([hospitalId])
+  @@index([dispatchUnitId])
 }
 
 model Shift {
@@ -256,7 +273,9 @@ model Shift {
   notes      String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
-  staff      Staff    @relation(fields: [staffId], references: [id])
+  staff      Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@index([staffId, startTime])
 }
 
 model Appointment {
@@ -272,8 +291,8 @@ model Appointment {
   duration    Int      @default(30)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-  doctor      Staff    @relation(fields: [doctorId], references: [id])
-  patient     Patient  @relation(fields: [patientId], references: [id])
+  doctor      Staff    @relation(fields: [doctorId], references: [id], onDelete: Restrict)
+  patient     Patient  @relation(fields: [patientId], references: [id], onDelete: Restrict)
 
   @@index([scheduledAt])
   @@index([doctorId, scheduledAt])
@@ -298,7 +317,7 @@ model Incident {
   hospitalId  String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
-  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+  hospital    Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
 
   @@unique([hospitalId, code])
   @@index([hospitalId])
@@ -312,15 +331,17 @@ model DispatchUnit {
   unitCode      String
   unitType      UnitType
   status        UnitStatus    @default(AVAILABLE)
-  location      String?
+  // Last known GPS position (was a JSON string in `location`).
+  lat           Float?
+  lng           Float?
   eta           Int?
   department    String        @default("ER")
-  crew          String[]
   currentCallId String?       @unique
   hospitalId    String
   lastUpdated   DateTime      @updatedAt
   createdAt     DateTime      @default(now())
   currentCall   DispatchCall? @relation("UnitCall", fields: [currentCallId], references: [id])
+  crew          Staff[]       @relation("UnitCrew")
   hospital      Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@unique([hospitalId, unitCode])

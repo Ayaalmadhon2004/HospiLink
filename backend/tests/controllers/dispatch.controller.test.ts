@@ -150,15 +150,16 @@ describe('dispatch.controller', () => {
       expect(prismaMock.dispatchCall.updateMany).not.toHaveBeenCalled();
     });
 
-    it('يحول location كائن لـ JSON string قبل التحديث', async () => {
+    it('يحفظ lat/lng كأعمدة مستقلة', async () => {
       asTx();
       prismaMock.dispatchUnit.updateMany.mockResolvedValue({ count: 1 } as any);
       prismaMock.dispatchUnit.findUniqueOrThrow.mockResolvedValue(unitRowAny());
 
-      await updateUnitStatus(mockRequest({ params: { id: 'u1' }, body: { status: 'ON_SCENE', location: { lat: 31.9, lng: 35.3 } } }), mockResponse());
+      await updateUnitStatus(mockRequest({ params: { id: 'u1' }, body: { status: 'ON_SCENE', lat: 31.9, lng: 35.3 } }), mockResponse());
 
       const dataArg = (prismaMock.dispatchUnit.updateMany.mock.calls[0][0] as any).data;
-      expect(dataArg.location).toBe(JSON.stringify({ lat: 31.9, lng: 35.3 }));
+      expect(dataArg).toEqual(expect.objectContaining({ lat: 31.9, lng: 35.3 }));
+      expect(dataArg.location).toBeUndefined();
     });
 
     function unitRowAny(over = {}) {
@@ -234,9 +235,9 @@ describe('dispatch.controller', () => {
       prismaMock.dispatchUnit.create.mockResolvedValue({ id: 'u9', unitCode: 'AMB-9' } as any);
       const res = mockResponse();
       await createUnit(mockRequest({ body: { unitCode: 'AMB-9', unitType: 'AMBULANCE', hospitalId: 'other' } }), res);
-      expect(prismaMock.dispatchUnit.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({ unitCode: 'AMB-9', unitType: 'AMBULANCE', hospitalId: 'hosp-1' }),
-      });
+      expect(prismaMock.dispatchUnit.create).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ unitCode: 'AMB-9', unitType: 'AMBULANCE', hospitalId: 'hosp-1', crew: { connect: [] } }),
+      }));
       expect(res.status).toHaveBeenCalledWith(201);
       expect(mockRoomEmit).toHaveBeenCalledWith('h-hosp-1:dispatch-room', 'unit-created', expect.anything());
 
@@ -255,18 +256,34 @@ describe('dispatch.controller', () => {
 
       prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'u1' } as any);
       prismaMock.dispatchUnit.update.mockResolvedValue({ id: 'u1' } as any);
+      prismaMock.staff.count.mockResolvedValue(1);
       const res1 = mockResponse();
-      await updateUnit(mockRequest({ params: { id: 'u1' }, body: { unitCode: 'AMB-2', crew: ['A'], status: 'OFF_DUTY', currentCallId: 'c1' } }), res1);
-      expect(prismaMock.dispatchUnit.update).toHaveBeenCalledWith({
+      await updateUnit(mockRequest({ params: { id: 'u1' }, body: { unitCode: 'AMB-2', crewIds: ['s1'], status: 'OFF_DUTY', currentCallId: 'c1' } }), res1);
+      expect(prismaMock.staff.count).toHaveBeenCalledWith({ where: { id: { in: ['s1'] }, hospitalId: 'hosp-1' } });
+      expect(prismaMock.dispatchUnit.update).toHaveBeenCalledWith(expect.objectContaining({
         where: { id: 'u1' },
-        data: { unitCode: 'AMB-2', unitType: undefined, department: undefined, crew: ['A'] },
-      });
+        data: { unitCode: 'AMB-2', unitType: undefined, department: undefined, crew: { set: [{ id: 's1' }] } },
+      }));
       expect(res1.status).toHaveBeenCalledWith(200);
 
       prismaMock.dispatchUnit.update.mockRejectedValue(Object.assign(new Error('dup'), { code: 'P2002' }));
       const res2 = mockResponse();
       await updateUnit(mockRequest({ params: { id: 'u1' }, body: { unitCode: 'AMB-1' } }), res2);
       expect(res2.status).toHaveBeenCalledWith(409);
+    });
+
+    it('rejects crew members that are not staff of the caller hospital (404, nothing written)', async () => {
+      prismaMock.staff.count.mockResolvedValue(1); // 1 of 2 ids belongs to hosp-1
+      const res1 = mockResponse();
+      await createUnit(mockRequest({ body: { unitCode: 'AMB-9', unitType: 'AMBULANCE', crewIds: ['s1', 'foreign'] } }), res1);
+      expect(res1.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.dispatchUnit.create).not.toHaveBeenCalled();
+
+      prismaMock.dispatchUnit.findFirst.mockResolvedValue({ id: 'u1' } as any);
+      const res2 = mockResponse();
+      await updateUnit(mockRequest({ params: { id: 'u1' }, body: { crewIds: ['s1', 'foreign'] } }), res2);
+      expect(res2.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.dispatchUnit.update).not.toHaveBeenCalled();
     });
 
     it('deleteUnit: only a unit without a call (409 otherwise, 404 for another hospital)', async () => {

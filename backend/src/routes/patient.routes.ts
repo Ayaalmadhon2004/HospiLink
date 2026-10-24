@@ -8,7 +8,8 @@ import {
   getPatients,       
   getPatientById,     
   updatePatient,      
-  dischargePatient,    
+  dischargePatient,
+  deletePatient,
   getPatientReports,
   getAvailableBeds,
   getReportFile
@@ -178,6 +179,19 @@ router.put(
   validate({ params: idParams }),
   logActivity('DISCHARGE_PATIENT'),
   dischargePatient
+);
+
+// ============================================
+// DELETE /api/patients/:id
+// Soft delete (sets deletedAt) - ADMIN only
+// ============================================
+router.delete(
+  '/:id',
+  protect,
+  authorize('ADMIN'),
+  validate({ params: idParams }),
+  logActivity('DELETE_PATIENT'),
+  deletePatient
 );
 
 export default router;

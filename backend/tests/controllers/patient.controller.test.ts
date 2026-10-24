@@ -10,6 +10,7 @@ import {
   getAvailableBeds,
   updatePatient,
   dischargePatient,
+  deletePatient,
   uploadReport,
   getReportFile,
   getPatientReports,
@@ -37,7 +38,7 @@ describe('patient.controller', () => {
       await getRecentPatients(req, res);
 
       expect(prismaMock.patient.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { hospitalId: 'hosp-1' }, take: 5, orderBy: { admissionDate: 'desc' } })
+        expect.objectContaining({ where: { hospitalId: 'hosp-1', deletedAt: null }, take: 5, orderBy: { admissionDate: 'desc' } })
       );
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
@@ -53,7 +54,7 @@ describe('patient.controller', () => {
 
       await getCriticalPatientCount(mockRequest(), res);
 
-      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL', hospitalId: 'hosp-1' } });
+      expect(prismaMock.patient.count).toHaveBeenCalledWith({ where: { status: 'CRITICAL', hospitalId: 'hosp-1', deletedAt: null } });
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ success: true, data: { count: 4 } });
     });
@@ -171,11 +172,11 @@ describe('patient.controller', () => {
       const req = mockRequest({ body: { name: 'Ali', age: '40', doctorId: 'foreign-doc' } });
       const res = mockResponse();
       prismaMock.patient.count.mockResolvedValue(0);
-      prismaMock.user.findFirst.mockResolvedValue(null);
+      prismaMock.staff.findFirst.mockResolvedValue(null);
 
       await admitPatient(req, res);
 
-      expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-doc', hospitalId: 'hosp-1' } }));
+      expect(prismaMock.staff.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign-doc', hospitalId: 'hosp-1' } }));
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
@@ -343,7 +344,7 @@ describe('patient.controller', () => {
       await getPatients(req, res);
 
       expect(prismaMock.patient.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ skip: 0, take: 10, where: { hospitalId: 'hosp-1' } })
+        expect.objectContaining({ skip: 0, take: 10, where: { hospitalId: 'hosp-1', deletedAt: null } })
       );
     });
 
@@ -582,7 +583,7 @@ describe('patient.controller', () => {
 
       await updatePatient(mockRequest({ params: { id: 'foreign' }, body: { name: 'x' } }), res);
 
-      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1' } }));
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1', deletedAt: null } }));
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patient.update).not.toHaveBeenCalled();
     });
@@ -596,11 +597,36 @@ describe('patient.controller', () => {
       await updatePatient(mockRequest({ params: { id: 'p1' }, body: { bedId: 'foreign-bed' } }), res);
       expect(res.status).toHaveBeenCalledWith(404);
 
-      prismaMock.user.findFirst.mockResolvedValue(null);
+      prismaMock.staff.findFirst.mockResolvedValue(null);
       const res2 = mockResponse();
       await updatePatient(mockRequest({ params: { id: 'p1' }, body: { doctorId: 'foreign-doc' } }), res2);
       expect(res2.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patient.update).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('deletePatient (soft delete)', () => {
+    it('404 for a missing, already deleted or other-hospital patient; nothing is written', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue(null);
+      const res = mockResponse();
+      await deletePatient(mockRequest({ params: { id: 'foreign' } }), res);
+      expect(prismaMock.patient.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'foreign', hospitalId: 'hosp-1', deletedAt: null } }));
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(prismaMock.patient.update).not.toHaveBeenCalled();
+    });
+
+    it('sets deletedAt (never deletes the row) and frees the bed in one transaction', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: 'bed-1' } as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 1 } as any);
+      prismaMock.patient.update.mockResolvedValue({ id: 'p1' } as any);
+      const res = mockResponse();
+
+      await deletePatient(mockRequest({ params: { id: 'p1' } }), res);
+
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({ where: { id: 'bed-1', hospitalId: 'hosp-1' }, data: { status: 'AVAILABLE' } });
+      expect(prismaMock.patient.update).toHaveBeenCalledWith({ where: { id: 'p1' }, data: { deletedAt: expect.any(Date), bedId: null } });
+      expect(prismaMock.patient.delete).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 
@@ -682,7 +708,7 @@ describe('patient.controller', () => {
       prismaMock.report.findMany.mockResolvedValue([] as any);
       await getPatientReports(mockRequest({ params: { id: 'p1' } } as any), mockResponse());
       expect(prismaMock.report.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({ omit: { fileData: true }, where: { patientId: 'p1', patient: { hospitalId: 'hosp-1' } } })
+        expect.objectContaining({ omit: { fileData: true }, where: { patientId: 'p1', patient: { hospitalId: 'hosp-1', deletedAt: null } } })
       );
     });
 
@@ -690,7 +716,7 @@ describe('patient.controller', () => {
       prismaMock.report.findFirst.mockResolvedValue(null);
       const res = mockResponse();
       await getReportFile(mockRequest({ params: { reportId: 'r1' } } as any), res);
-      expect(prismaMock.report.findFirst).toHaveBeenCalledWith({ where: { id: 'r1', patient: { hospitalId: 'hosp-1' } } });
+      expect(prismaMock.report.findFirst).toHaveBeenCalledWith({ where: { id: 'r1', patient: { hospitalId: 'hosp-1', deletedAt: null } } });
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
