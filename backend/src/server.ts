@@ -30,7 +30,6 @@ import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom, socketHospitalId }
 import { departmentRoom } from './utils/tenant';
 import settingsRoutes from './routes/settings.routes';
 import internalRoutes from './routes/internal.routes';
-import { startScheduler } from './services/scheduler';
 import logger from './config/logger';
 import { initSentry } from './config/sentry';
 import { buildAllowedOrigins, parsePort, createShutdown } from './config/serverConfig';
@@ -225,7 +224,6 @@ app.use(errorHandler);
 
 server.listen(PORT, () => {
   logger.info({ port: PORT }, 'HospiLink Server running');
-  startScheduler();
 });
 
 // Graceful shutdown (Render sends SIGTERM on deploy/restart)
