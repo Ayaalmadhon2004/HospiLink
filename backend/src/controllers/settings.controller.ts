@@ -1,5 +1,6 @@
 // src/controllers/settings.controller.ts
 import { Request, Response } from 'express';
+import type { ShiftType } from '@prisma/client';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
@@ -87,7 +88,7 @@ export const updateProfile = async (req: Request, res: Response) => {
     }
 
     // Body is validated (zod): provided fields are non-empty, omitted ones stay unchanged.
-    const { name, department, shift } = req.body as { name?: string; department?: string; shift?: string };
+    const { name, department, shift } = req.body as { name?: string; department?: string; shift?: ShiftType };
 
     const updatedUser = await prisma.user.update({
       where: { id: userId },

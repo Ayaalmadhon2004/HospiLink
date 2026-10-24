@@ -26,7 +26,7 @@ export const SignupPage = () => {
 
     const dataToSend = {
       ...formData,
-      shift: "Day"
+      shift: "DAY"
     };
 
     try {

@@ -7,7 +7,7 @@ import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { dayRange, hospitalTimezone, hourKey, formatLocal } from '../utils/time';
 import { notify } from '../services/notification.service';
 import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, AppointmentStatus, AppointmentType } from '@prisma/client';
 
 const CONFLICT_MESSAGE = 'Doctor has a conflicting appointment at this time';
 const DEFAULT_DURATION = 30;
@@ -62,8 +62,8 @@ export const getAppointments = async (req: Request, res: Response) => {
     }
     if (doctorId) where.doctorId = doctorId as string;
     if (patientId) where.patientId = patientId as string;
-    if (status) where.status = status as string;
-    if (type) where.type = type as string;
+    if (status) where.status = status as AppointmentStatus;
+    if (type) where.type = type as AppointmentType;
     if (department) where.department = department as string;
 
     const appointments = await prisma.appointment.findMany({

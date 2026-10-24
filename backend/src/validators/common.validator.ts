@@ -9,6 +9,13 @@ export const reportIdParams = z.object({ reportId: idSchema });
 export const nonEmpty = (label: string, max = 255) =>
   z.string().trim().min(1, `${label} is required`).max(max, `${label} is too long`);
 
+// Native Prisma enum, tolerant of case/spacing from older clients ('Day', 'on duty' -> DAY, ON_DUTY).
+export const enumValue = <T extends Record<string, string>>(e: T, label: string) =>
+  z.preprocess(
+    (v) => (typeof v === 'string' ? v.trim().toUpperCase().replace(/[\s-]+/g, '_') : v),
+    z.nativeEnum(e, { message: `${label} must be one of: ${Object.values(e).join(', ')}` })
+  );
+
 // Accepts ISO strings / anything Date.parse understands (the UI sends ISO strings).
 export const dateString = (label = 'date') =>
   z.string().min(1, `${label} is required`).refine((v) => !Number.isNaN(Date.parse(v)), `${label} must be a valid date`);

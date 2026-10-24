@@ -1,6 +1,7 @@
 // backend/src/validators/user.validator.ts
 import { z } from 'zod';
-import { nonEmpty } from './common.validator';
+import { ShiftType } from '@prisma/client';
+import { nonEmpty, enumValue } from './common.validator';
 
 export const roleEnum = z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']);
 const accountStatusEnum = z.enum(['PENDING', 'ACTIVE', 'DISABLED']);
@@ -12,7 +13,7 @@ export const inviteUserSchema = z.object({
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   role: roleEnum,
   department: nonEmpty('department', 100),
-  shift: nonEmpty('shift', 50),
+  shift: enumValue(ShiftType, 'shift'),
 });
 
 // The admin must pick the role explicitly: the PENDING row only holds a placeholder.

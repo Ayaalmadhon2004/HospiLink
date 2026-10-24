@@ -1,5 +1,7 @@
 // backend/src/validators/auth.validator.ts
 import { z } from 'zod';
+import { ShiftType } from '@prisma/client';
+import { enumValue } from './common.validator';
 
 // Signup schema. `.strict()` is NOT used (extra keys are stripped instead), so a
 // client sending `role` / `hospitalId` is silently ignored: public signup can
@@ -10,7 +12,7 @@ export const registerSchema = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters').max(128, 'Password is too long'),
   name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name is too long'),
   department: z.string().trim().min(1, 'Department is required').max(100),
-  shift: z.string().trim().min(1, 'Shift is required').max(50),
+  shift: enumValue(ShiftType, 'Shift'),
   hospitalCode: z.string().trim().toUpperCase().min(1, 'Hospital code is required').max(32),
 });
 

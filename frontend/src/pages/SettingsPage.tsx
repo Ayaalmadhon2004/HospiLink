@@ -73,6 +73,9 @@ const Field: React.FC<{ label: string; htmlFor: string; children: React.ReactNod
   </div>
 );
 
+// Mirrors the ShiftType enum of the API.
+const SHIFT_TYPES = ['DAY', 'EVENING', 'NIGHT', 'ON_CALL'] as const;
+
 type EditableProfile = Pick<ProfileSettings, 'name' | 'department' | 'shift'>;
 
 const ProfileForm: React.FC<{
@@ -127,7 +130,17 @@ const ProfileForm: React.FC<{
         <input type="text" maxLength={100} {...bind('department')} />
       </Field>
       <Field label={t('settings.profile.shift')} htmlFor={`${uid}-shift`}>
-        <input type="text" maxLength={50} {...bind('shift')} />
+        <select
+          id={`${uid}-shift`}
+          value={form.shift}
+          required
+          onChange={(e) => setForm((prev) => ({ ...prev, shift: e.target.value }))}
+          className={INPUT_CLASS}
+        >
+          {SHIFT_TYPES.map((v) => (
+            <option key={v} value={v}>{t(`staff.shifts.${v}`)}</option>
+          ))}
+        </select>
       </Field>
       <div className="flex items-end">
         <button

@@ -1,5 +1,7 @@
 // backend/src/validators/settings.validator.ts
 import { z } from 'zod';
+import { ShiftType } from '@prisma/client';
+import { enumValue } from './common.validator';
 
 // Profile: id/email/role/status sent back by the UI are stripped (not editable here).
 // The columns are NOT NULL, so a provided value must be non-empty; omit a field to leave it unchanged.
@@ -7,7 +9,7 @@ export const updateProfileSchema = z
   .object({
     name: z.string().trim().min(1, 'Name cannot be empty').max(100).optional(),
     department: z.string().trim().min(1, 'Department cannot be empty').max(100).optional(),
-    shift: z.string().trim().min(1, 'Shift cannot be empty').max(50).optional(),
+    shift: enumValue(ShiftType, 'Shift').optional(),
   })
   .refine((v) => v.name !== undefined || v.department !== undefined || v.shift !== undefined, {
     message: 'Provide at least one of name, department or shift',

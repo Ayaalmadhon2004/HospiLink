@@ -15,7 +15,7 @@ vi.mock('../AuthContext', () => ({ useAuth: () => ({ user: mockUser, loading: fa
 
 const TICK = 1000;
 const base: UserSettings = {
-  profile: { id: 'u1', name: 'Dr A', email: 'a@b.c', role: 'DOCTOR', department: 'ICU', shift: 'Day', status: 'ON_DUTY' },
+  profile: { id: 'u1', name: 'Dr A', email: 'a@b.c', role: 'DOCTOR', department: 'ICU', shift: 'DAY', status: 'ON_DUTY' },
   notifications: {
     criticalVitalsAlerts: true, incidentEscalations: true, shiftReminders: false, dispatchAlerts: true, appointmentReminders: true,
   },

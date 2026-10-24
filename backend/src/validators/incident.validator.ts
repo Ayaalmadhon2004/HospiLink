@@ -1,15 +1,14 @@
 // backend/src/validators/incident.validator.ts
 import { z } from 'zod';
-import { nonEmpty, dateString } from './common.validator';
+import { IncidentSeverity, IncidentStatus, IncidentType } from '@prisma/client';
+import { nonEmpty, dateString, enumValue } from './common.validator';
 
-// Incident.type / severity are free strings in prisma; the UI offers fixed lists
-// but other values may exist in the DB, so they are only length-checked.
-export const incidentStatusEnum = z.enum(['ACTIVE', 'RESOLVED', 'PENDING']);
+export const incidentStatusEnum = enumValue(IncidentStatus, 'status');
 
 export const createIncidentSchema = z.object({
   title: nonEmpty('title', 200),
-  type: nonEmpty('type', 50),
-  severity: nonEmpty('severity', 50),
+  type: enumValue(IncidentType, 'type'),
+  severity: enumValue(IncidentSeverity, 'severity'),
   location: nonEmpty('location', 200),
   reportedBy: nonEmpty('reportedBy', 100),
   description: z.string().trim().max(5000).optional(),
@@ -17,8 +16,8 @@ export const createIncidentSchema = z.object({
 
 export const updateIncidentSchema = z.object({
   title: nonEmpty('title', 200).optional(),
-  type: nonEmpty('type', 50).optional(),
-  severity: nonEmpty('severity', 50).optional(),
+  type: enumValue(IncidentType, 'type').optional(),
+  severity: enumValue(IncidentSeverity, 'severity').optional(),
   location: nonEmpty('location', 200).optional(),
   reportedBy: nonEmpty('reportedBy', 100).optional(),
   description: z.string().trim().max(5000).nullable().optional(),
@@ -35,7 +34,7 @@ export const updateIncidentStatusSchema = z.object({
 });
 
 export const incidentQuerySchema = z.object({
-  status: z.string().trim().max(30).optional(),
-  severity: z.string().trim().max(50).optional(),
-  type: z.string().trim().max(50).optional(),
+  status: enumValue(IncidentStatus, 'status').optional(),
+  severity: enumValue(IncidentSeverity, 'severity').optional(),
+  type: enumValue(IncidentType, 'type').optional(),
 });
