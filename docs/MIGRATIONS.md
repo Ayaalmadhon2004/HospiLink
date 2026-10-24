@@ -70,3 +70,8 @@ can be freed by completing or cancelling those calls through the new endpoints.
 `VitalThresholds` had no `hospitalId` (one table shared by all hospitals). The migration adds it, **copies every existing row to every hospital**, removes the global rows and
 makes (hospitalId, department, vitalType) unique. Checked on PostgreSQL 16 with existing rows and two hospitals. After deploying, review `GET /api/vitals/thresholds` for each hospital:
 a hospital that never configured anything now relies on the built-in defaults (adult ranges) instead of silently having no alerts.
+
+## Bed / patient reconciliation (`20261030000000_reconcile_beds`)
+
+Data-only. Enforces "bed OCCUPIED <=> patient assigned" on existing rows: a DISCHARGED patient loses their bed (the bed becomes AVAILABLE); a bed with a patient becomes OCCUPIED
+(even if it was CLEANING/MAINTENANCE, the patient is there); an OCCUPIED bed with nobody becomes AVAILABLE. To preview what it will change, run the three `UPDATE ... WHERE` conditions as `SELECT`s first.

@@ -66,8 +66,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
     if (selectedPatientId) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- effect intentionally syncs/fetches into state (data load or reset on prop change); restructuring would change behaviour
       setStatus('OCCUPIED');
-    } else if (!bed?.patientId) {
-      setStatus('AVAILABLE');
+    } else {
+      // No patient: the bed cannot be OCCUPIED (the server enforces OCCUPIED <=> has a patient). Keep CLEANING / MAINTENANCE.
+      setStatus((s) => (s === 'OCCUPIED' ? 'AVAILABLE' : s));
     }
   }, [selectedPatientId, bed]);
 
@@ -103,6 +104,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
 
       if (selectedPatientId) {
         body.patientId = selectedPatientId;
+      } else if (bed?.patientId) {
+        // The patient was cleared in the form: tell the server to unassign them (otherwise the bed keeps its patient).
+        body.patientId = '';
       }
 
       const data = bed

@@ -97,6 +97,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
   managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
   and a failed threshold lookup is logged as an error and also falls back to the defaults. A reading can therefore never be silently judged "not critical" for lack of configuration.
+- Beds <-> patients: a bed is OCCUPIED if and only if a patient is assigned to it (`Patient.bedId`). Everything that changes either side goes through `services/bedAssignment.ts` (`claimBed` is an atomic
+  AVAILABLE-and-empty -> OCCUPIED update, `releaseBed` frees it) inside a transaction: admit, `PUT /patients/:id` (bedId change, or status DISCHARGED which frees the bed), discharge, `PUT /beds/:id` (patientId assign/unassign;
+  a status that contradicts the patient is 400, switching a bed that has a patient away from OCCUPIED is 409) and `DELETE /beds/:id` (409 while it has a patient). Migration `20261030000000_reconcile_beds` repaired old rows.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

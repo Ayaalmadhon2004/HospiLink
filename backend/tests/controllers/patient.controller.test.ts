@@ -144,11 +144,13 @@ describe('patient.controller', () => {
       const req = mockRequest({ body: { name: 'Ali', age: '40', bedId: 'foreign-bed' } });
       const res = mockResponse();
       prismaMock.patient.count.mockResolvedValue(0);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 0 } as any);
       prismaMock.bed.findFirst.mockResolvedValue(null);
 
       await admitPatient(req, res);
 
-      expect(prismaMock.bed.findFirst).toHaveBeenCalledWith({ where: { id: 'foreign-bed', hospitalId: 'hosp-1' } });
+      // the claim is scoped to the caller's hospital
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'foreign-bed', hospitalId: 'hosp-1' }) }));
       expect(res.status).toHaveBeenCalledWith(404);
       expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
@@ -172,12 +174,13 @@ describe('patient.controller', () => {
       });
       const res = mockResponse();
       prismaMock.patient.count.mockResolvedValue(10);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 0 } as any);
       prismaMock.bed.findFirst.mockResolvedValue(null);
 
       await admitPatient(req, res);
 
       expect(res.status).toHaveBeenCalledWith(404);
-      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'السرير غير موجود' });
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Bed not found' });
     });
 
     it('يرفض إدخال المريض لو السرير مش متاح', async () => {
@@ -186,12 +189,14 @@ describe('patient.controller', () => {
       });
       const res = mockResponse();
       prismaMock.patient.count.mockResolvedValue(10);
-      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-x', status: 'OCCUPIED' } as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 0 } as any); // not AVAILABLE, or already has a patient
+      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-x' } as any);
 
       await admitPatient(req, res);
 
-      expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'السرير غير متاح حالياً' });
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(res.json).toHaveBeenCalledWith({ success: false, message: 'Bed is not available' });
+      expect(prismaMock.patient.create).not.toHaveBeenCalled();
     });
 
     it('يدخل مريض جديد بنجاح ويحجز السرير (يحوله OCCUPIED)', async () => {
@@ -201,9 +206,8 @@ describe('patient.controller', () => {
       const res = mockResponse();
       prismaMock.patient.count.mockResolvedValue(10);
       prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
-      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-x', status: 'AVAILABLE' } as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 1 } as any);
       prismaMock.patient.create.mockResolvedValue({ id: 'new-patient', patientCode: 'PT-2051' } as any);
-      prismaMock.bed.update.mockResolvedValue({} as any);
 
       await admitPatient(req, res);
 
@@ -217,8 +221,9 @@ describe('patient.controller', () => {
           }),
         })
       );
-      expect(prismaMock.bed.update).toHaveBeenCalledWith({
-        where: { id: 'bed-x' },
+      // atomic claim: only a free AVAILABLE bed with nobody in it becomes OCCUPIED
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({
+        where: { id: 'bed-x', hospitalId: 'hosp-1', status: 'AVAILABLE', patient: { is: null } },
         data: { status: 'OCCUPIED' },
       });
       expect(res.status).toHaveBeenCalledWith(201);
@@ -235,7 +240,7 @@ describe('patient.controller', () => {
       await admitPatient(req, res);
 
       expect(prismaMock.bed.findFirst).not.toHaveBeenCalled();
-      expect(prismaMock.bed.update).not.toHaveBeenCalled();
+      expect(prismaMock.bed.updateMany).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(201);
     });
   });
@@ -442,7 +447,7 @@ describe('patient.controller', () => {
 
   describe('updatePatient', () => {
     it('يحدث بيانات المريض ويرجعها', async () => {
-      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: null, status: 'OBSERVATION' } as any);
       prismaMock.patient.update.mockResolvedValue({ id: 'p1', name: 'Updated' } as any);
       const req = mockRequest({ params: { id: 'p1' }, body: { name: 'Updated' } });
       const res = mockResponse();
@@ -453,6 +458,83 @@ describe('patient.controller', () => {
         expect.objectContaining({ where: { id: 'p1' }, data: { name: 'Updated' } })
       );
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+  });
+
+  describe('updatePatient bed rules (OCCUPIED <=> has a patient)', () => {
+    const patientRow = (over = {}) => ({ id: 'p1', bedId: null, status: 'OBSERVATION', ...over });
+    const run = async (body: object, existing = patientRow()) => {
+      prismaMock.patient.findFirst.mockResolvedValue(existing as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 1 } as any);
+      prismaMock.patient.update.mockResolvedValue({ id: 'p1' } as any);
+      const res = mockResponse();
+      await updatePatient(mockRequest({ params: { id: 'p1' }, body }), res);
+      return res;
+    };
+
+    it('giving a patient a bed claims it (OCCUPIED) in the same transaction', async () => {
+      const res = await run({ bedId: 'bed-new' });
+
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({
+        where: { id: 'bed-new', hospitalId: 'hosp-1', status: 'AVAILABLE', patient: { is: null } },
+        data: { status: 'OCCUPIED' },
+      });
+      expect(prismaMock.patient.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ bedId: 'bed-new' }) }));
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('moving to another bed claims the new one and frees the old one', async () => {
+      await run({ bedId: 'bed-new' }, patientRow({ bedId: 'bed-old' }));
+
+      expect(prismaMock.bed.updateMany).toHaveBeenNthCalledWith(1, expect.objectContaining({ data: { status: 'OCCUPIED' } }));
+      expect(prismaMock.bed.updateMany).toHaveBeenNthCalledWith(2, { where: { id: 'bed-old', hospitalId: 'hosp-1' }, data: { status: 'AVAILABLE' } });
+    });
+
+    it('bedId null frees the old bed; an unchanged bedId touches no bed', async () => {
+      await run({ bedId: null }, patientRow({ bedId: 'bed-old' }));
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledTimes(1);
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({ where: { id: 'bed-old', hospitalId: 'hosp-1' }, data: { status: 'AVAILABLE' } });
+      expect(prismaMock.patient.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ bedId: null }) }));
+
+      prismaMock.bed.updateMany.mockClear();
+      await run({ bedId: 'bed-old', name: 'X' }, patientRow({ bedId: 'bed-old' }));
+      expect(prismaMock.bed.updateMany).not.toHaveBeenCalled();
+    });
+
+    it('409 when the target bed is taken or not available, and nothing is changed', async () => {
+      prismaMock.patient.findFirst.mockResolvedValue(patientRow({ bedId: 'bed-old' }) as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 0 } as any);
+      prismaMock.bed.findFirst.mockResolvedValue({ id: 'bed-new' } as any);
+      const res = mockResponse();
+
+      await updatePatient(mockRequest({ params: { id: 'p1' }, body: { bedId: 'bed-new' } }), res);
+
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledTimes(1); // the old bed was NOT released
+      expect(prismaMock.patient.update).not.toHaveBeenCalled();
+    });
+
+    it('status DISCHARGED through update frees the bed and stamps dischargeDate', async () => {
+      await run({ status: 'DISCHARGED' }, patientRow({ bedId: 'bed-old' }));
+
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({ where: { id: 'bed-old', hospitalId: 'hosp-1' }, data: { status: 'AVAILABLE' } });
+      const data = (prismaMock.patient.update.mock.calls[0][0] as any).data;
+      expect(data).toMatchObject({ status: 'DISCHARGED', bedId: null });
+      expect(data.dischargeDate).toBeInstanceOf(Date);
+    });
+
+    it('a discharged patient cannot be given a bed (400)', async () => {
+      const res = await run({ bedId: 'bed-new' }, patientRow({ status: 'DISCHARGED' }));
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.bed.updateMany).not.toHaveBeenCalled();
+
+      const res2 = await run({ status: 'DISCHARGED', bedId: 'bed-new' });
+      expect(res2.status).toHaveBeenCalledWith(400);
+    });
+
+    it('editing other fields never touches beds', async () => {
+      await run({ diagnosis: 'Flu' }, patientRow({ bedId: 'bed-old' }));
+      expect(prismaMock.bed.updateMany).not.toHaveBeenCalled();
     });
   });
 
@@ -469,7 +551,8 @@ describe('patient.controller', () => {
     });
 
     it('يرفض نقل المريض لسرير أو دكتور من مستشفى ثاني', async () => {
-      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1' } as any);
+      prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: null, status: 'OBSERVATION' } as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 0 } as any);
       prismaMock.bed.findFirst.mockResolvedValue(null);
       const res = mockResponse();
 
@@ -497,7 +580,7 @@ describe('patient.controller', () => {
 
     it('يحرر السرير ويسرح المريض ضمن transaction واحدة', async () => {
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', bedId: 'bed-1' } as any);
-      prismaMock.bed.update.mockResolvedValue({} as any);
+      prismaMock.bed.updateMany.mockResolvedValue({ count: 1 } as any);
       prismaMock.patient.update.mockResolvedValue({ id: 'p1', status: 'DISCHARGED' } as any);
 
       const req = mockRequest({ params: { id: 'p1' } });
@@ -505,8 +588,8 @@ describe('patient.controller', () => {
 
       await dischargePatient(req, res);
 
-      expect(prismaMock.bed.update).toHaveBeenCalledWith({
-        where: { id: 'bed-1' },
+      expect(prismaMock.bed.updateMany).toHaveBeenCalledWith({
+        where: { id: 'bed-1', hospitalId: 'hosp-1' },
         data: { status: 'AVAILABLE' },
       });
       expect(prismaMock.patient.update).toHaveBeenCalledWith({
@@ -525,7 +608,7 @@ describe('patient.controller', () => {
 
       await dischargePatient(req, res);
 
-      expect(prismaMock.bed.update).not.toHaveBeenCalled();
+      expect(prismaMock.bed.updateMany).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
+import { BedRuleError, claimBed, releaseBed } from '../services/bedAssignment';
 import { randomUUID } from 'crypto';
 import type { Bed, PatientStatus, Prisma } from '@prisma/client';
 
@@ -122,6 +123,7 @@ class AdmitError extends Error {
   }
 }
 
+
 export const admitPatient = async (req: Request, res: Response) => {
   // hospitalId is never read from the body: the patient joins the admitting user's hospital.
   const { name, age, gender, department, diagnosis, bedId, doctorId } = req.body;
@@ -144,9 +146,8 @@ export const admitPatient = async (req: Request, res: Response) => {
           }
 
           if (bedId) {
-            const bed = await tx.bed.findFirst({ where: { id: bedId, hospitalId } });
-            if (!bed) throw new AdmitError('السرير غير موجود', 404);
-            if (bed.status !== 'AVAILABLE') throw new AdmitError('السرير غير متاح حالياً', 400);
+            // Atomic: only a free AVAILABLE bed can be claimed (404 / 409 otherwise).
+            await claimBed(tx, bedId, hospitalId);
             validBedId = bedId;
           }
 
@@ -166,13 +167,6 @@ export const admitPatient = async (req: Request, res: Response) => {
 
           const newPatient = await tx.patient.create({ data: patientData });
 
-          if (validBedId) {
-            await tx.bed.update({
-              where: { id: bedId },
-              data: { status: 'OCCUPIED' }
-            });
-          }
-
           return newPatient;
         });
         break;
@@ -185,7 +179,7 @@ export const admitPatient = async (req: Request, res: Response) => {
 
     res.status(201).json({ success: true, data: result });
   } catch (error: unknown) {
-    if (error instanceof AdmitError) {
+    if (error instanceof AdmitError || error instanceof BedRuleError) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     logger.error({ err: error }, '🔥 Admit error:');
@@ -450,29 +444,52 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
 export const updatePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const data = req.body;
+    const { bedId: requestedBedId, ...fields } = req.body as Omit<Prisma.PatientUncheckedUpdateInput, 'bedId'> & {
+      bedId?: string | null;
+      doctorId?: string | null;
+      status?: PatientStatus;
+    };
     const hospitalId = hospitalIdOf(req);
 
-    const existing = await prisma.patient.findFirst({ where: { id, hospitalId }, select: { id: true } });
+    const existing = await prisma.patient.findFirst({ where: { id, hospitalId }, select: { id: true, bedId: true, status: true } });
     if (!existing) {
       return res.status(404).json({ success: false, message: 'المريض غير موجود' });
     }
-    // A bed / doctor reassignment must stay inside the caller's hospital.
-    if (data.bedId && !(await prisma.bed.findFirst({ where: { id: data.bedId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, message: 'السرير غير موجود' });
-    }
-    if (data.doctorId && !(await prisma.user.findFirst({ where: { id: data.doctorId, hospitalId }, select: { id: true } }))) {
+    if (fields.doctorId && !(await prisma.user.findFirst({ where: { id: fields.doctorId, hospitalId }, select: { id: true } }))) {
       return res.status(404).json({ success: false, message: 'Doctor not found' });
     }
 
-    const updated = await prisma.patient.update({
-      where: { id },
-      data,
-      include: { bed: true }
+    // Bed rules (OCCUPIED <=> has a patient): a DISCHARGED patient holds no bed and cannot be given one.
+    const discharging = (fields.status ?? existing.status) === 'DISCHARGED';
+    if (discharging && requestedBedId) {
+      return res.status(400).json({ success: false, message: 'A discharged patient cannot be assigned a bed' });
+    }
+    // The bed the patient ends up in: discharge frees it, an explicit bedId (or null) replaces it, otherwise unchanged.
+    const targetBedId = discharging ? null : requestedBedId === undefined ? existing.bedId : requestedBedId;
+    const bedChanges = targetBedId !== existing.bedId;
+    const justDischarged = discharging && existing.status !== 'DISCHARGED';
+
+    const updated = await prisma.$transaction(async (tx) => {
+      if (bedChanges) {
+        if (targetBedId) await claimBed(tx, targetBedId, hospitalId);
+        if (existing.bedId) await releaseBed(tx, existing.bedId, hospitalId);
+      }
+      return tx.patient.update({
+        where: { id },
+        data: {
+          ...fields,
+          ...(bedChanges ? { bedId: targetBedId } : {}),
+          ...(justDischarged && !fields.dischargeDate ? { dischargeDate: new Date() } : {}),
+        },
+        include: { bed: true },
+      });
     });
 
     res.status(200).json({ success: true, data: updated });
   } catch (error: unknown) {
+    if (error instanceof BedRuleError) {
+      return res.status(error.status).json({ success: false, message: error.message });
+    }
     logger.error({ err: error }, 'Update patient error:');
     res.status(500).json({ success: false, message: 'فشل تحديث المريض' });
   }
@@ -485,8 +502,9 @@ export const dischargePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
 
+    const hospitalId = hospitalIdOf(req);
     const patient = await prisma.patient.findFirst({
-      where: { id, hospitalId: hospitalIdOf(req) },
+      where: { id, hospitalId },
       include: { bed: true }
     });
 
@@ -495,12 +513,7 @@ export const dischargePatient = async (req: Request, res: Response) => {
     }
 
     const result = await prisma.$transaction(async (tx) => {
-      if (patient.bedId) {
-        await tx.bed.update({
-          where: { id: patient.bedId },
-          data: { status: 'AVAILABLE' }
-        });
-      }
+      if (patient.bedId) await releaseBed(tx, patient.bedId, hospitalId);
 
       const updated = await tx.patient.update({
         where: { id },
