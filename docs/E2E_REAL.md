@@ -22,8 +22,8 @@ once and reuses that session cookie for the rest of the run; use `loginViaUi()` 
 1. Backend (cwd `backend/`): `prisma generate`, `prisma migrate deploy`, `tsx prisma/seed.e2e.ts`, then `tsx src/server.ts` on port 5000.
 2. Frontend: `vite build` with `VITE_API_URL=http://localhost:5000/api`, then `vite preview` on `localhost:4173`.
 
-Origins and cookies: the browser uses `http://localhost:4173`, which is already in the backend CORS allowlist
-(`DEFAULT_ORIGINS`), so CORS is not changed or relaxed. `localhost:4173` and `localhost:5000` are the same site, and Chromium
+Origins and cookies: the browser uses `http://localhost:4173`, which the Playwright config passes to the API as
+`CORS_ORIGINS` (the backend has no built-in origins), so CORS is not relaxed. `localhost:4173` and `localhost:5000` are the same site, and Chromium
 accepts the `Secure; SameSite=None; HttpOnly` auth cookie on `localhost`, so the real login cookie flow is exercised.
 
 Data: `backend/prisma/seed.e2e.ts` (not `seed.ts`) creates one hospital, the admin `e2e.admin@hospilink.test` , two patients

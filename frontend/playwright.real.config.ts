@@ -11,7 +11,7 @@ import { defineConfig, devices } from '@playwright/test';
 //   E2E_JWT_SECRET    defaults to a throwaway value (never use a real secret).
 //
 // Origins: the browser must use `localhost:4173` because it is in the backend CORS allowlist
-// (DEFAULT_ORIGINS in backend/src/config/serverConfig.ts). The API runs on localhost:5000 (same site,
+// (CORS_ORIGINS below, validated by backend/src/config/env.ts). The API runs on localhost:5000 (same site,
 // different port), so the Secure/SameSite=None httpOnly auth cookie works without changing CORS.
 const WEB_PORT = 4173;
 const API_PORT = 5000;
@@ -38,6 +38,7 @@ const backendEnv: Record<string, string> = {
   DATABASE_URL: databaseUrl,
   JWT_SECRET: process.env.E2E_JWT_SECRET ?? 'e2e-throwaway-jwt-secret-not-for-production',
   PORT: String(API_PORT),
+  CORS_ORIGINS: WEB_URL,
   // Keep the unrelated error reporter off in tests.
   SENTRY_DSN: '',
 };
