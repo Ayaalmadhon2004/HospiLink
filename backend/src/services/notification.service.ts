@@ -119,6 +119,56 @@ export const notify = async (input: NotifyInput) => {
   }
 };
 
+/**
+ * Delivers many notifications addressed to explicit `recipients.userIds` with one user lookup and
+ * one insert (instead of `notify()` per item). Returns, per input and in the same order, the rows
+ * created for it. Role/department selectors are not supported here. Never throws: on failure every
+ * entry is an empty array.
+ */
+export const notifyBatch = async (inputs: NotifyInput[]) => {
+  type Created = Awaited<ReturnType<typeof prisma.notification.createManyAndReturn>>;
+  const results: Created[] = inputs.map(() => []);
+  try {
+    const allIds = [...new Set(inputs.flatMap((i) => (i.recipients.userIds ?? []).filter(Boolean)))];
+    if (!allIds.length) return results;
+
+    const users = (await prisma.user.findMany({ where: { id: { in: allIds } }, select: { id: true, settings: true } })) ?? [];
+    const byId = new Map(users.map((u) => [u.id, u]));
+
+    const rows: Prisma.NotificationCreateManyInput[] = [];
+    const owners = new Map<string, number[]>(); // row key -> input indexes, in insertion order
+    const keyOf = (r: { userId: string; type: string; title: string; message: string; link?: string | null }) =>
+      JSON.stringify([r.userId, r.type, r.title, r.message, r.link ?? null]);
+    inputs.forEach((input, idx) => {
+      const settingKey = TYPE_TO_SETTING[input.type];
+      for (const userId of new Set((input.recipients.userIds ?? []).filter(Boolean))) {
+        const u = byId.get(userId);
+        if (!u) continue;
+        if (settingKey && !(u.settings ? u.settings[settingKey] : DEFAULT_SETTINGS[settingKey])) continue;
+        const row = { userId, type: input.type, title: input.title, message: input.message, link: input.link ?? null };
+        rows.push(row);
+        owners.set(keyOf(row), [...(owners.get(keyOf(row)) ?? []), idx]);
+      }
+    });
+    if (!rows.length) return results;
+
+    const created = (await prisma.notification.createManyAndReturn({ data: rows })) ?? [];
+    for (const n of created) {
+      const idx = owners.get(keyOf(n))?.shift();
+      if (idx !== undefined) results[idx].push(n);
+      try {
+        getIO().to(`user-${n.userId}`).emit('new-notification', n);
+      } catch (err) {
+        logger.error({ err, userId: n.userId }, '[Notifications] emit failed (row already stored)');
+      }
+    }
+    return results;
+  } catch (error) {
+    logger.error({ err: error }, '[Notifications] notifyBatch failed:');
+    return inputs.map(() => [] as Created);
+  }
+};
+
 /** Single-user delivery without settings filtering (kept for the legacy helper). */
 export const createNotification = async (data: {
   userId: string;

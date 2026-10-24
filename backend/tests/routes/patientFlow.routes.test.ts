@@ -23,7 +23,7 @@ describe('GET /patients/flow', () => {
   it('returns 401 without a token', async () => {
     const res = await request(app).get('/patients/flow');
     expect(res.status).toBe(401);
-    expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
   });
 
   it('returns 403 for DISPATCHER', async () => {
@@ -34,11 +34,11 @@ describe('GET /patients/flow', () => {
   it.each(['0', '31', 'abc'])('returns 400 for days=%s', async (days) => {
     const res = await request(app).get(`/patients/flow?days=${days}`).set('Authorization', asRole('ADMIN'));
     expect(res.status).toBe(400);
-    expect(prismaMock.patient.findMany).not.toHaveBeenCalled();
+    expect(prismaMock.$queryRaw).not.toHaveBeenCalled();
   });
 
   it.each(['ADMIN', 'DOCTOR', 'NURSE'])('returns one bucket per day for %s', async (role) => {
-    prismaMock.patient.findMany.mockResolvedValue([]);
+    prismaMock.$queryRaw.mockResolvedValue([]);
     const res = await request(app).get('/patients/flow?days=5').set('Authorization', asRole(role));
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
@@ -46,7 +46,7 @@ describe('GET /patients/flow', () => {
   });
 
   it('is not shadowed by /patients/:id', async () => {
-    prismaMock.patient.findMany.mockResolvedValue([]);
+    prismaMock.$queryRaw.mockResolvedValue([]);
     const res = await request(app).get('/patients/flow').set('Authorization', asRole('ADMIN'));
     expect(res.status).toBe(200);
     expect(prismaMock.patient.findUnique).not.toHaveBeenCalled();
