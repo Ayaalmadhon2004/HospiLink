@@ -22,6 +22,7 @@ model Hospital {
   incidents Incident[]
   dispatchUnits DispatchUnit[]
   dispatchCalls DispatchCall[]
+  vitalThresholds VitalThresholds[]
 }
 
 model User {
@@ -202,8 +203,11 @@ model PatientVitals {
   @@index([isCritical])
 }
 
+// Per hospital and department. A (department, vitalType) without a row falls back to the built-in defaults
+// in services/vitalThresholds.ts, so a missing row never means "no alerts".
 model VitalThresholds {
   id           String  @id @default(uuid())
+  hospitalId   String
   department   String
   vitalType    String
   minNormal    Float?
@@ -212,8 +216,10 @@ model VitalThresholds {
   maxCritical  Float?
   alertEnabled Boolean @default(true)
   autoNotify   Boolean @default(false)
+  hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
-  @@unique([department, vitalType])
+  @@unique([hospitalId, department, vitalType])
+  @@index([hospitalId])
 }
 
 model Staff {

@@ -184,3 +184,33 @@ describe('dispatch lifecycle routes', () => {
     expect(badId.status).toBe(400);
   });
 });
+
+describe('vitals thresholds routes', () => {
+  it('reading is for clinical roles; DISPATCHER gets 403', async () => {
+    const res = await request(app).get('/vitals/thresholds').set('Authorization', as('DISPATCHER', 'ACTIVE'));
+    expect(res.status).toBe(403);
+  });
+
+  it.each(['NURSE', 'DISPATCHER'])('changing thresholds needs a DOCTOR or ADMIN: %s -> 403', async (role) => {
+    const authz = as(role, 'ACTIVE');
+    const put = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2' });
+    const del = await request(app).delete(`/vitals/thresholds/${U1}`).set('Authorization', authz);
+    expect(put.status).toBe(403);
+    expect(del.status).toBe(403);
+    expect(prismaMock.vitalThresholds.upsert).not.toHaveBeenCalled();
+  });
+
+  it('a DOCTOR can save a threshold; disordered limits are a 400; /thresholds is not swallowed by /:id', async () => {
+    const authz = as('DOCTOR', 'ACTIVE');
+    prismaMock.vitalThresholds.upsert.mockResolvedValue({ id: 't1' } as any);
+    const ok = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2', minCritical: 88 });
+    expect(ok.status).toBe(200);
+    const bad = await request(app).put('/vitals/thresholds').set('Authorization', authz).send({ department: 'ICU', vitalType: 'SPO2', minCritical: 99, maxCritical: 90 });
+    expect(bad.status).toBe(400);
+
+    prismaMock.vitalThresholds.findMany.mockResolvedValue([] as any);
+    const list = await request(app).get('/vitals/thresholds').set('Authorization', authz);
+    expect(list.status).toBe(200);
+    expect(prismaMock.patientVitals.findFirst).not.toHaveBeenCalled();
+  });
+});

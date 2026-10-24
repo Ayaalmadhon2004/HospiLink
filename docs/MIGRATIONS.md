@@ -64,3 +64,9 @@ mistyped email: fix the email in the staff form (it re-links when a matching log
 Drops the UNIQUE index on `DispatchCall.assignedUnitId` (a unit could be assigned to only one call in its whole life) and replaces it with a plain index.
 The live unit <-> call link is still `DispatchUnit.currentCallId` (unique). Nothing to check before deploying; units that stayed `EN_ROUTE` on calls that never got closed
 can be freed by completing or cancelling those calls through the new endpoints.
+
+## Per-hospital vital thresholds (`20261029000000_vital_thresholds_hospital`)
+
+`VitalThresholds` had no `hospitalId` (one table shared by all hospitals). The migration adds it, **copies every existing row to every hospital**, removes the global rows and
+makes (hospitalId, department, vitalType) unique. Checked on PostgreSQL 16 with existing rows and two hospitals. After deploying, review `GET /api/vitals/thresholds` for each hospital:
+a hospital that never configured anything now relies on the built-in defaults (adult ranges) instead of silently having no alerts.

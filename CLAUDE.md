@@ -94,6 +94,9 @@ Frontend: `VITE_API_URL` (defaults to the Render API URL in `services/api.ts`).
 - Dispatch lifecycle: the unit <-> call link changes ONLY through `POST /dispatch/calls/:id/assign`, `/complete` and `/cancel` (the last two close the call and release the unit in one transaction;
   `PUT /dispatch/units/:id/status` never takes a `callId` and refuses AVAILABLE/OFF_DUTY for a unit that is on a call; EN_ROUTE/ON_SCENE are mirrored on the call). `DispatchCall.assignedUnitId` is history only (not unique).
   Units: `POST/PUT/DELETE /dispatch/units` (delete = ADMIN, refused while on a call). Socket `unit-location-update` (DISPATCHER/ADMIN) is broadcast as `unit-location` to the dispatch and unit rooms.
+- Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
+  managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
+  and a failed threshold lookup is logged as an error and also falls back to the defaults. A reading can therefore never be silently judged "not critical" for lack of configuration.
 - Account approval: public signup requires the target hospital's `Hospital.code` (`hospitalCode` in the body, uppercased; unknown code -> 400) and creates `accountStatus: PENDING` (no token/cookie issued); there is no `HOSPITAL_ID` fallback. `protect`, `login` and `socketAuth` answer 403
   ("Account pending admin approval") for PENDING/DISABLED users. Only an ADMIN activates them or invites users with a role
   (`/api/users`: list, invite, `PUT :id/approve`, `:id/reject`, `:id/deactivate`).

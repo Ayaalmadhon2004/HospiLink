@@ -2,6 +2,7 @@ import { idSchema } from '../../src/validators/common.validator';
 import { createAppointmentSchema, updateAppointmentSchema } from '../../src/validators/appointment.validator';
 import { createBedSchema, updateBedSchema } from '../../src/validators/bed.validator';
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema } from '../../src/validators/vitals.validator';
+import { upsertThresholdSchema } from '../../src/validators/vitals.validator';
 import { createStaffSchema, updateStaffSchema, staffLoginSchema, createShiftSchema, updateShiftSchema } from '../../src/validators/staff.validator';
 import { createIncidentSchema, updateIncidentStatusSchema } from '../../src/validators/incident.validator';
 import { createCallSchema, assignUnitSchema, updateUnitStatusSchema, createUnitSchema, updateUnitSchema } from '../../src/validators/dispatch.validator';
@@ -177,5 +178,19 @@ describe('dispatch unit lifecycle', () => {
   });
   it('updateUnit accepts partial identity fields only (no status, no call)', () => {
     expect(updateUnitSchema.parse({ unitCode: 'N', status: 'OFF_DUTY', currentCallId: U1 })).toEqual({ unitCode: 'N' });
+  });
+});
+
+describe('upsertThresholdSchema', () => {
+  const base = { department: 'ICU', vitalType: 'HEART_RATE' };
+  it('accepts ordered limits, partial limits and null (clears a limit)', () => {
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 40, minNormal: 60, maxNormal: 100, maxCritical: 130 }).success).toBe(true);
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 90, maxCritical: null, alertEnabled: false }).success).toBe(true);
+  });
+  it('rejects disordered limits, unknown vital types, hospitalId-like extras are stripped', () => {
+    expect(upsertThresholdSchema.safeParse({ ...base, minCritical: 100, maxCritical: 50 }).success).toBe(false);
+    expect(upsertThresholdSchema.safeParse({ ...base, minNormal: 120, maxNormal: 60 }).success).toBe(false);
+    expect(upsertThresholdSchema.safeParse({ ...base, vitalType: 'MOOD' }).success).toBe(false);
+    expect(upsertThresholdSchema.parse({ ...base, hospitalId: 'x' })).not.toHaveProperty('hospitalId');
   });
 });

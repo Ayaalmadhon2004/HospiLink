@@ -23,6 +23,7 @@ describe('notification events', () => {
   describe('critical vitals', () => {
     const critical = () => {
       prismaMock.patient.findFirst.mockResolvedValue({ id: 'p1', name: 'Sam', department: 'ICU', doctorId: 'doc1', hospitalId: 'hosp-1' } as any);
+      prismaMock.patient.updateMany.mockResolvedValue({ count: 1 } as any);
       (prismaMock as any).vitalThresholds.findMany.mockResolvedValue([
         { vitalType: 'HEART_RATE', minCritical: 40, maxCritical: 130, alertEnabled: true },
       ]);
