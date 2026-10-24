@@ -7,7 +7,7 @@ import { useDispatchSocket } from '../hooks/useDispatchSocket';
 import { useNow } from '../hooks/useNow';
 import { apiGet } from '../services/api';
 import type { ApiResponse } from '../types/api';
-import { useAuth } from '../contexts/authContext';
+import { useAuthPermissions } from '../hooks/useAuthPermissions';
 import UnitActions from '../components/Dashboard/UnitActions';
 import {
   computeUnitStats,
@@ -19,7 +19,6 @@ import {
 const POLL_INTERVAL_MS = 10_000;
 const CLOCK_TICK_MS = 30_000;
 const ALERT_TOAST_MS = 8_000;
-const CAN_DISPATCH = ['ADMIN', 'DISPATCHER'];
 const UNITS_KEY = ['dispatch-units'] as const;
 
 const DispatchDashboard: React.FC = () => {
@@ -28,8 +27,7 @@ const DispatchDashboard: React.FC = () => {
   const { isConnected, latestUnitUpdate, criticalAlert } = useDispatchSocket();
   // Re-evaluates time-based alarms (prolonged on-scene, delayed) between polls
   const now = useNow(CLOCK_TICK_MS);
-  const { user } = useAuth();
-  const canDispatch = !!user && CAN_DISPATCH.includes(user.role);
+  const canDispatch = useAuthPermissions().can('dispatch:operate');
 
   const { data: units = [] } = useQuery({
     queryKey: UNITS_KEY,

@@ -3,14 +3,13 @@ import { logger } from '../utils/logger';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { Appointment } from '../services/appointmentsService';
+import { SOCKET_URL } from '../config/env';
 
 interface AppointmentUpdate {
   type: 'created' | 'updated' | 'cancelled';
   data: Appointment;
 }
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
-  .replace('/api', '');
 
 export const useAppointmentsSocket = () => {
   const [latestUpdate, setLatestUpdate] = useState<AppointmentUpdate | null>(null);

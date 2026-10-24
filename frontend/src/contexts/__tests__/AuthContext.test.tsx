@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import { AuthProvider } from '../AuthContext';
 import { useAuth } from '../authContext';
+import { notifySessionExpired } from '../../services/sessionExpiry';
+
+const toastError = vi.hoisted(() => vi.fn());
+vi.mock('sonner', () => ({ toast: { error: toastError } }));
 
 // A plain function (not vi.fn) backs apiGet: vitest's mock bookkeeping would
 // otherwise flag the intentionally rejected promise as an unhandled rejection.
@@ -64,5 +68,28 @@ describe('AuthProvider bootstrap', () => {
   it('ends up anonymous when the response has no user', async () => {
     renderProbe();
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('anonymous'));
+  });
+
+  it('clears the session and toasts once when a 401 is reported while signed in', async () => {
+    toastError.mockClear();
+    state.respond = () => Promise.resolve({ user: { id: '1', name: 'Dr Aya', email: 'a@b.c', role: 'DOCTOR' } });
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('user:Dr Aya'));
+    act(() => {
+      notifySessionExpired();
+      notifySessionExpired();
+    });
+    await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('anonymous'));
+    expect(toastError).toHaveBeenCalledTimes(1);
+    expect(toastError).toHaveBeenCalledWith('Session expired, please log in again', { id: 'session-expired' });
+  });
+
+  it('ignores a 401 when nobody is signed in (e.g. the initial /auth/me)', async () => {
+    toastError.mockClear();
+    state.respond = () => Promise.reject(new Error('Unauthorized'));
+    renderProbe();
+    await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('anonymous'));
+    act(() => notifySessionExpired());
+    expect(toastError).not.toHaveBeenCalled();
   });
 });

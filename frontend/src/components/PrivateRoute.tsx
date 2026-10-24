@@ -1,14 +1,17 @@
 // frontend/src/components/PrivateRoute.tsx
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/authContext';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import type { Role } from '../configs/permissions';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
+  /** When set, only these roles may see the content; other signed-in users get a 403 screen. */
+  allowedRoles?: readonly Role[];
 }
 
-export const PrivateRoute = ({ children }: PrivateRouteProps) => {
+export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
   const { user, loading } = useAuth();
   const location = useLocation();
   const { t } = useTranslation();
@@ -28,6 +31,18 @@ export const PrivateRoute = ({ children }: PrivateRouteProps) => {
   // لو مش مسجل دخول — روحي لـ login مع حفظ المسار الأصلي
   if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // مسجل دخول بس دوره مش مسموح لهاي الصفحة
+  if (allowedRoles && !(allowedRoles as readonly string[]).includes(user.role)) {
+    return (
+      <div role="alert" className="min-h-[50vh] flex flex-col items-center justify-center gap-3 p-6 text-center">
+        <p className="text-gray-700 font-medium">{t('errors.forbidden')}</p>
+        <Link to="/dashboard" className="text-teal-600 hover:underline text-sm">
+          {t('sidebar.tabs.Overview')}
+        </Link>
+      </div>
+    );
   }
 
   // ✅ مسجل دخول — اعرضي المحتوى

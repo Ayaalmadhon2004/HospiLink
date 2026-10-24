@@ -38,6 +38,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    env: { VITE_API_URL: 'http://localhost:5000/api' },
     exclude: ['e2e/**', 'node_modules/**', 'dist/**'],
     coverage: {
       provider: 'v8',
@@ -46,11 +47,9 @@ export default defineConfig({
     },
   },
   server: {
-    proxy: {
-      '/api': {
-        target: 'https://hospi-link-two.vercel.app',
-        changeOrigin: true,
-      },
-    },
+    // Only used when VITE_API_URL is a same-origin path (e.g. /api): set VITE_DEV_PROXY_TARGET to the API host.
+    proxy: process.env.VITE_DEV_PROXY_TARGET
+      ? { '/api': { target: process.env.VITE_DEV_PROXY_TARGET, changeOrigin: true } }
+      : undefined,
   },
 });

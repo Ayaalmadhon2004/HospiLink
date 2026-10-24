@@ -64,6 +64,8 @@ export const mockApi = async (page: Page, options: MockOptions = {}) => {
     const path = pathname.replace(/^\/api/, '');
     const method = request.method();
 
+    if (path === '/health') return json(route, 200, { status: 'UP', database: 'CONNECTED' });
+
     if (path === '/auth/me') {
       return loggedIn
         ? json(route, 200, { success: true, user: doctor })

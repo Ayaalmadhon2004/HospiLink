@@ -2,14 +2,15 @@
 import axios from 'axios';
 import type { ApiResponse, QueryParams } from '../types/api';
 import { toApiError } from './normalizeApiError';
-const API_BASE = import.meta.env.VITE_API_URL ?? 'https://hospilink-1bfi.onrender.com/api';
+import { API_URL } from '../config/env';
+import { notifySessionExpired } from './sessionExpiry';
 
 // ============================================
 // CORE AXIOS INSTANCE
 // ============================================
 
 export const api = axios.create({
-  baseURL: API_BASE,
+  baseURL: API_URL,
   withCredentials: true,
   timeout: 30000, // ✅ 30 ثانية — ضروري لـ Render cold starts
   headers: {
@@ -30,10 +31,18 @@ api.interceptors.request.use(
 );
 
 // ============================================
-// RESPONSE INTERCEPTOR — NO hard redirect
+// RESPONSE INTERCEPTOR — 401 => session expiry handler (no hard redirect)
 // ============================================
 
-api.interceptors.response.use((response) => response, (error: unknown) => Promise.reject(toApiError(error)));
+api.interceptors.response.use(
+  (response) => response,
+  (error: unknown) => {
+    const apiError = toApiError(error);
+    // An expired/invalid session surfaces as 401 on any request: let the auth layer sign the user out once.
+    if (apiError.status === 401) notifySessionExpired();
+    return Promise.reject(apiError);
+  },
+);
 
 // ============================================
 // MODERN HTTP METHODS

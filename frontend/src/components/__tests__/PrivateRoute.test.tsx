@@ -46,4 +46,29 @@ describe('PrivateRoute', () => {
     renderAt('/secret');
     expect(screen.getByText('secret content')).toBeInTheDocument();
   });
+
+  it('shows a 403 screen when the role is not in allowedRoles', () => {
+    useAuth.mockReturnValue({ user: { id: '1', name: 'N', role: 'NURSE' }, loading: false });
+    render(
+      <MemoryRouter>
+        <PrivateRoute allowedRoles={['ADMIN', 'DISPATCHER']}>
+          <p>dispatch content</p>
+        </PrivateRoute>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent(/do not have permission/i);
+    expect(screen.queryByText('dispatch content')).not.toBeInTheDocument();
+  });
+
+  it('renders the content when the role is allowed', () => {
+    useAuth.mockReturnValue({ user: { id: '1', name: 'D', role: 'DISPATCHER' }, loading: false });
+    render(
+      <MemoryRouter>
+        <PrivateRoute allowedRoles={['ADMIN', 'DISPATCHER']}>
+          <p>dispatch content</p>
+        </PrivateRoute>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('dispatch content')).toBeInTheDocument();
+  });
 });

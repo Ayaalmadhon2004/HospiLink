@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { Heart, ChevronRight, Loader2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/authContext';
+import { canAccessRoute } from '../../configs/permissions';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
 import { NAV_ITEMS, SETTINGS_NAV_ITEM, type NavItem } from '../../configs/navigation';
 
@@ -86,7 +87,7 @@ const Sidebar = ({ onNavigate }: SidebarProps) => {
         <div className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-4">
           {t('sidebar.clinicalOperations')}
         </div>
-        {NAV_ITEMS.map(renderItem)}
+        {NAV_ITEMS.filter((item) => canAccessRoute(user?.role, item.path)).map(renderItem)}
       </nav>
 
       {/* Settings */}

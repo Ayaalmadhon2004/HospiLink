@@ -3,9 +3,8 @@ import { logger } from '../utils/logger';
 import { useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 import type { Incident } from '../types/incident';
+import { SOCKET_URL } from '../config/env';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
-  .replace('/api', '');
 
 export const useIncidentsSocket = () => {
   const [latestUpdate, setLatestUpdate] = useState<{ type: 'created' | 'updated' | 'status'; data: Incident } | null>(null);

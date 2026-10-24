@@ -9,6 +9,7 @@ import { getStaff, deleteStaff, getShiftTimeline } from '../services/staffServic
 import { extractList } from '../types/api';
 import type { Shift } from '../types/staff';
 import { useStaffSocket } from '../hooks/useStaffSocket';
+import { useAuthPermissions } from '../hooks/useAuthPermissions';
 import { StaffModal } from '../components/Staff/StaffModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
@@ -30,6 +31,7 @@ interface StaffMember {
 
 export const StaffDirectoryPage = () => {
   const { t } = useTranslation();
+  const canManage = useAuthPermissions().can('staff:manage');
   const [selectedDept, setSelectedDept] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -119,13 +121,15 @@ export const StaffDirectoryPage = () => {
             <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
             {t('staff.refresh')}
           </button>
-          <button
-            onClick={handleAdd}
-            className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
-          >
-            <Plus size={16} />
-            {t('staff.modal.add')}
-          </button>
+          {canManage && (
+            <button
+              onClick={handleAdd}
+              className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
+            >
+              <Plus size={16} />
+              {t('staff.modal.add')}
+            </button>
+          )}
         </div>
       </div>
 
@@ -248,24 +252,26 @@ export const StaffDirectoryPage = () => {
                   )}
                 </td>
                 <td className="px-6 py-4 text-end">
-                  <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
-                    <button
-                      onClick={() => handleEdit(member)}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                      title={t('staff.edit')}
-                      aria-label={t('staff.edit')}
-                    >
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteClick(member.id, member.name)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                      title={t('staff.delete')}
-                      aria-label={t('staff.delete')}
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {canManage && (
+                    <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
+                      <button
+                        onClick={() => handleEdit(member)}
+                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        title={t('staff.edit')}
+                        aria-label={t('staff.edit')}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteClick(member.id, member.name)}
+                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        title={t('staff.delete')}
+                        aria-label={t('staff.delete')}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}

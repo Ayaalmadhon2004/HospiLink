@@ -1,9 +1,8 @@
 // frontend/src/hooks/useDispatchSocket.ts
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { io, Socket } from 'socket.io-client';
+import { SOCKET_URL } from '../config/env';
 
-const SOCKET_URL = (import.meta.env.VITE_API_URL || 'https://hospi-link-two.vercel.app')
-  .replace('/api', '');
 
 export interface UnitUpdate {
   unitId: string;
