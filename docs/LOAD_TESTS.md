@@ -49,9 +49,14 @@ Measured on a small shared VM (PostgreSQL, API and k6 on the same machine, so th
 
 | Script / profile | Result |
 |---|---|
+| `vitals-ingest` **load** (50 devices x 2 min, PRODUCTION rate limits, nothing raised) | 6 023 requests (49.9/s), 10 001 readings stored, p95 15 ms, p99 439 ms (cold start), 0 failures, 0 dropped iterations |
 | `vitals-ingest` smoke (10 devices, 20 s) | p95 27 ms, 0 failures |
 | `api-read` smoke (10 users) | p95 24 ms across 8 endpoints |
 | `contention` smoke | all invariants held (25/25 dispenses, 10/10 payments, consecutive numbers, distinct codes) |
 | `socket-fanout` smoke (20 receivers x 10 readings) | 200/200 delivered, p95 15 ms |
 | `exports` (300+ patients) | xlsx p95 92 ms, pdf p95 207 ms |
 | `rate-limits` | 20 login attempts evaluated then 429; flood cut off |
+
+## What the load runs found
+- The first 50-device run **failed 80 % of requests (HTTP 429)**: ingestion was throttled by a per-IP limiter (600/min on the route, and the general 200/min API limiter on top), so a hospital gateway carrying 50 devices (3 000 requests/min) was cut to a few readings per second. Fixed: ingestion is limited per authenticated device key (`INGEST_RATE_LIMIT_MAX`, default 6 000/min), rejected requests per IP (60/min), and it is exempt from the general limiter. The run above is the same script on the fixed code with production limits.
+- Related, not changed here: the general limiter is 200 requests/minute **per IP**. Every browser behind one hospital NAT shares that budget. If staff report 429s on a busy ward, key the limiter per user (after `protect`) or raise it for authenticated traffic.
