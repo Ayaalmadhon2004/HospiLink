@@ -1,0 +1,104 @@
+name: load-test
+
+# k6 load, contention and abuse-protection scripts (perf/) against a throwaway PostgreSQL and a locally started API.
+# Manual (pick the profile) and weekly. Not part of the PR pipeline: it is slower and its latency numbers depend on the runner.
+# Results: the job fails when a threshold is crossed; JSON summaries are uploaded as an artifact. See docs/LOAD_TESTS.md.
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'smoke (about 3 minutes) or load (about 12 minutes)'
+        type: choice
+        options: [smoke, load]
+        default: smoke
+  schedule:
+    - cron: '23 4 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  k6:
+    name: k6 (${{ inputs.profile || 'smoke' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          # Throwaway credentials for a container that lives only for this job.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hospilink_loadtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hospilink_loadtest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PROFILE: ${{ inputs.profile || 'smoke' }}
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hospilink_loadtest
+      # Throwaway values, not real secrets.
+      JWT_SECRET: ci-load-throwaway-jwt-secret
+      CORS_ORIGINS: http://localhost:5173
+      NODE_ENV: production
+      LOG_LEVEL: error
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npx prisma generate
+      - name: Migrate and seed the throwaway database
+        run: |
+          npx prisma migrate deploy
+          npx tsx prisma/seed.e2e.ts
+      - uses: grafana/setup-k6-action@v1
+
+      - name: "Start the API (raised per-IP limits, test-only overrides)"
+        run: |
+          AUTH_RATE_LIMIT_MAX=100000 API_RATE_LIMIT_MAX=1000000 nohup npx tsx src/server.ts > "$RUNNER_TEMP/api.log" 2>&1 &
+          for i in $(seq 1 60); do curl -sf http://localhost:5000/api/health && break; sleep 1; done
+
+      - name: Device ingestion, read mix, contention invariants, socket fan-out
+        working-directory: .
+        run: |
+          mkdir -p "$RUNNER_TEMP/k6"
+          export SUMMARY_JSON="$RUNNER_TEMP/k6/{name}.json"
+          k6 run perf/vitals-ingest.js
+          k6 run perf/api-read.js
+          k6 run perf/contention.js
+          k6 run perf/socket-fanout.js
+
+      # The export limiter (10 / min) is fixed, but every other protection test needs the DEFAULT limits: restart the API.
+      - name: Export guard rails and abuse protections (default limits)
+        working-directory: .
+        run: |
+          kill $(lsof -t -i:5000) || true
+          sleep 2
+          (cd backend && nohup npx tsx src/server.ts > "$RUNNER_TEMP/api2.log" 2>&1 &)
+          for i in $(seq 1 60); do curl -sf http://localhost:5000/api/health && break; sleep 1; done
+          export SUMMARY_JSON="$RUNNER_TEMP/k6/{name}.json"
+          k6 run perf/exports.js
+          k6 run perf/rate-limits.js
+
+      - name: Upload k6 summaries
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: k6-summaries
+          path: ${{ runner.temp }}/k6/*.json
+          if-no-files-found: ignore
+
+      - name: API log on failure
+        if: failure()
+        run: tail -n 100 "$RUNNER_TEMP/api.log" "$RUNNER_TEMP/api2.log" || true
