@@ -1281,5 +1281,16 @@
     "create": "Create draft",
     "createFailed": "Could not create the invoice",
     "actionFailed": "The action failed"
+  },
+  "export": {
+    "button": "Export",
+    "title": "Export data",
+    "hint": "Choose a period (optional, default: last 30 days).",
+    "excel": "Excel",
+    "pdf": "PDF",
+    "preparing": "Preparing…",
+    "badRange": "\"From\" must not be after \"To\".",
+    "tooLarge": "Too many rows for one export. Choose a shorter period.",
+    "failed": "The export failed. Please try again."
   }
 }

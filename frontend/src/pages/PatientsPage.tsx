@@ -1,3 +1,4 @@
+import { ExportMenu } from '../components/Export/ExportMenu';
 import { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -183,14 +184,17 @@ export const PatientsPage = () => {
           <p className="text-slate-500">{t('patients.subtitle')}</p>
         </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-hospital-navy text-white px-4 py-2 rounded-lg hover:bg-hospital-navy/90 transition flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-hospital-navy focus:ring-offset-2"
-          aria-label={t('patients.admitLabel')}
-        >
-          <UserPlus size={18} aria-hidden="true" />
-          {t('patients.admit')}
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportMenu type="patients" />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-hospital-navy text-white px-4 py-2 rounded-lg hover:bg-hospital-navy/90 transition flex items-center gap-2 focus:outline-none focus:ring-2 focus:ring-hospital-navy focus:ring-offset-2"
+            aria-label={t('patients.admitLabel')}
+          >
+            <UserPlus size={18} aria-hidden="true" />
+            {t('patients.admit')}
+          </button>
+        </div>
       </header>
 
       <AdmitPatientModal 

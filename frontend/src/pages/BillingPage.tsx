@@ -1,3 +1,4 @@
+import { ExportMenu } from '../components/Export/ExportMenu';
 // pages/BillingPage.tsx
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
@@ -28,7 +29,10 @@ export const BillingPage = () => {
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Receipt className="w-6 h-6 text-blue-600" aria-hidden="true" />{t('billing.title')}</h1>
           <p className="text-gray-500 text-sm mt-1">{t('billing.subtitle')}</p>
         </div>
-        <button onClick={() => setCreating(true)} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">{t('billing.new')}</button>
+        <div className="flex items-center gap-2">
+          <ExportMenu type="billing" />
+          <button onClick={() => setCreating(true)} className="bg-blue-600 text-white px-4 py-2.5 rounded-lg text-sm font-medium">{t('billing.new')}</button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2" role="group" aria-label={t('billing.filter')}>

@@ -1,6 +1,7 @@
 // components/Audit/AuditFilters.tsx
 import { useTranslation } from 'react-i18next';
 import type { AuditLogFilters } from '../../services/auditLogService';
+import { dayStartIso, nextDayStartIso, toDayValue, lastIncludedDayValue } from '../../utils/dateRange';
 
 interface AuditFiltersProps {
   filters: AuditLogFilters;
@@ -9,15 +10,6 @@ interface AuditFiltersProps {
 }
 
 const INPUT = 'border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white';
-
-// <input type="date"> yields a local "YYYY-MM-DD"; the API takes instants. `to` is exclusive, so "to" means the end of that day.
-const dayStart = (d: string): string => new Date(`${d}T00:00:00`).toISOString();
-const nextDayStart = (d: string): string => {
-  const date = new Date(`${d}T00:00:00`);
-  date.setDate(date.getDate() + 1);
-  return date.toISOString();
-};
-const toDay = (iso?: string): string => (iso ? new Date(iso).toLocaleDateString('en-CA') : '');
 
 export const AuditFilters = ({ filters, actions, onChange }: AuditFiltersProps) => {
   const { t } = useTranslation();
@@ -35,7 +27,7 @@ export const AuditFilters = ({ filters, actions, onChange }: AuditFiltersProps) 
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="audit-from" className="text-xs font-medium text-gray-600">{t('audit.filters.from')}</label>
-        <input id="audit-from" type="date" className={INPUT} value={toDay(filters.from)} onChange={(e) => set({ from: e.target.value ? dayStart(e.target.value) : undefined })} />
+        <input id="audit-from" type="date" className={INPUT} value={toDayValue(filters.from)} onChange={(e) => set({ from: e.target.value ? dayStartIso(e.target.value) : undefined })} />
       </div>
       <div className="flex flex-col gap-1">
         <label htmlFor="audit-to" className="text-xs font-medium text-gray-600">{t('audit.filters.to')}</label>
@@ -43,8 +35,8 @@ export const AuditFilters = ({ filters, actions, onChange }: AuditFiltersProps) 
           id="audit-to"
           type="date"
           className={INPUT}
-          value={filters.to ? toDay(new Date(new Date(filters.to).getTime() - 1).toISOString()) : ''}
-          onChange={(e) => set({ to: e.target.value ? nextDayStart(e.target.value) : undefined })}
+          value={lastIncludedDayValue(filters.to)}
+          onChange={(e) => set({ to: e.target.value ? nextDayStartIso(e.target.value) : undefined })}
         />
       </div>
       <div className="flex flex-col gap-1">

@@ -1,3 +1,4 @@
+import { ExportMenu } from '../components/Export/ExportMenu';
 // pages/AppointmentsPage.tsx
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -134,13 +135,16 @@ export const AppointmentsPage = () => {
           </h1>
           <p className="text-gray-500 text-sm">{t('appointments.subtitle')}</p>
         </div>
-        <button
-          onClick={handleAdd}
-          className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
-        >
-          <Plus size={16} />
-          {t('appointments.new')}
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportMenu type="appointments" />
+          <button
+            onClick={handleAdd}
+            className="flex items-center gap-2 bg-teal-500 text-white px-4 py-2 rounded-lg hover:bg-teal-600 transition"
+          >
+            <Plus size={16} />
+            {t('appointments.new')}
+          </button>
+        </div>
       </div>
 
       {/* Modal */}
