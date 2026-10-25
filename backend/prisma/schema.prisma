@@ -26,6 +26,7 @@ model Hospital {
   dispatchCalls DispatchCall[]
   vitalThresholds VitalThresholds[]
   deviceKeys DeviceKey[]
+  auditLogs AuditLog[]
 }
 
 model User {
@@ -116,9 +117,14 @@ model AuditLog {
   userId    String?
   entityId  String
   details   String?
+  // Tenant of the actor, copied at write time so the trail stays scoped after the user is deleted (NULL = legacy row
+  // whose actor was already gone: never shown to any hospital).
+  hospitalId String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hospital  Hospital? @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
 
+  @@index([hospitalId, createdAt])
   @@index([userId, createdAt])
   @@index([entityId])
   @@index([action, createdAt])

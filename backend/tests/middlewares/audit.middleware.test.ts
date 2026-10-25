@@ -100,4 +100,11 @@ describe('audit.middleware - logActivity on read requests', () => {
     });
     expect(next).toHaveBeenCalledTimes(1);
   });
+
+  it('stores the actor\'s hospital so the trail can be scoped per tenant', async () => {
+    const req = mockRequest({ originalUrl: '/api/wards' } as any);
+    prismaMock.auditLog.create.mockResolvedValue({} as any);
+    await logActivity('CREATE_WARD')(req, mockResponse(), mockNext());
+    expect(prismaMock.auditLog.create).toHaveBeenCalledWith({ data: expect.objectContaining({ hospitalId: 'hosp-1' }) });
+  });
 });
