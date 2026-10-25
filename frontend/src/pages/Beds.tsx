@@ -10,6 +10,7 @@ import { apiGetAll } from '../services/paginate';
 import type { ApiResponse } from '../types/api';
 import type { Patient } from '../types/patient';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
+import { WardsPanel } from '../components/Wards/WardsPanel';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
 
@@ -166,6 +167,8 @@ const Beds = () => {
           </div>
         </div>
       </section>
+
+      <WardsPanel />
 
       {/* Filters & Search */}
       <section className="flex flex-col sm:flex-row gap-4">

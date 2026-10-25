@@ -6,12 +6,13 @@ Status of the five areas requested. "Done" items ship in this branch; the rest a
 - Vitals ingestion layer (HL7 v2 / FHIR / JSON, MQTT via bridge), `DeviceKey` management → `docs/VITALS_INTEGRATION.md`
 - Backup scripts, nightly workflow, restore drill, retention policy → `docs/BACKUP_AND_RETENTION.md`
 - Secret scan workflow over full history (`.github/workflows/secret-scan.yml`)
+- Wards CRUD (API + `WardsPanel`) and the ADMIN audit-log page (`AuditLog.hospitalId` migration + `/audit-logs`)
 
 ## 1. Product modules (order = value / risk)
 | # | PR | Scope | Size |
 |---|---|---|---|
-| 1 | `feat/wards-crud` | `POST/PUT/DELETE /wards` (ADMIN, `Restrict` while beds exist → 409), `ward.validator`, tests; the beds API already has full CRUD, add Ward + Bed management screens in `pages/` using `entityConfigs` + `useCrud` | S |
-| 2 | `feat/audit-log-admin` | `GET /api/audit-logs?page&limit&action&userId&from&to` (ADMIN, scoped through `user.hospitalId`; `AuditLog` has no `hospitalId`, so add it + backfill migration first, otherwise this is a cross-tenant leak), `AuditLogPage` with filters + CSV export; index `AuditLog(createdAt)` | M |
+| 1 | ~~`feat/wards-crud`~~ done | `POST/PUT/DELETE /wards` (ADMIN, `Restrict` while beds exist → 409), `ward.validator`, tests; the beds API already has full CRUD, add Ward + Bed management screens in `pages/` using `entityConfigs` + `useCrud` | S |
+| 2 | ~~`feat/audit-log-admin`~~ done (CSV export still open) | `GET /api/audit-logs?page&limit&action&userId&from&to` (ADMIN, scoped through `user.hospitalId`; `AuditLog` has no `hospitalId`, so add it + backfill migration first, otherwise this is a cross-tenant leak), `AuditLogPage` with filters + CSV export; index `AuditLog(createdAt)` | M |
 | 3 | `feat/user-management` | `PUT /users/:id/role` (ADMIN, same hospital; refuse demoting the last ADMIN and self-demotion; revoke sessions via `passwordChangedAt`-style bump), `PUT :id/activate` (counterpart of `deactivate`); frontend Users page (list/approve/reject/role/activate) — the approve/reject/deactivate endpoints already exist | M |
 | 4 | `feat/clinical-records` | Models `ClinicalNote`, `Prescription`(+`PrescriptionItem`), `Medication` (catalogue), `LabOrder`/`LabResult` — all with `hospitalId`, `patientId`, `authorId`→`Staff`, soft-delete like `Patient`; notes append-only (amend = new version). Roles: DOCTOR write, NURSE read/administer, tests per path. Needs a clinical sign-off on fields before migrating | L |
 | 5 | `feat/pharmacy-billing` | Pharmacy: stock (`MedicationStock` per hospital, decrement in the same transaction as dispensing a prescription item, never below 0). Billing: `Invoice`, `InvoiceLine`, `Payment`; money as integer minor units (no floats), status DRAFT→ISSUED→PAID/VOID, immutable once ISSUED (VOID + reissue). Add a `PHARMACIST`/`BILLING` role only after the access matrix is agreed | L |

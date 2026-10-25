@@ -104,7 +104,8 @@
       "Vitals Monitor": "مراقبة العلامات الحيوية",
       "Incidents": "الحوادث",
       "Dispatch": "الإسعاف",
-      "Settings": "الإعدادات"
+      "Settings": "الإعدادات",
+      "Audit Log": "سجل التدقيق"
     },
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة"
@@ -225,7 +226,8 @@
       "DOCTOR_NOT_FOUND": "الطبيب غير موجود.",
       "UNIT_NOT_FOUND": "الوحدة غير موجودة.",
       "THRESHOLD_NOT_FOUND": "الحد غير موجود.",
-      "FILE_NOT_FOUND": "الملف غير موجود."
+      "FILE_NOT_FOUND": "الملف غير موجود.",
+      "WARD_HAS_BEDS": "لا يزال في هذا القسم أسرّة. انقل أسرّته أو احذفها أولاً."
     }
   },
   "errorBoundary": {
@@ -327,6 +329,12 @@
       "reportedByPlaceholder": "اسم الموظف",
       "description": "الوصف",
       "descriptionPlaceholder": "صف الحادثة بالتفصيل..."
+    },
+    "ward": {
+      "name": "اسم القسم",
+      "namePlaceholder": "مثال: القلبية",
+      "floor": "الطابق",
+      "floorPlaceholder": "مثال: 2"
     }
   },
   "patients": {
@@ -988,5 +996,64 @@
       "chartSpO2": "تشبّع الأكسجين SpO2 (%)",
       "chartTemperature": "درجة الحرارة (°م)"
     }
+  },
+  "wards": {
+    "title": "الأقسام",
+    "subtitle": "إدارة الأقسام التي تنتمي إليها الأسرّة",
+    "itemName": "القسم",
+    "itemType": "القسم",
+    "add": "إضافة قسم",
+    "empty": "لا توجد أقسام بعد",
+    "floor": "الطابق {{floor}}",
+    "bedCount_zero": "لا أسرّة",
+    "bedCount_one": "سرير واحد",
+    "bedCount_two": "سريران",
+    "bedCount_few": "{{count}} أسرّة",
+    "bedCount_many": "{{count}} سريرًا",
+    "bedCount_other": "{{count}} سرير",
+    "edit": "تعديل القسم {{name}}",
+    "delete": "حذف القسم {{name}}",
+    "hasBeds": "أزل أسرّته أو انقلها قبل الحذف",
+    "modalAdd": "إضافة قسم",
+    "modalEdit": "تعديل القسم",
+    "modalAddSubtitle": "أنشئ قسمًا لأسرّتك",
+    "modalEditSubtitle": "غيّر اسم القسم أو طابقه",
+    "save": "حفظ التغييرات",
+    "created": "تم إنشاء القسم",
+    "updated": "تم تحديث القسم"
+  },
+  "audit": {
+    "title": "سجل التدقيق",
+    "subtitle": "من فعل ماذا ومتى. للقراءة فقط.",
+    "filters": {
+      "action": "الإجراء",
+      "allActions": "كل الإجراءات",
+      "from": "من",
+      "to": "إلى",
+      "entityId": "معرّف الكيان",
+      "entityPlaceholder": "معرّف مريض أو سرير أو قسم...",
+      "reset": "إعادة ضبط الفلاتر"
+    },
+    "cols": {
+      "time": "الوقت",
+      "user": "المستخدم",
+      "action": "الإجراء",
+      "entity": "الكيان",
+      "details": "التفاصيل"
+    },
+    "deletedUser": "مستخدم محذوف",
+    "empty": "لا يوجد نشاط يطابق هذه الفلاتر",
+    "loading": "جارٍ تحميل سجل التدقيق",
+    "loadFailed": "تعذّر تحميل سجل التدقيق",
+    "retry": "إعادة المحاولة",
+    "page": "الصفحة {{page}} من {{total}}",
+    "total_zero": "لا إدخالات",
+    "total_one": "إدخال واحد",
+    "total_two": "إدخالان",
+    "total_few": "{{count}} إدخالات",
+    "total_many": "{{count}} إدخالًا",
+    "total_other": "{{count}} إدخال",
+    "prev": "الصفحة السابقة",
+    "next": "الصفحة التالية"
   }
 }

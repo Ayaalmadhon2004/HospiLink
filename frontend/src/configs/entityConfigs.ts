@@ -264,3 +264,19 @@ export const incidentValidationSchema = z.object({
   reportedBy: requiredString('Reported by'),
   description: requiredString('Description'),
 });
+
+// ─── WARD CONFIG ───────────────────────────────────────────────────
+export interface WardFormValues {
+  name: string;
+  floor?: string;
+}
+
+export const wardFields: FieldConfig<WardFormValues>[] = [
+  { name: 'name', label: 'forms.ward.name', type: 'text', required: true, colSpan: 2, placeholder: 'forms.ward.namePlaceholder' },
+  { name: 'floor', label: 'forms.ward.floor', type: 'number', colSpan: 1, placeholder: 'forms.ward.floorPlaceholder' },
+];
+
+export const wardValidationSchema = z.object({
+  name: requiredString('Ward name').max(100),
+  floor: z.string().optional().refine((v) => !v || Number.isInteger(Number(v)), 'Floor must be a whole number'),
+});

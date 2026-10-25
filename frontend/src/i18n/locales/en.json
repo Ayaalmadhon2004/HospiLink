@@ -104,7 +104,8 @@
       "Vitals Monitor": "Vitals Monitor",
       "Incidents": "Incidents",
       "Dispatch": "Dispatch",
-      "Settings": "Settings"
+      "Settings": "Settings",
+      "Audit Log": "Audit Log"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
@@ -225,7 +226,8 @@
       "DOCTOR_NOT_FOUND": "Doctor not found.",
       "UNIT_NOT_FOUND": "Unit not found.",
       "THRESHOLD_NOT_FOUND": "Threshold not found.",
-      "FILE_NOT_FOUND": "File not found."
+      "FILE_NOT_FOUND": "File not found.",
+      "WARD_HAS_BEDS": "This ward still has beds. Move or delete its beds first."
     }
   },
   "errorBoundary": {
@@ -327,6 +329,12 @@
       "reportedByPlaceholder": "Staff name",
       "description": "Description",
       "descriptionPlaceholder": "Describe the incident in detail..."
+    },
+    "ward": {
+      "name": "Ward name",
+      "namePlaceholder": "e.g. Cardiology",
+      "floor": "Floor",
+      "floorPlaceholder": "e.g. 2"
     }
   },
   "patients": {
@@ -952,5 +960,56 @@
       "chartSpO2": "SpO2 (%)",
       "chartTemperature": "Temperature (°C)"
     }
+  },
+  "wards": {
+    "title": "Wards",
+    "subtitle": "Manage the wards that beds belong to",
+    "itemName": "Ward",
+    "itemType": "ward",
+    "add": "Add Ward",
+    "empty": "No wards yet",
+    "floor": "Floor {{floor}}",
+    "bedCount_one": "{{count}} bed",
+    "bedCount_other": "{{count}} beds",
+    "edit": "Edit ward {{name}}",
+    "delete": "Delete ward {{name}}",
+    "hasBeds": "Remove or move its beds before deleting",
+    "modalAdd": "Add Ward",
+    "modalEdit": "Edit Ward",
+    "modalAddSubtitle": "Create a ward for your beds",
+    "modalEditSubtitle": "Rename the ward or change its floor",
+    "save": "Save changes",
+    "created": "Ward created",
+    "updated": "Ward updated"
+  },
+  "audit": {
+    "title": "Audit Log",
+    "subtitle": "Who did what, and when. Read-only.",
+    "filters": {
+      "action": "Action",
+      "allActions": "All actions",
+      "from": "From",
+      "to": "To",
+      "entityId": "Entity ID",
+      "entityPlaceholder": "Patient, bed, ward id...",
+      "reset": "Reset filters"
+    },
+    "cols": {
+      "time": "Time",
+      "user": "User",
+      "action": "Action",
+      "entity": "Entity",
+      "details": "Details"
+    },
+    "deletedUser": "Deleted user",
+    "empty": "No activity matches these filters",
+    "loading": "Loading audit log",
+    "loadFailed": "Could not load the audit log",
+    "retry": "Retry",
+    "page": "Page {{page}} of {{total}}",
+    "total_one": "{{count}} entry",
+    "total_other": "{{count}} entries",
+    "prev": "Previous page",
+    "next": "Next page"
   }
 }

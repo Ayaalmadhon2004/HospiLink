@@ -24,6 +24,7 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then(m =>
 const DispatchDashboard = lazy(() => import('./pages/DispatchDashboard'));
 const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then(m => ({ default: m.IncidentsPage })));
 const StaffDirectoryPage = lazy(() => import('./pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function App() {
@@ -60,6 +61,7 @@ function App() {
           <Route path="/vitals" element={<VitalsMonitorPage />} />
           <Route path="/incidents" element={<IncidentsPage />} />
           <Route path="/dispatch" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dispatch']}><DispatchDashboard /></PrivateRoute>} />
+          <Route path="/audit-logs" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/audit-logs']}><AuditLogsPage /></PrivateRoute>} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

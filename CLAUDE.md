@@ -50,7 +50,7 @@ Frontend (`cd frontend`):
 - `npm run dev`            Vite on :5173
 - `npm run build`          `tsc -b && vite build`
 - `npm run lint`           eslint (currently clean)
-- `npm test`               vitest (191 tests)
+- `npm test`               vitest (~290 tests)
 - `npm run preview`        serves build on :4173
 - `npm run test:e2e`       Playwright (chromium), API mocked in-browser via `e2e/mockApi.ts`; no backend/DB needed.
                            First time: `npx playwright install chromium`. Files are `e2e/*.e2e.ts`.
@@ -100,6 +100,8 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
 - Patients are soft-deleted: `DELETE /patients/:id` (ADMIN) sets `Patient.deletedAt` and frees the bed; a DB trigger rejects hard deletes. Every read of patients (and of relations scoped through `patient: { ... }`) must include `deletedAt: null`; only `nextPatientNumber` counts deleted rows (codes stay unique).
 - Referential actions are explicit in `schema.prisma`: Bed/Incident/Staff -> Hospital and Bed -> Ward are `Restrict`, `Shift -> Staff` cascades, `AuditLog.userId` is nullable + `SetNull` (the trail outlives users).
 - Device vitals ingestion: `POST /api/vitals/ingest/{hl7|fhir|json}` authenticated by `x-device-key` (`DeviceKey`, hashed, hospital-bound, ADMIN manages via `/api/devices`); adapters in `services/vitalsAdapters.ts` are pure, the shared pipeline is `services/vitalsIngest.ts` (also used by `POST /vitals`). See `docs/VITALS_INTEGRATION.md`. Backups/retention: `docs/BACKUP_AND_RETENTION.md`; remaining work: `docs/ROADMAP.md`.
+- Wards: `POST/PUT/DELETE /wards` (ADMIN; name unique per hospital case-insensitively -> 409; delete answers 409 `WARD_HAS_BEDS` while beds exist). `GET /wards` includes `_count.beds`. UI: `components/Wards/WardsPanel` on the Beds page, gated by `wards:manage`.
+- Audit trail: `AuditLog.hospitalId` is copied from the actor by `logActivity` (rows whose actor was already gone before the migration have NULL and are never shown). `GET /api/audit-logs` (+`/actions`) is ADMIN-only, read-only, always scoped by `hospitalIdOf(req)`, filters `action,userId,entityId,from,to` (`to` exclusive), default page size 50; UI route `/audit-logs`.
 - Dispatch units keep their position in `lat`/`lng` (floats) and their crew in `Staff.dispatchUnitId` (API: `crew: [{id,name,role}]` out, `crewIds` in).
 - Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
   managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
