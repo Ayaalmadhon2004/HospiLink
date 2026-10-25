@@ -21,6 +21,8 @@ export const createMedicationSchema = z.object({
   genericName: optText(150),
   form: text('form', 50),
   strength: text('strength', 50),
+  reorderLevel: looseNumber(0, 1_000_000, { int: true }),
+  unitPriceMinor: looseNumber(0, 1_000_000_000, { int: true }),
 });
 export const updateMedicationSchema = z.object({
   name: text('name', 150).optional(),
@@ -28,6 +30,8 @@ export const updateMedicationSchema = z.object({
   form: text('form', 50).optional(),
   strength: text('strength', 50).optional(),
   active: z.boolean().optional(),
+  reorderLevel: looseNumber(0, 1_000_000, { int: true }),
+  unitPriceMinor: looseNumber(0, 1_000_000_000, { int: true }),
 });
 
 // ---- prescriptions ----

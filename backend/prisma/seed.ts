@@ -505,11 +505,12 @@ async function main() {
   // Starter drug catalogue (idempotent: unique per hospital + name + form + strength)
   const meds = await prisma.medication.createMany({
     data: [
-      { name: 'Paracetamol', genericName: 'Acetaminophen', form: 'tablet', strength: '500 mg' },
-      { name: 'Ibuprofen', genericName: 'Ibuprofen', form: 'tablet', strength: '400 mg' },
-      { name: 'Amoxicillin', genericName: 'Amoxicillin', form: 'capsule', strength: '500 mg' },
-      { name: 'Ceftriaxone', genericName: 'Ceftriaxone', form: 'injection', strength: '1 g' },
-      { name: 'Metformin', genericName: 'Metformin', form: 'tablet', strength: '850 mg' },
+      // unitPriceMinor = price per unit in minor currency units; stock starts at 0 until a delivery is received in the UI.
+      { name: 'Paracetamol', genericName: 'Acetaminophen', form: 'tablet', strength: '500 mg', unitPriceMinor: 25, reorderLevel: 100 },
+      { name: 'Ibuprofen', genericName: 'Ibuprofen', form: 'tablet', strength: '400 mg', unitPriceMinor: 30, reorderLevel: 100 },
+      { name: 'Amoxicillin', genericName: 'Amoxicillin', form: 'capsule', strength: '500 mg', unitPriceMinor: 60, reorderLevel: 60 },
+      { name: 'Ceftriaxone', genericName: 'Ceftriaxone', form: 'injection', strength: '1 g', unitPriceMinor: 250, reorderLevel: 20 },
+      { name: 'Metformin', genericName: 'Metformin', form: 'tablet', strength: '850 mg', unitPriceMinor: 40, reorderLevel: 60 },
     ].map((m) => ({ ...m, hospitalId: hospital.id })),
     skipDuplicates: true,
   });

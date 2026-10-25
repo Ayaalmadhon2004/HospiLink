@@ -26,6 +26,11 @@ model Hospital {
   dispatchCalls DispatchCall[]
   vitalThresholds VitalThresholds[]
   deviceKeys DeviceKey[]
+  // Last invoice number handed out (incremented atomically when an invoice is issued, so numbers are gap-free).
+  invoiceSeq Int @default(0)
+  stockMovements StockMovement[]
+  dispensations Dispensation[]
+  invoices Invoice[]
   auditLogs AuditLog[]
   medications Medication[]
   clinicalNotes ClinicalNote[]
@@ -67,6 +72,9 @@ model User {
   authoredNotes        ClinicalNote[]
   prescribed           Prescription[]
   orderedLabs          LabOrder[]
+  stockMovements       StockMovement[]
+  dispensed            Dispensation[]
+  receivedPayments     Payment[]
 }
 
 model TwoFactorRecoveryCode {
@@ -166,6 +174,8 @@ model Patient {
   clinicalNotes ClinicalNote[]
   prescriptions Prescription[]
   labOrders     LabOrder[]
+  dispensations Dispensation[]
+  invoices      Invoice[]
 
   @@index([hospitalId, deletedAt])
   @@index([doctorId])
@@ -310,10 +320,16 @@ model Medication {
   form        String // tablet, injection, syrup...
   strength    String // "500 mg"
   active      Boolean            @default(true)
+  // Pharmacy: units on hand (a DB CHECK keeps it >= 0), alert threshold, and the price per unit in minor currency units.
+  stockQuantity  Int @default(0)
+  reorderLevel   Int @default(0)
+  unitPriceMinor Int @default(0)
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   hospital    Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
   items       PrescriptionItem[]
+  movements   StockMovement[]
+  dispensations Dispensation[]
 
   @@unique([hospitalId, name, form, strength])
   @@index([hospitalId, active])
@@ -356,9 +372,129 @@ model PrescriptionItem {
   instructions   String?
   prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
   medication     Medication   @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  dispensations  Dispensation[]
 
   @@index([prescriptionId])
   @@index([medicationId])
+}
+
+// ---- Pharmacy and billing. Money is always an integer in minor units (cents/fils): never a float. ----
+
+enum StockMovementType {
+  RECEIVE
+  DISPENSE
+  ADJUST
+}
+
+// Append-only ledger behind Medication.stockQuantity: every change to the stock writes one row in the same transaction.
+model StockMovement {
+  id           String            @id @default(uuid())
+  hospitalId   String
+  medicationId String
+  type         StockMovementType
+  delta        Int
+  note         String?
+  userId       String?
+  userName     String
+  createdAt    DateTime          @default(now())
+  hospital     Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  medication   Medication        @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([medicationId, createdAt])
+  @@index([hospitalId, createdAt])
+}
+
+// Units handed to a patient against a prescription item. The price is a snapshot; invoiceLineId is set once billed.
+model Dispensation {
+  id               String           @id @default(uuid())
+  hospitalId       String
+  patientId        String
+  prescriptionItemId String
+  medicationId     String
+  quantity         Int
+  unitPriceMinor   Int
+  dispensedById    String?
+  dispensedByName  String
+  createdAt        DateTime         @default(now())
+  invoiceLineId    String?          @unique
+  hospital         Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient          Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  item             PrescriptionItem @relation(fields: [prescriptionItemId], references: [id], onDelete: Restrict)
+  medication       Medication       @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  dispensedBy      User?            @relation(fields: [dispensedById], references: [id], onDelete: SetNull)
+  invoiceLine      InvoiceLine?     @relation(fields: [invoiceLineId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([prescriptionItemId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  INSURANCE
+  TRANSFER
+}
+
+// DRAFT is editable and has no number; ISSUED gets the next gap-free number and is frozen; PAID when payments cover the total.
+model Invoice {
+  id            String        @id @default(uuid())
+  hospitalId    String
+  patientId     String
+  number        String?
+  status        InvoiceStatus @default(DRAFT)
+  currency      String        @default("USD")
+  discountMinor Int           @default(0)
+  // Denormalised, recomputed by the server on every draft change; frozen at issue.
+  totalMinor    Int           @default(0)
+  paidMinor     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  issuedAt      DateTime?
+  voidedAt      DateTime?
+  hospital      Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  lines         InvoiceLine[]
+  payments      Payment[]
+
+  @@unique([hospitalId, number])
+  @@index([hospitalId, status, createdAt])
+  @@index([patientId])
+}
+
+model InvoiceLine {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  description    String
+  quantity       Int
+  unitPriceMinor Int
+  totalMinor     Int
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  dispensation   Dispensation?
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  hospitalId     String
+  amountMinor    Int
+  method         PaymentMethod
+  reference      String?
+  receivedById   String?
+  receivedByName String
+  createdAt      DateTime      @default(now())
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  receivedBy     User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
 }
 
 enum LabPriority {

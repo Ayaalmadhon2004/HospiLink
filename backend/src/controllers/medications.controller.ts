@@ -32,8 +32,8 @@ export const listMedications = async (req: Request, res: Response) => {
 // POST /api/medications (ADMIN, DOCTOR)
 export const createMedication = async (req: Request, res: Response) => {
   try {
-    const { name, genericName, form, strength } = req.body;
-    const med = await prisma.medication.create({ data: { hospitalId: hospitalIdOf(req), name, genericName: genericName ?? null, form, strength } });
+    const { name, genericName, form, strength, reorderLevel, unitPriceMinor } = req.body;
+    const med = await prisma.medication.create({ data: { hospitalId: hospitalIdOf(req), name, genericName: genericName ?? null, form, strength, reorderLevel: reorderLevel ?? 0, unitPriceMinor: unitPriceMinor ?? 0 } });
     return ok(res, med, {}, 201);
   } catch (error: unknown) {
     if (duplicate(error)) return fail(res, 409, 'CONFLICT', 'This medication (name, form, strength) already exists');
