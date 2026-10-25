@@ -33,11 +33,26 @@ file `sw.js` is regenerated on every build.
 - nginx (`frontend/nginx.conf`): `/` is served with `Cache-Control: no-cache`, so `sw.js` is always revalidated.
 - No backend, CORS, helmet or CSP changes are needed (the service worker is same-origin and makes no new cross-origin requests).
 
-## Icons
+## Icons and manifest
 
-The icons in `frontend/public/icons/` are generated placeholders (white cross on the app teal `#0b3c34`); the repo had no
-HospiLink logo (`favicon.svg` is the default Vite logo). Replace them with real branding when available, keeping the file
-names or updating `pwa.config.ts`. Maskable icons keep the cross inside the safe zone.
+The mark is a white medical cross with a teal (`#14b8a6`) heartbeat line on the app brand colour `#0b3c34` (same as
+`theme-color` in `index.html`). The vector source is `frontend/public/icons/logo.svg` (also served as `favicon.svg`).
+
+PNGs in `frontend/public/icons/` are generated, not hand drawn: `cd frontend && npm run icons`
+(`scripts/generate-icons.cjs`, renders the SVG with the Chromium bundled with Playwright; set `PLAYWRIGHT_BROWSERS_PATH`
+if the browsers are not in the default cache; no `playwright install` needed when one is present). Commit the outputs.
+
+| File | Use |
+| --- | --- |
+| `icon-192.png`, `icon-512.png` | manifest, purpose `any` (rounded corners) |
+| `maskable-192.png`, `maskable-512.png` | manifest, purpose `maskable`: full-bleed background, glyph scaled to 62% so it stays inside the 80% safe circle |
+| `apple-touch-icon.png` | 180x180, full-bleed (iOS rounds it itself) |
+| `favicon-32.png`, `favicon-48.png`, `../favicon.svg` | browser tab icons |
+
+The manifest (in `pwa.config.ts`) declares `id`, `name`, `short_name`, `description`, `start_url`, `scope`, `display: standalone`,
+`theme_color`, `background_color`, `lang: en`, `dir: ltr` (the UI itself flips to RTL for Arabic), the icons and two shortcuts
+(Patients, Appointments). `src/pwaAssets.test.ts` checks that every file the manifest, shortcuts, `includeAssets` and
+`index.html` reference exists, is a PNG and has the declared size.
 
 ## How to test offline
 

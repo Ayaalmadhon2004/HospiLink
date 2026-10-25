@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="HospiLink">
+  <rect width="512" height="512" rx="112" fill="#0b3c34"/>
+  <path d="M208 96h96a16 16 0 0 1 16 16v96h96a16 16 0 0 1 16 16v96a16 16 0 0 1-16 16h-96v96a16 16 0 0 1-16 16h-96a16 16 0 0 1-16-16v-96h-96a16 16 0 0 1-16-16v-96a16 16 0 0 1 16-16h96v-96a16 16 0 0 1 16-16z" fill="#ffffff"/>
+  <path d="M84 268h92l32-64 48 124 36-80 20 20h116" fill="none" stroke="#14b8a6" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

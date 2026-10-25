@@ -74,9 +74,10 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `TWO_FACTOR_ENC_KEY`  32 random bytes, base64 (`openssl rand -base64 32`); encrypts TOTP secrets, required to use 2FA (the API boots without it, the `/auth/2fa/*` endpoints fail)
 - `AUTH_RATE_LIMIT_MAX`, `API_RATE_LIMIT_MAX`  TEST ONLY overrides of the auth (20 / 15 min) and API (200 / min) per-IP limits; set by the real-backend Playwright config, never in production
 - `INGEST_RATE_LIMIT_MAX`  optional, requests/minute allowed per authenticated device key on `/api/vitals/ingest/*` (default 6000). Ingest is exempt from the general per-IP API limiter on purpose (one hospital gateway carries every bedside device); rejected requests (bad key/payload) are limited per IP (60/min) instead
+- `VITALS_REPORT_RATE_LIMIT_MAX`  optional, per-IP requests/minute on the public `POST /api/telemetry/web-vitals` beacon (default 60)
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
-Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/config/env.ts`, no fallback; see `frontend/.env.example`). Optional `VITE_DEV_PROXY_TARGET` for the Vite dev proxy.
+Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/config/env.ts`, no fallback; see `frontend/.env.example`). Optional `VITE_VITALS_ENDPOINT` (e.g. `<API>/telemetry/web-vitals`, production builds only) and `VITE_VITALS_SAMPLE` (0..1). Optional `VITE_DEV_PROXY_TARGET` for the Vite dev proxy.
 
 ## Backend conventions (Node / Express)
 
@@ -198,7 +199,7 @@ Open:
 - Security scanning: `.github/workflows/zap-baseline.yml` (ZAP passive baseline, `.zap/rules.tsv`, `docs/SECURITY_SCANNING.md`) has not had a first real run yet (authoring sandbox had no Docker); header fixes came from a manual curl review. A custom API domain must be added to `connect-src` in `frontend/vercel.json`.
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend has unit tests, a mocked-API Playwright suite and a real-backend suite (`npm run test:e2e:real`); broader page coverage is still welcome.
-- i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): the icons are generated placeholders and need real branding. Web Vitals (`docs/WEB_VITALS.md`) report only when `VITE_VITALS_ENDPOINT` is set.
+- i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): icons are generated from `public/icons/logo.svg` by `npm run icons` (`scripts/generate-icons.cjs`). Web Vitals (`docs/WEB_VITALS.md`) report only in production builds when `VITE_VITALS_ENDPOINT` is set; the backend collector is the public, strictly validated, rate-limited `POST /api/telemetry/web-vitals` (204, text/plain beacon).
 - The credentials once committed in `backend/.env.example` must stay rotated (they remain in git history).
 
 Fixed on main (do not reintroduce): API `Cache-Control: no-store`, CSP `base-uri/form-action`, Permissions-Policy (`config/securityHeaders.ts`), SPA CSP/HSTS in `frontend/vercel.json`, `/api/health` no longer leaks DB errors; self-signup no longer grants access (PENDING until an ADMIN approves); hospital isolation on every resource (`hospitalId` on Staff, Incident, DispatchUnit, DispatchCall; see migration `20261022000001_hospital_scoping`); `.github/workflows/ci-cd.yml` has no `continue-on-error`, so lint, build and tests are strict in CI; report files are stored in the DB (`Report.fileData`); zod validation covers every resource route via `validate({ params, query, body })` (auth validates in its controller; `GET /wards` has no input); `.env.example` holds placeholders only; `JWT_SECRET` has no fallback;
