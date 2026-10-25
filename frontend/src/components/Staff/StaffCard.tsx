@@ -3,6 +3,7 @@ import { Mail, Phone, Stethoscope, Clock } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Shift } from '../../types/staff';
 import { formatTime } from '../../utils/datetime';
+import { enumLabel } from '../../utils/enumLabel';
 
 interface StaffMember {
   id: string;
@@ -108,7 +109,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           <div className="flex items-center gap-2 text-sm">
             <Clock size={14} className="text-medical-teal" aria-hidden="true" />
             <span className="text-teal-700 font-medium">
-              {t(`staff.shifts.${currentShift.type}`, { defaultValue: currentShift.type })}
+              {enumLabel(t, 'shiftType', currentShift.type)}
             </span>
             <span className="text-clinic-text/40 text-xs">
               {formatTime(currentShift.startTime)} - 

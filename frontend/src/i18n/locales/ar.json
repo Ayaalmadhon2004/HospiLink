@@ -210,6 +210,7 @@
     "updateFailed": "تعذّر تحديث {{item}}"
   },
   "errors": {
+    "unexpectedError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
     "forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء.",
     "server": "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
     "codes": {
@@ -234,7 +235,15 @@
       "LAST_ADMIN": "يجب أن يبقى في المستشفى مدير نشط واحد على الأقل.",
       "INSUFFICIENT_STOCK": "لا توجد كمية كافية في المخزون.",
       "INVOICE_NOT_EDITABLE": "يمكن تعديل الفاتورة المسودة فقط.",
-      "OVERPAYMENT": "الفاتورة غير مفتوحة للدفع، أو أن المبلغ أكبر من الرصيد المستحق."
+      "OVERPAYMENT": "الفاتورة غير مفتوحة للدفع، أو أن المبلغ أكبر من الرصيد المستحق.",
+      "VALIDATION_ERROR": "البيانات المدخلة غير صالحة. يرجى مراجعتها والمحاولة مجددًا.",
+      "UNAUTHORIZED": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجددًا.",
+      "FORBIDDEN": "ليست لديك صلاحية لتنفيذ هذا الإجراء.",
+      "NOT_FOUND": "العنصر المطلوب غير موجود.",
+      "CONFLICT": "يتعارض هذا الإجراء مع الحالة الحالية. حدّث الصفحة وحاول مجددًا.",
+      "INTERNAL_ERROR": "حدث خطأ من جهتنا. يرجى المحاولة مرة أخرى.",
+      "TWO_FACTOR_LOCKED": "تم إدخال رموز خاطئة كثيرًا. المصادقة الثنائية مقفلة لمدة 15 دقيقة.",
+      "EXPORT_TOO_LARGE": "يتجاوز التصدير 10000 صف. قلّص النطاق الزمني وحاول مجددًا."
     }
   },
   "errorBoundary": {
@@ -1340,5 +1349,122 @@
     "badRange": "يجب ألا يكون تاريخ \"من\" بعد \"إلى\".",
     "tooLarge": "عدد الصفوف أكبر من أن يُصدَّر دفعة واحدة. اختر فترة أقصر.",
     "failed": "فشل التصدير. حاول مرة أخرى."
+  },
+  "enums": {
+    "appointmentStatus": {
+      "SCHEDULED": "مجدول",
+      "CONFIRMED": "مؤكد",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى",
+      "NO_SHOW": "لم يحضر"
+    },
+    "dutyStatus": {
+      "ON_DUTY": "على رأس العمل",
+      "OFF_DUTY": "خارج الدوام"
+    },
+    "callStatus": {
+      "PENDING": "قيد الانتظار",
+      "ASSIGNED": "مُسنَد",
+      "EN_ROUTE": "في الطريق",
+      "ON_SCENE": "في موقع الحدث",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى"
+    },
+    "priority": {
+      "LOW": "منخفضة",
+      "MEDIUM": "متوسطة",
+      "HIGH": "عالية",
+      "CRITICAL": "حرجة"
+    },
+    "stockMovement": {
+      "RECEIVE": "استلام",
+      "DISPENSE": "صرف",
+      "ADJUST": "تعديل"
+    },
+    "authTokenType": {
+      "PASSWORD_RESET": "إعادة تعيين كلمة المرور",
+      "EMAIL_VERIFY": "تأكيد البريد الإلكتروني"
+    },
+    "auditAction": {
+      "2FA_DISABLE": "تعطيل المصادقة الثنائية",
+      "2FA_ENABLE": "تفعيل المصادقة الثنائية",
+      "2FA_RECOVERY_CODES": "إعادة إنشاء رموز الاسترداد",
+      "2FA_SETUP": "بدء إعداد المصادقة الثنائية",
+      "ACTIVATE_USER": "تفعيل مستخدم",
+      "ADD_INVOICE_LINE": "إضافة بند إلى فاتورة",
+      "ADJUST_STOCK": "تعديل المخزون",
+      "ADMIT_PATIENT": "قبول مريض",
+      "AMEND_CLINICAL_NOTE": "تعديل ملاحظة سريرية",
+      "APPROVE_USER": "اعتماد مستخدم",
+      "ASSIGN_CALL": "إسناد بلاغ",
+      "BROADCAST_NOTIFICATION": "بث إشعار",
+      "CANCEL_CALL": "إلغاء بلاغ",
+      "CANCEL_LAB_ORDER": "إلغاء طلب مخبري",
+      "CHANGE_USER_ROLE": "تغيير دور مستخدم",
+      "CLOSE_PRESCRIPTION": "إغلاق وصفة طبية",
+      "COMPLETE_CALL": "إنهاء بلاغ",
+      "CREATE_APPOINTMENT": "إنشاء موعد",
+      "CREATE_CALL": "إنشاء بلاغ",
+      "CREATE_CLINICAL_NOTE": "إنشاء ملاحظة سريرية",
+      "CREATE_DEVICE_KEY": "إنشاء مفتاح جهاز",
+      "CREATE_INCIDENT": "إنشاء حادثة",
+      "CREATE_INVOICE": "إنشاء فاتورة",
+      "CREATE_LAB_ORDER": "إنشاء طلب مخبري",
+      "CREATE_MEDICATION": "إضافة دواء",
+      "CREATE_PRESCRIPTION": "إنشاء وصفة طبية",
+      "CREATE_SHIFT": "إنشاء وردية",
+      "CREATE_STAFF": "إضافة موظف",
+      "CREATE_UNIT": "إضافة وحدة",
+      "CREATE_WARD": "إضافة جناح",
+      "DEACTIVATE_USER": "تعطيل مستخدم",
+      "DELETE_APPOINTMENT": "حذف موعد",
+      "DELETE_INCIDENT": "حذف حادثة",
+      "DELETE_PATIENT": "حذف مريض",
+      "DELETE_SHIFT": "حذف وردية",
+      "DELETE_STAFF": "حذف موظف",
+      "DELETE_UNIT": "حذف وحدة",
+      "DELETE_VITALS": "حذف قراءة علامات حيوية",
+      "DELETE_VITAL_THRESHOLD": "حذف حد علامة حيوية",
+      "DELETE_WARD": "حذف جناح",
+      "DISCHARGE_PATIENT": "إخراج مريض",
+      "DISPENSE_MEDICATION": "صرف دواء",
+      "EXPORT_DATA": "تصدير بيانات",
+      "INVITE_USER": "دعوة مستخدم",
+      "ISSUE_INVOICE": "إصدار فاتورة",
+      "LINK_STAFF_LOGIN": "ربط حساب دخول بموظف",
+      "LIST_PATIENTS": "عرض قائمة المرضى",
+      "RECEIVE_STOCK": "استلام مخزون",
+      "RECORD_PAYMENT": "تسجيل دفعة",
+      "RECORD_VITALS": "تسجيل علامات حيوية",
+      "REJECT_USER": "رفض مستخدم",
+      "REMOVE_INVOICE_LINE": "حذف بند من فاتورة",
+      "RESET_2FA": "إعادة ضبط المصادقة الثنائية",
+      "REVOKE_DEVICE_KEY": "إلغاء مفتاح جهاز",
+      "SET_INVOICE_DISCOUNT": "تحديد خصم الفاتورة",
+      "SUBMIT_LAB_RESULTS": "إدخال نتائج مخبرية",
+      "UPDATE_APPOINTMENT": "تحديث موعد",
+      "UPDATE_DISPLAY": "تحديث إعدادات العرض",
+      "UPDATE_HOSPITAL": "تحديث إعدادات المستشفى",
+      "UPDATE_INCIDENT": "تحديث حادثة",
+      "UPDATE_INCIDENT_STATUS": "تحديث حالة حادثة",
+      "UPDATE_MEDICATION": "تحديث دواء",
+      "UPDATE_NOTIFICATIONS": "تحديث إعدادات الإشعارات",
+      "UPDATE_PATIENT": "تحديث بيانات مريض",
+      "UPDATE_PROFILE": "تحديث الملف الشخصي",
+      "UPDATE_SECURITY": "تحديث إعدادات الأمان",
+      "UPDATE_SHIFT": "تحديث وردية",
+      "UPDATE_STAFF": "تحديث بيانات موظف",
+      "UPDATE_UNIT": "تحديث وحدة",
+      "UPDATE_UNIT_STATUS": "تحديث حالة وحدة",
+      "UPDATE_VITALS": "تحديث علامات حيوية",
+      "UPDATE_WARD": "تحديث جناح",
+      "UPLOAD_REPORT": "رفع تقرير",
+      "UPSERT_VITAL_THRESHOLD": "حفظ حد علامة حيوية",
+      "VIEW_PATIENT": "عرض بيانات مريض",
+      "VIEW_PATIENT_REPORTS": "عرض تقارير مريض",
+      "VIEW_REPORT_FILE": "عرض ملف تقرير",
+      "VOID_INVOICE": "إلغاء فاتورة"
+    }
   }
 }

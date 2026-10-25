@@ -3,6 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { AuditLogsPage } from '../AuditLogsPage';
 import { apiGet } from '../../services/api';
+import i18n from '../../i18n';
 import { QueryWrapper } from '../../test/QueryWrapper';
 import { canAccessRoute } from '../../configs/permissions';
 import { NAV_ITEMS } from '../../configs/navigation';
@@ -29,8 +30,17 @@ describe('AuditLogsPage', () => {
     render(<AuditLogsPage />, { wrapper: QueryWrapper });
     expect(await screen.findByText('Dana Admin')).toBeInTheDocument();
     expect(screen.getByText('Deleted user')).toBeInTheDocument();
-    expect(screen.getByText('CREATE_WARD', { selector: 'code' })).toBeInTheDocument();
+    expect(screen.getByTitle('CREATE_WARD')).toHaveTextContent('Ward created');
     expect(screen.getByText(/120 entries/)).toBeInTheDocument();
+  });
+
+  it('shows action names and roles in Arabic, keeping the raw action as a tooltip', async () => {
+    await i18n.changeLanguage('ar');
+    mockApi();
+    render(<AuditLogsPage />, { wrapper: QueryWrapper });
+    const action = await screen.findByTitle('CREATE_WARD');
+    expect(action).toHaveTextContent('إضافة جناح');
+    expect(screen.getByText('مدير')).toBeInTheDocument();
   });
 
   it('filtering by action queries the server and returns to page 1; paging asks for the next page', async () => {

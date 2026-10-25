@@ -26,7 +26,7 @@ export const InvoiceDetailPage = () => {
 
   return (
     <div className="space-y-6 p-4 md:p-8 max-w-4xl">
-      <Link to="/billing" className="text-sm text-blue-700 flex items-center gap-1"><ArrowLeft className="w-4 h-4" aria-hidden="true" />{t('billing.back')}</Link>
+      <Link to="/billing" className="text-sm text-blue-700 flex items-center gap-1"><ArrowLeft className="w-4 h-4 rtl:rotate-180" aria-hidden="true" />{t('billing.back')}</Link>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">{inv.number ?? t('billing.draft')}</h1>

@@ -15,6 +15,7 @@ import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { StaffCard } from '../components/Staff/StaffCard';
 import { ShiftTimeline } from '../components/Staff/ShiftTimeline';
+import { enumLabel } from '../utils/enumLabel';
 
 interface StaffMember {
   id: string;
@@ -245,7 +246,7 @@ export const StaffDirectoryPage = () => {
                 <td className="px-6 py-4">
                   {member.shifts?.[0] ? (
                     <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
-                      {t(`staff.shifts.${member.shifts[0].type}`, { defaultValue: member.shifts[0].type })}
+                      {enumLabel(t, 'shiftType', member.shifts[0].type)}
                     </span>
                   ) : (
                     <span className="text-gray-400 text-sm">—</span>

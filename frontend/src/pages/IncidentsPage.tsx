@@ -25,6 +25,7 @@ import { useNow } from '../hooks/useNow';
 import { IncidentModal } from '../components/IncidentModal';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
+import { enumLabel } from '../utils/enumLabel';
 
 const INCIDENTS_KEY = ['incidents'];
 const RELATIVE_TIME_TICK_MS = 60_000;
@@ -300,13 +301,13 @@ export const IncidentsPage = () => {
                     <span
                       className={`w-1.5 h-1.5 rounded-full ${severityDots[incident.severity]} inline-block me-1`}
                     />
-                    {t(`incidents.severity.${incident.severity}`, { defaultValue: incident.severity })}
+                    {enumLabel(t, 'incidentSeverity', incident.severity)}
                   </span>
                   {/* ✅ Status badge */}
                   <span
                     className={`px-2 py-0.5 rounded text-xs font-medium ${statusColors[incident.status] || 'text-gray-600 bg-gray-50'}`}
                   >
-                    {t(`incidents.status.${incident.status}`, { defaultValue: incident.status })}
+                    {enumLabel(t, 'incidentStatus', incident.status)}
                   </span>
                 </div>
                 <span className="text-sm text-gray-400">

@@ -210,6 +210,7 @@
     "updateFailed": "Failed to update {{item}}"
   },
   "errors": {
+    "unexpectedError": "Something went wrong. Please try again.",
     "forbidden": "You do not have permission to perform this action.",
     "server": "Server error. Please try again later.",
     "codes": {
@@ -234,7 +235,15 @@
       "LAST_ADMIN": "The hospital must keep at least one active admin.",
       "INSUFFICIENT_STOCK": "Not enough stock on hand.",
       "INVOICE_NOT_EDITABLE": "Only a draft invoice can be changed.",
-      "OVERPAYMENT": "The invoice is not open for payment, or the amount is more than the balance."
+      "OVERPAYMENT": "The invoice is not open for payment, or the amount is more than the balance.",
+      "VALIDATION_ERROR": "The submitted data is not valid. Please review it and try again.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "FORBIDDEN": "You do not have permission to do this.",
+      "NOT_FOUND": "The requested item was not found.",
+      "CONFLICT": "This action conflicts with the current state. Refresh and try again.",
+      "INTERNAL_ERROR": "Something went wrong on our side. Please try again.",
+      "TWO_FACTOR_LOCKED": "Too many wrong codes. Two-factor sign-in is locked for 15 minutes.",
+      "EXPORT_TOO_LARGE": "This export has more than 10,000 rows. Narrow the date range and try again."
     }
   },
   "errorBoundary": {
@@ -1292,5 +1301,122 @@
     "badRange": "\"From\" must not be after \"To\".",
     "tooLarge": "Too many rows for one export. Choose a shorter period.",
     "failed": "The export failed. Please try again."
+  },
+  "enums": {
+    "appointmentStatus": {
+      "SCHEDULED": "Scheduled",
+      "CONFIRMED": "Confirmed",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No show"
+    },
+    "dutyStatus": {
+      "ON_DUTY": "On duty",
+      "OFF_DUTY": "Off duty"
+    },
+    "callStatus": {
+      "PENDING": "Pending",
+      "ASSIGNED": "Assigned",
+      "EN_ROUTE": "En route",
+      "ON_SCENE": "On scene",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "stockMovement": {
+      "RECEIVE": "Received",
+      "DISPENSE": "Dispensed",
+      "ADJUST": "Adjusted"
+    },
+    "authTokenType": {
+      "PASSWORD_RESET": "Password reset",
+      "EMAIL_VERIFY": "Email verification"
+    },
+    "auditAction": {
+      "2FA_DISABLE": "Two-factor disabled",
+      "2FA_ENABLE": "Two-factor enabled",
+      "2FA_RECOVERY_CODES": "Recovery codes regenerated",
+      "2FA_SETUP": "Two-factor setup started",
+      "ACTIVATE_USER": "User activated",
+      "ADD_INVOICE_LINE": "Invoice line added",
+      "ADJUST_STOCK": "Stock adjusted",
+      "ADMIT_PATIENT": "Patient admitted",
+      "AMEND_CLINICAL_NOTE": "Clinical note amended",
+      "APPROVE_USER": "User approved",
+      "ASSIGN_CALL": "Call assigned",
+      "BROADCAST_NOTIFICATION": "Notification broadcast",
+      "CANCEL_CALL": "Call cancelled",
+      "CANCEL_LAB_ORDER": "Lab order cancelled",
+      "CHANGE_USER_ROLE": "User role changed",
+      "CLOSE_PRESCRIPTION": "Prescription closed",
+      "COMPLETE_CALL": "Call completed",
+      "CREATE_APPOINTMENT": "Appointment created",
+      "CREATE_CALL": "Call created",
+      "CREATE_CLINICAL_NOTE": "Clinical note created",
+      "CREATE_DEVICE_KEY": "Device key created",
+      "CREATE_INCIDENT": "Incident created",
+      "CREATE_INVOICE": "Invoice created",
+      "CREATE_LAB_ORDER": "Lab order created",
+      "CREATE_MEDICATION": "Medication created",
+      "CREATE_PRESCRIPTION": "Prescription created",
+      "CREATE_SHIFT": "Shift created",
+      "CREATE_STAFF": "Staff member created",
+      "CREATE_UNIT": "Unit created",
+      "CREATE_WARD": "Ward created",
+      "DEACTIVATE_USER": "User deactivated",
+      "DELETE_APPOINTMENT": "Appointment deleted",
+      "DELETE_INCIDENT": "Incident deleted",
+      "DELETE_PATIENT": "Patient deleted",
+      "DELETE_SHIFT": "Shift deleted",
+      "DELETE_STAFF": "Staff member deleted",
+      "DELETE_UNIT": "Unit deleted",
+      "DELETE_VITALS": "Vitals deleted",
+      "DELETE_VITAL_THRESHOLD": "Vital threshold deleted",
+      "DELETE_WARD": "Ward deleted",
+      "DISCHARGE_PATIENT": "Patient discharged",
+      "DISPENSE_MEDICATION": "Medication dispensed",
+      "EXPORT_DATA": "Data exported",
+      "INVITE_USER": "User invited",
+      "ISSUE_INVOICE": "Invoice issued",
+      "LINK_STAFF_LOGIN": "Staff login linked",
+      "LIST_PATIENTS": "Patients listed",
+      "RECEIVE_STOCK": "Stock received",
+      "RECORD_PAYMENT": "Payment recorded",
+      "RECORD_VITALS": "Vitals recorded",
+      "REJECT_USER": "User rejected",
+      "REMOVE_INVOICE_LINE": "Invoice line removed",
+      "RESET_2FA": "Two-factor reset",
+      "REVOKE_DEVICE_KEY": "Device key revoked",
+      "SET_INVOICE_DISCOUNT": "Invoice discount set",
+      "SUBMIT_LAB_RESULTS": "Lab results submitted",
+      "UPDATE_APPOINTMENT": "Appointment updated",
+      "UPDATE_DISPLAY": "Display settings updated",
+      "UPDATE_HOSPITAL": "Hospital settings updated",
+      "UPDATE_INCIDENT": "Incident updated",
+      "UPDATE_INCIDENT_STATUS": "Incident status updated",
+      "UPDATE_MEDICATION": "Medication updated",
+      "UPDATE_NOTIFICATIONS": "Notification settings updated",
+      "UPDATE_PATIENT": "Patient updated",
+      "UPDATE_PROFILE": "Profile updated",
+      "UPDATE_SECURITY": "Security settings updated",
+      "UPDATE_SHIFT": "Shift updated",
+      "UPDATE_STAFF": "Staff member updated",
+      "UPDATE_UNIT": "Unit updated",
+      "UPDATE_UNIT_STATUS": "Unit status updated",
+      "UPDATE_VITALS": "Vitals updated",
+      "UPDATE_WARD": "Ward updated",
+      "UPLOAD_REPORT": "Report uploaded",
+      "UPSERT_VITAL_THRESHOLD": "Vital threshold saved",
+      "VIEW_PATIENT": "Patient viewed",
+      "VIEW_PATIENT_REPORTS": "Patient reports viewed",
+      "VIEW_REPORT_FILE": "Report file viewed",
+      "VOID_INVOICE": "Invoice voided"
+    }
   }
 }

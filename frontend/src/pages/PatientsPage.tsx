@@ -10,6 +10,7 @@ import {
   Loader2, Search, UserPlus 
 } from 'lucide-react';
 import { formatDate } from '../utils/datetime';
+import { enumLabel } from '../utils/enumLabel';
 
 const STATUS_COLORS: Record<string, string> = {
   STABLE: 'bg-green-100 text-green-700',
@@ -106,10 +107,10 @@ const StatusBadge = memo(({ status }: { status: string }) => {
     <span
       className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${colorClass}`}
       role="status"
-      aria-label={t('patients.listStatusAria', { status: t(`status.${status}`, { defaultValue: status }) })}
+      aria-label={t('patients.listStatusAria', { status: enumLabel(t, 'patientStatus', status) })}
     >
       <span className="w-1.5 h-1.5 rounded-full bg-current" aria-hidden="true" />
-      {t(`status.${status}`, { defaultValue: status })}
+      {enumLabel(t, 'patientStatus', status)}
     </span>
   );
 });

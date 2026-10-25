@@ -11,6 +11,7 @@ import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, 
 import { formatDate } from '../utils/datetime';
 import { ClinicalRecords } from '../components/Clinical/ClinicalRecords';
 import { useAuthPermissions } from '../hooks/useAuthPermissions';
+import { enumLabel } from '../utils/enumLabel';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -205,9 +206,9 @@ export const PatientDetailPage = () => {
             <span 
               className={`px-4 py-2 rounded-full text-sm font-medium ${STATUS_COLORS[patient.status as keyof typeof STATUS_COLORS]}`}
               role="status"
-              aria-label={t('patients.statusAria', { status: t(`status.${patient.status}`, { defaultValue: patient.status }) })}
+              aria-label={t('patients.statusAria', { status: enumLabel(t, 'patientStatus', patient.status) })}
             >
-              {t(`status.${patient.status}`, { defaultValue: patient.status })}
+              {enumLabel(t, 'patientStatus', patient.status)}
             </span>
           </div>
         </div>
@@ -227,7 +228,7 @@ export const PatientDetailPage = () => {
               </div>
               <div className="flex justify-between">
                 <dt className="text-clinic-text/50">{t('patientDetail.gender')}</dt>
-                <dd className="font-medium text-clinic-text">{t(`gender.${patient.gender}`, { defaultValue: patient.gender })}</dd>
+                <dd className="font-medium text-clinic-text">{enumLabel(t, 'gender', patient.gender)}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-clinic-text/50">{t('patientDetail.admissionDate')}</dt>

@@ -1,5 +1,6 @@
 // components/Audit/AuditFilters.tsx
 import { useTranslation } from 'react-i18next';
+import { enumLabel } from '../../utils/enumLabel';
 import type { AuditLogFilters } from '../../services/auditLogService';
 import { dayStartIso, nextDayStartIso, toDayValue, lastIncludedDayValue } from '../../utils/dateRange';
 
@@ -22,7 +23,7 @@ export const AuditFilters = ({ filters, actions, onChange }: AuditFiltersProps) 
         <label htmlFor="audit-action" className="text-xs font-medium text-gray-600">{t('audit.filters.action')}</label>
         <select id="audit-action" className={INPUT} value={filters.action ?? ''} onChange={(e) => set({ action: e.target.value || undefined })}>
           <option value="">{t('audit.filters.allActions')}</option>
-          {actions.map((a) => <option key={a} value={a}>{a}</option>)}
+          {actions.map((a) => <option key={a} value={a}>{enumLabel(t, 'auditAction', a)}</option>)}
         </select>
       </div>
       <div className="flex flex-col gap-1">

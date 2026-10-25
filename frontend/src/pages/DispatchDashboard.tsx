@@ -15,6 +15,7 @@ import {
   getUnitAlarm,
   type DispatchUnit,
 } from '../utils/dispatchUnits';
+import { enumLabel } from '../utils/enumLabel';
 
 const POLL_INTERVAL_MS = 10_000;
 const CLOCK_TICK_MS = 30_000;
@@ -122,7 +123,7 @@ const DispatchDashboard: React.FC = () => {
                       </div>
                       <div>
                         <p className="font-semibold text-gray-800">{unit.unitCode}</p>
-                        <p className="text-xs text-gray-500">{t(`dispatch.unitTypes.${unit.unitType}`, { defaultValue: unit.unitType })}</p>
+                        <p className="text-xs text-gray-500">{enumLabel(t, 'unitType', unit.unitType)}</p>
                       </div>
                     </div>
                   </td>

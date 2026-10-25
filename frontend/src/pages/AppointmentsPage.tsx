@@ -13,6 +13,7 @@ import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
 import { toast } from 'sonner';
 import { formatDate as fmtDate, formatTime as fmtTime } from '../utils/datetime';
+import { enumLabel } from '../utils/enumLabel';
 
 const SCHEDULE_KEY = ['appointments', 'schedule'];
 
@@ -193,7 +194,7 @@ export const AppointmentsPage = () => {
                   <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Stethoscope size={14} />
-                      {t(`appointments.types.${apt.type}`, { defaultValue: apt.type })}
+                      {enumLabel(t, 'appointmentType', apt.type)}
                     </span>
                     {apt.doctor?.name && (
                       <span className="flex items-center gap-1">
@@ -268,7 +269,7 @@ export const AppointmentsPage = () => {
             <option value="">{t('appointments.allTypes')}</option>
             {appointmentTypes.map((type) => (
               <option key={type} value={type}>
-                {t(`appointments.types.${type}`, { defaultValue: type })}
+                {enumLabel(t, 'appointmentType', type)}
               </option>
             ))}
           </select>
@@ -297,11 +298,11 @@ export const AppointmentsPage = () => {
                     )}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
-                    {t(`appointments.types.${apt.type}`, { defaultValue: apt.type })} &middot; {apt.doctor?.name ? apt.doctor.name.replace(/^Dr\.\s*/i, '') : t('appointments.noDoctor')} &middot; {t(`departments.${apt.department}`, { defaultValue: apt.department })}
+                    {enumLabel(t, 'appointmentType', apt.type)} &middot; {apt.doctor?.name ? apt.doctor.name.replace(/^Dr\.\s*/i, '') : t('appointments.noDoctor')} &middot; {t(`departments.${apt.department}`, { defaultValue: apt.department })}
                   </div>
                 </div>
                 <span className={`hidden sm:inline-block px-2 py-1 rounded-full text-xs font-medium ${typeColors[apt.type] || ''}`}>
-                  {t(`appointments.types.${apt.type}`, { defaultValue: apt.type })}
+                  {enumLabel(t, 'appointmentType', apt.type)}
                 </span>
                 <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                   <button

@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useTranslation } from 'react-i18next';
-import { getErrorCode, getErrorMessage } from '../types/api';
+import { getErrorMessage } from '../types/api';
 import { getUsers, approveUser, rejectUser, deactivateUser, activateUser, changeUserRole, USERS_KEY } from '../services/userService';
 import type { Role } from '../configs/permissions';
 
@@ -32,9 +32,8 @@ export const useUserManagement = () => {
     mutationFn: run,
     onSuccess: (_data, action) => toast.success(t(`users.done.${action.type}`)),
     onError: (err: unknown) => {
-      const code = getErrorCode(err);
-      const known = code ? t(`errors.codes.${code}`, { defaultValue: '' }) : '';
-      toast.error(known || getErrorMessage(err, t('users.actionFailed')));
+      // ApiError already carries the translated text of known codes (see normalizeApiError).
+      toast.error(getErrorMessage(err, t('users.actionFailed')));
     },
     onSettled: () => queryClient.invalidateQueries({ queryKey: USERS_KEY }),
   });
