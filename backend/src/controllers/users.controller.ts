@@ -8,6 +8,7 @@ import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
 import { linkStaffToUserByEmail } from '../services/staffLink';
+import { isSerializationFailure } from '../utils/dbErrors';
 import { sendSecurityNotice } from '../services/securityNotices';
 import type { Prisma, Role } from '@prisma/client';
 
@@ -198,8 +199,8 @@ export const changeUserRole = async (req: Request, res: Response) => {
     if (error instanceof LastAdminError) {
       return res.status(409).json({ success: false, code: 'LAST_ADMIN', message: 'The hospital must keep at least one active admin' });
     }
-    // P2034: a concurrent serializable transaction won; the admin can simply retry.
-    if (typeof error === 'object' && error !== null && (error as { code?: unknown }).code === 'P2034') {
+    // A concurrent serializable transaction won (40001 / P2034); the admin can simply retry.
+    if (isSerializationFailure(error)) {
       return res.status(409).json({ success: false, code: 'CONFLICT', message: 'Concurrent change, please retry' });
     }
     handleError(res, error, 'Failed to change user role');

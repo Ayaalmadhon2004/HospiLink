@@ -44,6 +44,7 @@ Backend (`cd backend`):
 - `npm run lint`           eslint + typescript-eslint (`no-explicit-any` is an error in src; CI runs it)
 - `npm test`               jest (no DB needed: Prisma is mocked)
 - `npm run test:coverage`  current coverage ~88% statements
+- `npm run test:int`       integration suite on a REAL PostgreSQL (`tests-int/`, needs `INT_DATABASE_URL` -> a throwaway db whose name contains `test`/`e2e`; applies the migrations, truncates between tests, boots the real server for sockets). See `docs/INTEGRATION_TESTS.md`.
 
 Frontend (`cd frontend`):
 - `npm install`
@@ -111,6 +112,7 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
 - Vitals: a critical reading escalates `Patient.status` to CRITICAL (never downgrades, never touches DISCHARGED; emits `patient-status-changed`). Thresholds are per hospital + department (`VitalThresholds.hospitalId`),
   managed with `GET/PUT /api/vitals/thresholds` and `DELETE /api/vitals/thresholds/:id` (PUT/DELETE: DOCTOR/ADMIN); any (department, vital type) without a row uses the built-in adult defaults in `services/vitalThresholds.ts`,
   and a failed threshold lookup is logged as an error and also falls back to the defaults. A reading can therefore never be silently judged "not critical" for lack of configuration.
+- Patient codes: `admitPatient` allocates `PT-<n>` under `pg_advisory_xact_lock` inside its transaction (via `$executeRaw`; `$queryRaw` cannot read a `void` result). Lost serializable/deadlock races are recognised with `utils/dbErrors.ts` `isSerializationFailure` (the pg adapter reports `TransactionWriteConflict`/40001, not P2034) and answered 409.
 - Beds <-> patients: a bed is OCCUPIED if and only if a patient is assigned to it (`Patient.bedId`). Everything that changes either side goes through `services/bedAssignment.ts` (`claimBed` is an atomic
   AVAILABLE-and-empty -> OCCUPIED update, `releaseBed` frees it) inside a transaction: admit, `PUT /patients/:id` (bedId change, or status DISCHARGED which frees the bed), discharge, `PUT /beds/:id` (patientId assign/unassign;
   a status that contradicts the patient is 400, switching a bed that has a patient away from OCCUPIED is 409) and `DELETE /beds/:id` (409 while it has a patient). Migration `20261030000000_reconcile_beds` repaired old rows.
@@ -184,6 +186,7 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
   The separate real-backend suite (`frontend/e2e-real`, `npm run test:e2e:real`, CI job `e2e-real` with a `services: postgres` container)
   covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, and the NotificationBell (badge, mark read, delete, realtime `new-notification`), with no mocks.
   It uses its own seed (`backend/prisma/seed.e2e.ts`), never `seed.ts`, and refuses a database whose name lacks `e2e`/`test`.
+- Integration tests (`backend/tests-int`, CI job `backend-integration`, also checks migration/schema drift) cover what mocks cannot: triggers, CHECK/exclusion/unique constraints, row-lock races (beds, stock, payments, invoice numbers, last admin), tenant isolation of every id-taking route, device ingestion and socket.io room fan-out. Add a case there whenever a rule is enforced by the database or by a conditional UPDATE/transaction.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.
 
 ## Known issues / priorities (keep this list current)

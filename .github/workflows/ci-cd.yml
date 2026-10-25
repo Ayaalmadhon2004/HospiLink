@@ -183,13 +183,75 @@ jobs:
           if-no-files-found: ignore
 
   # ---------------------------------------------------------
+  # 2b) Backend integration: real PostgreSQL, real Prisma, real triggers/constraints, real socket.io server.
+  #     Catches what the mocked unit suite cannot (races, DB-level guards, tenant leaks). See docs/INTEGRATION_TESTS.md.
+  # ---------------------------------------------------------
+  backend-integration:
+    name: Backend integration (real PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          # Throwaway credentials for a container that lives only for this job.
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: hospilink_inttest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d hospilink_inttest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      INT_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/hospilink_inttest
+      # Throwaway value, not a real secret.
+      JWT_SECRET: ci-int-throwaway-jwt-secret
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+        env:
+          DATABASE_URL: ${{ env.INT_DATABASE_URL }}
+
+      # The migrations are applied by the suite's global setup; right after that the database must match schema.prisma
+      # exactly: a schema change without a migration (or the reverse) fails here instead of in production.
+      - name: Apply migrations and check for schema drift
+        run: |
+          npx prisma migrate deploy
+          npx prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+        env:
+          DATABASE_URL: ${{ env.INT_DATABASE_URL }}
+
+      - name: Run integration tests
+        run: npm run test:int
+
+  # ---------------------------------------------------------
   # 3) Deploy الـ backend على Render
   #    بيشتغل بس لما الـ push يكون على main وكل الفحوصات فوق نجحت
   # ---------------------------------------------------------
   deploy-backend:
     name: Deploy Backend to Render
     runs-on: ubuntu-latest
-    needs: [backend-ci, frontend-ci]
+    needs: [backend-ci, backend-integration, frontend-ci]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
 

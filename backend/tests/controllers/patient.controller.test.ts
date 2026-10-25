@@ -283,7 +283,10 @@ describe('patient.controller', () => {
 
     it('يعيد المحاولة بالكود التالي لما يصير تعارض P2002 على patientCode', async () => {
       prismaMock.patient.count.mockResolvedValue(0);
-      prismaMock.patient.aggregate.mockResolvedValue({ _max: { patientCode: null } } as any);
+      // The number is read again inside every attempt: the second read sees the row that won the race (PT-2041).
+      prismaMock.patient.aggregate
+        .mockResolvedValueOnce({ _max: { patientCode: null } } as any)
+        .mockResolvedValue({ _max: { patientCode: 'PT-2041' } } as any);
       prismaMock.patient.create
         .mockRejectedValueOnce({ code: 'P2002', meta: { target: ['patientCode'] } })
         .mockResolvedValueOnce({ id: 'p' } as any);
@@ -291,6 +294,7 @@ describe('patient.controller', () => {
 
       await admitPatient(admitReq(), res);
 
+      expect(prismaMock.$executeRaw).toHaveBeenCalledTimes(2); // the allocation advisory lock is taken in every attempt
       expect(prismaMock.patient.create).toHaveBeenCalledTimes(2);
       expect(prismaMock.patient.create).toHaveBeenLastCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ patientCode: 'PT-2042' }) })

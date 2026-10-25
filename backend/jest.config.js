@@ -14,7 +14,7 @@ module.exports = {
   transformIgnorePatterns: [
     '/node_modules/(?!(zod)/)'
   ],
-  testPathIgnorePatterns: ['/node_modules/'],
+  testPathIgnorePatterns: ['/node_modules/', '/tests-int/'], // integration tests need a real database: npm run test:int
   cache: false,
   maxWorkers: 1
 };

@@ -277,6 +277,14 @@ describe('users.controller (ADMIN account administration)', () => {
       expect(sendSecurityNotice).not.toHaveBeenCalledWith('e', expect.any(String), expect.stringContaining('ADMIN to DOCTOR'));
     });
 
+    it('409 when the pg adapter reports the lost race as a bare TransactionWriteConflict (40001), not P2034', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'DOCTOR', accountStatus: 'ACTIVE' } as any);
+      prismaMock.$transaction.mockRejectedValue(Object.assign(new Error('TransactionWriteConflict'), { cause: { originalCode: '40001' } }));
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
     it('409 when a concurrent serializable transaction wins (P2034)', async () => {
       prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'DOCTOR', accountStatus: 'ACTIVE' } as any);
       prismaMock.$transaction.mockRejectedValue(Object.assign(new Error('conflict'), { code: 'P2034' }));
