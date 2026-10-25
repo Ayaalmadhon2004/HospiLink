@@ -36,4 +36,4 @@ CI job `backend-integration` runs it on a `postgres:16` service and also fails w
 - Assert "nothing happened" with a short timeout (`nextEvent(..., 800)` returns `null`).
 - `helpers/db.ts` `pgCode()` / `pgMessage()` read the PostgreSQL error behind Prisma's generic wrapper.
 
-Still out of scope: load testing (k6), a ZAP baseline, and Playwright flows for the new modules (see `docs/ROADMAP.md`).
+Still out of scope: load testing (k6), and Playwright flows for the new modules (see `docs/ROADMAP.md`).

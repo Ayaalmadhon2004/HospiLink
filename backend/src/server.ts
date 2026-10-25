@@ -1,9 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import helmet from 'helmet';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
-import { errorEnvelope } from './utils/apiResponse';
+import { errorEnvelope, fail } from './utils/apiResponse';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import prisma from './config/db';
@@ -37,10 +36,12 @@ import { socketAuth, hasRole, joinUserRoom, joinClinicalRoom, socketHospitalId }
 import { departmentRoom } from './utils/tenant';
 import settingsRoutes from './routes/settings.routes';
 import internalRoutes from './routes/internal.routes';
+import webVitalsRoutes from './routes/webVitals.routes';
 import logger from './config/logger';
 import { initSentry } from './config/sentry';
 import { createShutdown } from './config/serverConfig';
 import { loadEnv } from './config/env';
+import { helmetMiddleware, permissionsPolicy, noStore } from './config/securityHeaders';
 
 dotenv.config();
 initSentry();
@@ -55,18 +56,9 @@ const isDev = process.env.NODE_ENV !== 'production';
 // client shares a single rate-limit bucket.
 app.set('trust proxy', 1);
 
-// ✅ Security: Helmet — sets security headers (X-Content-Type-Options, X-Frame-Options, etc.)
-app.use(helmet({
-  contentSecurityPolicy: {
-    // JSON API: serves no HTML, so lock everything down.
-    useDefaults: false,
-    directives: {
-      defaultSrc: ["'none'"],
-      frameAncestors: ["'none'"],
-    },
-  },
-  crossOriginEmbedderPolicy: false, // needed for socket.io
-}));
+// ✅ Security: Helmet (CSP, HSTS, X-Content-Type-Options...) + Permissions-Policy; see config/securityHeaders.ts
+app.use(helmetMiddleware());
+app.use(permissionsPolicy);
 
 // ✅ Performance: Compression — gzip/brotli for JSON responses
 app.use(compression({
@@ -178,11 +170,16 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+// Unauthenticated Web Vitals beacon: own tiny body parser + limiter, so it is mounted before express.json()
+app.use('/api/telemetry/web-vitals', webVitalsRoutes);
+
 app.use(express.json());
 app.use(cookieParser());
 app.use(errorEnvelope);
 
 // ✅ Apply rate limiting
+// API responses are never cacheable (patient data); health/uploads/reports set their own headers.
+app.use('/api', noStore);
 app.use('/api/auth', authLimiter);
 app.use('/api', apiLimiter);
 
@@ -240,9 +237,13 @@ app.get('/api/health', async (req, res) => {
     await prisma.$queryRaw`SELECT 1`;
     res.status(200).json({ status: 'UP', database: 'CONNECTED' });
   } catch (error) {
-    res.status(500).json({ status: 'DOWN', error: (error as Error).message });
+    logger.error({ err: error }, 'health check: database unreachable');
+    res.status(500).json({ status: 'DOWN', database: 'DISCONNECTED' }); // no driver/connection details to clients
   }
 });
+
+// Unknown API routes: JSON envelope instead of Express' default HTML page ("Cannot GET ...").
+app.use('/api', (_req, res) => fail(res, 404, 'NOT_FOUND', 'Route not found'));
 
 app.use(errorHandler);
 
