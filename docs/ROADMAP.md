@@ -19,7 +19,7 @@ Status of the five areas requested. "Done" items ship in this branch; the rest a
 | 6 | ~~`feat/exports`~~ done (PDF has no Arabic glyphs yet, see docs/EXPORTS.md) | Reports: server-side `GET /api/reports/export?type=patients|appointments|billing|vitals&format=xlsx|pdf&from&to` (ADMIN/DOCTOR, streamed; `exceljs` for xlsx, `pdfkit` for pdf, hard row cap + audit-logged, tenant-scoped, CSV-injection guard: prefix `= + - @` cells with `'`). Frontend: export menu on list pages | M |
 
 ## 2. Real-database tests (CI job `backend-integration`): DONE, see `docs/INTEGRATION_TESTS.md`
-Remaining from this section: Playwright real-suite flows for the new modules, k6 load scripts, OWASP ZAP baseline.
+Playwright real-suite flows for the new modules: DONE (`docs/E2E_REAL.md`). Remaining from this section: k6 load scripts, OWASP ZAP baseline.
 - Add `backend/tests-int/` with its own `jest.int.config.ts`, no Prisma mock, a `services: postgres:17` container, `prisma migrate deploy`, and `TRUNCATE … CASCADE` between tests. Refuse a database whose name lacks `test`/`e2e` (same guard as `seed.e2e.ts`).
 - First cases (each maps to a rule in `CLAUDE.md` that mocks cannot prove):
   1. two concurrent `claimBed` calls for one bed → exactly one succeeds;

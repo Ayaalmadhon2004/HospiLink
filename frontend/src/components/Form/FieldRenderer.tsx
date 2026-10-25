@@ -1,4 +1,5 @@
 // components/Form/FieldRenderer.tsx
+import { useId } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { apiGet } from '../../services/api';
@@ -30,6 +31,8 @@ export const FieldRenderer = <T extends object>({
   disabled: formDisabled,
 }: FieldRendererProps<T>) => {
   const { t } = useTranslation();
+  // Unique per rendered field so a label is tied to its control (screen readers, getByLabel) even with two forms on a page.
+  const controlId = `${useId()}-${field.name}`;
   // Config text may be an i18n key or a plain literal (literal is the fallback)
   const tr = (text?: string) => (text ? t(text, { defaultValue: text }) : text);
 
@@ -72,7 +75,7 @@ export const FieldRenderer = <T extends object>({
   const colSpan = field.colSpan === 2 ? 'col-span-2' : 'col-span-1';
 
   const renderLabel = () => (
-    <label className={labelClass}>
+    <label htmlFor={field.type === 'custom' ? undefined : controlId} className={labelClass}>
       {tr(field.label)}
       {field.required && <span className="text-red-500 ms-0.5">*</span>}
     </label>
@@ -97,6 +100,7 @@ export const FieldRenderer = <T extends object>({
       <div className={colSpan}>
         {renderLabel()}
         <Combobox
+          id={controlId}
           options={blocked ? [] : allOptions.map((o) => ({ ...o, label: tr(o.label) ?? o.label }))}
           value={(value as string) || ''}
           onChange={(v) => setValue(field.name, v)}
@@ -120,6 +124,7 @@ export const FieldRenderer = <T extends object>({
       <div className={colSpan}>
         {renderLabel()}
         <select
+          id={controlId}
           value={(value as string) || ''}
           onChange={(e) => setValue(field.name, e.target.value)}
           disabled={isDisabled}
@@ -143,6 +148,7 @@ export const FieldRenderer = <T extends object>({
       <div className={colSpan}>
         {renderLabel()}
         <textarea
+          id={controlId}
           value={(value as string) || ''}
           onChange={(e) => setValue(field.name, e.target.value)}
           placeholder={tr(field.placeholder)}
@@ -226,6 +232,7 @@ export const FieldRenderer = <T extends object>({
     <div className={colSpan}>
       {renderLabel()}
       <input
+        id={controlId}
         type={inputType}
         value={inputValue}
         onChange={(e) => {
@@ -240,6 +247,7 @@ export const FieldRenderer = <T extends object>({
         placeholder={tr(field.placeholder)}
         disabled={isDisabled}
         className={baseInputClass}
+        step={field.type === 'number' ? field.step : undefined}
         min={field.type === 'number' ? 0 : undefined}
         max={field.type === 'number' ? 99999 : undefined}
       />

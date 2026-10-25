@@ -49,4 +49,17 @@ describe('/wards access + validation', () => {
     expect((await request(app).put('/wards/nope').set('Authorization', as('ADMIN')).send({ name: 'X' })).status).toBe(400);
     expect((await request(app).delete('/wards/nope').set('Authorization', as('ADMIN'))).status).toBe(400);
   });
+
+  it('PUT /wards/:id: floor null clears the floor (reaches the controller as null), a number sets it, absent leaves it alone', async () => {
+    prismaMock.ward.findFirst.mockResolvedValue({ id: W1 } as any);
+    prismaMock.ward.update.mockResolvedValue({ id: W1 } as any);
+    const auth = as('ADMIN');
+    expect((await request(app).put(`/wards/${W1}`).set('Authorization', auth).send({ floor: null })).status).toBe(200);
+    expect(prismaMock.ward.update.mock.calls[0][0].data).toEqual({ floor: null });
+    await request(app).put(`/wards/${W1}`).set('Authorization', auth).send({ floor: '4' });
+    expect(prismaMock.ward.update.mock.calls[1][0].data).toEqual({ floor: 4 });
+    prismaMock.ward.findFirst.mockResolvedValueOnce({ id: W1 } as any).mockResolvedValueOnce(null); // exists; the new name is free
+    await request(app).put(`/wards/${W1}`).set('Authorization', auth).send({ name: 'Only name' });
+    expect(prismaMock.ward.update.mock.calls[2][0].data).toEqual({ name: 'Only name' });
+  });
 });

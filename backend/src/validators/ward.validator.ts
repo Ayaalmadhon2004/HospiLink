@@ -10,6 +10,7 @@ export const createWardSchema = z.object({
 
 export const updateWardSchema = z.object({
   name: nonEmpty('name', 100).optional(),
-  // null clears the floor; looseNumber maps ''/null to undefined, so null is accepted explicitly here.
-  floor: z.union([looseNumber(-5, 200, { int: true }), z.null()]).optional(),
+  // null clears the floor. z.null() must come FIRST: looseNumber maps null to "not provided", which would swallow it
+  // and silently leave the old floor in place (found by frontend/e2e-real/admin-modules.e2e.ts).
+  floor: z.union([z.null(), looseNumber(-5, 200, { int: true })]).optional(),
 });

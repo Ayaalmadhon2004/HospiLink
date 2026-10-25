@@ -77,10 +77,17 @@ app.use(compression({
   level: 6,
 }));
 
+// Production limits are the defaults below. The real-backend E2E suite (frontend/playwright.real.config.ts) raises them through
+// env because one browser session hits /api/auth/me on every page load; nothing else sets these.
+const limitFromEnv = (name: string, fallback: number): number => {
+  const n = Number(process.env[name]);
+  return Number.isInteger(n) && n > 0 ? n : fallback;
+};
+
 // ✅ Rate limiting for auth routes — prevents brute force
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 requests per window
+  max: limitFromEnv('AUTH_RATE_LIMIT_MAX', 20), // 20 requests per window
   message: { success: false, message: 'Too many authentication attempts. Please try again later.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -89,7 +96,7 @@ const authLimiter = rateLimit({
 // General API rate limiter
 const apiLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 200, // 200 requests per minute
+  max: limitFromEnv('API_RATE_LIMIT_MAX', 200), // 200 requests per minute
   message: { success: false, message: 'Too many requests. Please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,

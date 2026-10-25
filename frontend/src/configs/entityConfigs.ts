@@ -326,6 +326,6 @@ export const medicationFields: FieldConfig<MedicationFormValues>[] = [
   { name: 'genericName', label: 'forms.medication.genericName', type: 'text', colSpan: 1 },
   { name: 'form', label: 'forms.medication.form', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.formPlaceholder' },
   { name: 'strength', label: 'forms.medication.strength', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.strengthPlaceholder' },
-  { name: 'unitPrice', label: 'forms.medication.unitPrice', type: 'number', colSpan: 1, placeholder: 'forms.medication.unitPricePlaceholder' },
+  { name: 'unitPrice', label: 'forms.medication.unitPrice', type: 'number', step: 0.01, colSpan: 1, placeholder: 'forms.medication.unitPricePlaceholder' },
   { name: 'reorderLevel', label: 'forms.medication.reorderLevel', type: 'number', colSpan: 1, helperText: 'forms.medication.reorderHint' },
 ];

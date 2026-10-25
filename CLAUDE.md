@@ -72,6 +72,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `APP_URL`, `SMTP_URL`, `MAIL_FROM`  frontend URL used in emailed links and the SMTP transport for password reset / email verification
                  (without `SMTP_URL` mails are only logged in dev, never sent)
 - `TWO_FACTOR_ENC_KEY`  32 random bytes, base64 (`openssl rand -base64 32`); encrypts TOTP secrets, required to use 2FA (the API boots without it, the `/auth/2fa/*` endpoints fail)
+- `AUTH_RATE_LIMIT_MAX`, `API_RATE_LIMIT_MAX`  TEST ONLY overrides of the auth (20 / 15 min) and API (200 / min) per-IP limits; set by the real-backend Playwright config, never in production
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
 
 Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/config/env.ts`, no fallback; see `frontend/.env.example`). Optional `VITE_DEV_PROXY_TARGET` for the Vite dev proxy.
@@ -184,7 +185,7 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
   `tests/mocks/*`; add a test for every new controller path (happy path + 400/401/403/404).
 - Frontend: Vitest + Testing Library for units; Playwright (`frontend/e2e`) covers login, the private-route redirect and the patients list/search/detail flow against a mocked API. Extend `mockApi.ts` when adding flows. The mocked suite does NOT exercise the real backend.
   The separate real-backend suite (`frontend/e2e-real`, `npm run test:e2e:real`, CI job `e2e-real` with a `services: postgres` container)
-  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, and the NotificationBell (badge, mark read, delete, realtime `new-notification`), with no mocks.
+  covers login (seeded user), the private-route redirect and admitting a patient that shows up in the list, and the NotificationBell (badge, mark read, delete, realtime `new-notification`), with no mocks. It also has serial multi-role journeys for the newer modules (`clinical`, `pharmacy-billing` incl. real Excel/PDF downloads, `admin-modules` = wards/users/audit log): sign in per role with `login(page, 'admin'|'doctor'|'nurse')`, create data with `admitPatient(page)`, use unique names (the database is not reset between local runs).
   It uses its own seed (`backend/prisma/seed.e2e.ts`), never `seed.ts`, and refuses a database whose name lacks `e2e`/`test`.
 - Integration tests (`backend/tests-int`, CI job `backend-integration`, also checks migration/schema drift) cover what mocks cannot: triggers, CHECK/exclusion/unique constraints, row-lock races (beds, stock, payments, invoice numbers, last admin), tenant isolation of every id-taking route, device ingestion and socket.io room fan-out. Add a case there whenever a rule is enforced by the database or by a conditional UPDATE/transaction.
 - Run `npm test` (backend) and `npm run build && npm run lint` (frontend) before pushing.

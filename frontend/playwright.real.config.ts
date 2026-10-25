@@ -39,6 +39,10 @@ const backendEnv: Record<string, string> = {
   JWT_SECRET: process.env.E2E_JWT_SECRET ?? 'e2e-throwaway-jwt-secret-not-for-production',
   PORT: String(API_PORT),
   CORS_ORIGINS: WEB_URL,
+  // Test-only: one browser session calls /api/auth/me on every page load, which would exhaust the production limits
+  // (20 auth requests / 15 min, 200 API requests / min). Production keeps the defaults.
+  AUTH_RATE_LIMIT_MAX: '2000',
+  API_RATE_LIMIT_MAX: '5000',
   // Keep the unrelated error reporter off in tests.
   SENTRY_DSN: '',
 };

@@ -12,8 +12,25 @@ Notification bell (`notification-bell.e2e.ts`): the seeded unread notification s
 clicking it marks it read (badge gone, stored in the DB) and deleting it removes it for good; creating an incident through the real API
 makes a new notification appear in the bell over socket.io (`new-notification` to the `user-<id>` room) without a reload.
 
-The auth endpoints are rate limited (20 requests per 15 minutes), so `login()` in `e2e-real/helpers.ts` signs in through the form
-once and reuses that session cookie for the rest of the run; use `loginViaUi()` only where the sign-in itself is under test.
+The auth endpoints are rate limited in production (20 requests per 15 minutes, 200 API requests per minute per IP). A browser session calls
+`/api/auth/me` on every page load, so the Playwright config starts the API with `AUTH_RATE_LIMIT_MAX` / `API_RATE_LIMIT_MAX` raised (test-only env
+overrides, production keeps the defaults). `login(page, role)` in `e2e-real/helpers.ts` signs in through the form once per role and reuses that
+session cookie for the rest of the run; use `loginViaUi()` only where the sign-in itself is under test.
+
+Roles: the seed creates an ADMIN, a DOCTOR and a NURSE (`e2e.admin|doctor|nurse@hospilink.test`, same password, department "General", the
+department of the patients the flows admit). `admitPatient(page)` creates a uniquely named patient through the API with the page's session.
+
+### Module flows (serial: each file is one story across several roles)
+- `clinical.e2e.ts`: a doctor writes and amends a note (the original stays in the history, two rows in the database), a nurse can read it, cannot amend it and
+  is only offered "Nursing", the admin is read-only; a doctor orders a lab test, a nurse enters a critical result (server-computed flag), and the department's
+  doctor gets the notification in the bell.
+- `pharmacy-billing.e2e.ts`: doctor adds a priced medication -> admin sees low stock, receives a delivery, cannot adjust below zero -> doctor prescribes ->
+  nurse dispenses (too many units refused, then 3) -> stock and the movement ledger agree -> admin invoices the patient (dispensed items arrive on the draft),
+  adds a line and a discount, issues (gap-free number, frozen), takes a partial and a final payment (overpayment blocked) -> real Excel and PDF downloads ->
+  export visibility per role and the period validation -> billing / stock role boundaries.
+- `admin-modules.e2e.ts`: wards (add, rename, clear the floor, delete, duplicate 409, delete refused while it has beds, read-only for doctor/nurse); users
+  (a public sign-up stays PENDING, approve with a role, confirmed role change, deactivate, activate, own row locked); the audit log shows those actions and
+  filters by action; doctors/nurses are refused on `/users` and `/audit-logs` both in the UI and by the API.
 
 ## How it works
 
