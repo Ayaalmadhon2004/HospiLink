@@ -17,6 +17,8 @@ CI job `backend-integration` runs it on a `postgres:16` service and also fails w
 
 ## What each file proves
 
+`roles.int.test.ts` runs the PHARMACIST and BILLING jobs end to end (receive, queue, dispense, invoice from the dispensation, issue, pay, billing export), their lack of clinical access, and hospital isolation of the queue and the patient lookup.
+
 | File | Proves |
 |---|---|
 | `constraints.int.test.ts` | patients cannot be hard-deleted; clinical notes are immutable (but an author account can still be deleted); a doctor cannot be double-booked (exclusion constraint, also under a 6-way race); stock / money CHECKs; unique invoice numbers per hospital; one patient per bed; wards with beds cannot be deleted |

@@ -4,6 +4,7 @@ import { Activity } from 'lucide-react';
 import { login, resendVerification, verifyTwoFactor } from '../services/authService';
 import { getErrorCode, getErrorMessage } from '../types/api';
 import { Link } from 'react-router-dom';
+import { homePath } from '../configs/permissions';
 import { useTranslation } from 'react-i18next';
 import { LanguageSwitcher } from '../components/LanguageSwitcher';
 
@@ -39,7 +40,7 @@ export const LoginPage = () => {
         // الجلسة بتنحفظ بكوكي httpOnly (ما في token بالـ localStorage)
 
         // ✅ توجيه للـ Dashboard
-        window.location.href = '/dashboard';
+        window.location.href = homePath(data.user.role);
       } else {
         setError(data.message || t('auth.loginFailed'));
       }

@@ -57,13 +57,13 @@ function App() {
 
         {/* Signed-in sections share the sidebar layout; the URL is the only navigation state */}
         <Route element={<PrivateRoute><AppLayout /></PrivateRoute>}>
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/patients" element={<PatientsPage />} />
-          <Route path="/beds" element={<Beds />} />
+          <Route path="/dashboard" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dashboard']}><Dashboard /></PrivateRoute>} />
+          <Route path="/patients" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/patients']}><PatientsPage /></PrivateRoute>} />
+          <Route path="/beds" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/beds']}><Beds /></PrivateRoute>} />
           <Route path="/staff" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/staff']}><StaffDirectoryPage /></PrivateRoute>} />
-          <Route path="/appointments" element={<AppointmentsPage />} />
-          <Route path="/vitals" element={<VitalsMonitorPage />} />
-          <Route path="/incidents" element={<IncidentsPage />} />
+          <Route path="/appointments" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/appointments']}><AppointmentsPage /></PrivateRoute>} />
+          <Route path="/vitals" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/vitals']}><VitalsMonitorPage /></PrivateRoute>} />
+          <Route path="/incidents" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/incidents']}><IncidentsPage /></PrivateRoute>} />
           <Route path="/dispatch" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dispatch']}><DispatchDashboard /></PrivateRoute>} />
           <Route path="/pharmacy" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/pharmacy']}><PharmacyPage /></PrivateRoute>} />
           <Route path="/billing" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/billing']}><BillingPage /></PrivateRoute>} />
@@ -74,8 +74,8 @@ function App() {
         </Route>
 
         {/* Full-page patient screens (own header, no sidebar) */}
-        <Route path="/patients/:id" element={<PrivateRoute><PatientDetailPage /></PrivateRoute>} />
-        <Route path="/patients/:id/edit" element={<PrivateRoute><EditPatientPage /></PrivateRoute>} />
+        <Route path="/patients/:id" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/patients']}><PatientDetailPage /></PrivateRoute>} />
+        <Route path="/patients/:id/edit" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/patients']}><EditPatientPage /></PrivateRoute>} />
 
         <Route path="*" element={<Navigate to="/dashboard" replace />} />
       </Routes>

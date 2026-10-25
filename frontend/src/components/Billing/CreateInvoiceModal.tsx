@@ -4,18 +4,20 @@ import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { X } from 'lucide-react';
 import { Combobox } from '../Form/Combobox';
-import { apiGetAll } from '../../services/paginate';
-import { createInvoice } from '../../services/billingService';
+import { createInvoice, searchPatients } from '../../services/billingService';
 import { getErrorMessage } from '../../types/api';
-import type { Patient } from '../../types/patient';
 
 export const CreateInvoiceModal = ({ onClose, onCreated }: { onClose: () => void; onCreated: (invoiceId: string) => void }) => {
   const { t } = useTranslation();
   const [patientId, setPatientId] = useState('');
+  const [query, setQuery] = useState('');
   const [includeDispensations, setInclude] = useState(true);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
-  const patients = useQuery({ queryKey: ['billing', 'patients'], queryFn: async () => (await apiGetAll<Patient>('/patients')).data });
+  // Server-side search over the minimal billing lookup (id, name, code): billing staff cannot read the clinical patient list.
+  const patients = useQuery({ queryKey: ['billing', 'patients', query], queryFn: () => searchPatients(query), placeholderData: (prev) => prev });
+  const options = (patients.data ?? []).map((p) => ({ label: p.name, value: p.id, hint: p.patientCode }));
+  const pick = (id: string) => { setPatientId(id); setQuery(options.find((o) => o.value === id)?.label ?? ''); };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,7 +41,7 @@ export const CreateInvoiceModal = ({ onClose, onCreated }: { onClose: () => void
         {error && <p role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-2">{error}</p>}
         <div>
           <label htmlFor="inv-patient" className="text-sm font-medium text-gray-700">{t('billing.patient')}</label>
-          <Combobox id="inv-patient" options={(patients.data ?? []).map((p) => ({ label: p.name, value: p.id, hint: p.patientCode }))} value={patientId} onChange={setPatientId} placeholder={t('billing.selectPatient')} loading={patients.isPending} />
+          <Combobox id="inv-patient" options={options} value={patientId} onChange={pick} query={query} onQueryChange={(q) => { setQuery(q); setPatientId(''); }} placeholder={t('billing.selectPatient')} loading={patients.isPending} emptyMessage={t('forms.noOptions')} />
         </div>
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input type="checkbox" checked={includeDispensations} onChange={(e) => setInclude(e.target.checked)} />

@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/authContext';
 import { Activity } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import type { Role } from '../configs/permissions';
+import { homePath, type Role } from '../configs/permissions';
 
 interface PrivateRouteProps {
   children: React.ReactNode;
@@ -38,8 +38,8 @@ export const PrivateRoute = ({ children, allowedRoles }: PrivateRouteProps) => {
     return (
       <div role="alert" className="min-h-[50vh] flex flex-col items-center justify-center gap-3 p-6 text-center">
         <p className="text-gray-700 font-medium">{t('errors.forbidden')}</p>
-        <Link to="/dashboard" className="text-teal-600 hover:underline text-sm">
-          {t('sidebar.tabs.Overview')}
+        <Link to={homePath(user.role)} className="text-teal-600 hover:underline text-sm">
+          {t('errors.backHome')}
         </Link>
       </div>
     );

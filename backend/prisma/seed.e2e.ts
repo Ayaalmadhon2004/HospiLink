@@ -14,6 +14,8 @@ export const E2E_ADMIN = { email: 'e2e.admin@hospilink.test', password: 'E2e-Pas
 // notifications (critical lab results) reach them.
 export const E2E_DOCTOR = { email: 'e2e.doctor@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Doctor', role: 'DOCTOR' as const };
 export const E2E_NURSE = { email: 'e2e.nurse@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Nurse', role: 'NURSE' as const };
+export const E2E_PHARMACIST = { email: 'e2e.pharmacist@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Pharmacist', role: 'PHARMACIST' as const };
+export const E2E_BILLING = { email: 'e2e.billing@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Billing', role: 'BILLING' as const };
 
 // Codes deliberately sit outside the PT-20xx range that POST /patients/admit generates
 // (see "Known issues" in CLAUDE.md about the count-based patientCode).
@@ -51,7 +53,7 @@ async function main(): Promise<void> {
     },
   });
 
-  for (const u of [E2E_DOCTOR, E2E_NURSE]) {
+  for (const u of [E2E_DOCTOR, E2E_NURSE, E2E_PHARMACIST, E2E_BILLING]) {
     await prisma.user.upsert({
       where: { email: u.email },
       update: {},

@@ -13,4 +13,4 @@ export interface ManagedUser {
   createdAt: string;
 }
 
-export const ROLES: readonly Role[] = ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER'];
+export const ROLES: readonly Role[] = ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'PHARMACIST', 'BILLING'];

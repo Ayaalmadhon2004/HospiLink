@@ -4,14 +4,18 @@ import { expect, type Page } from '@playwright/test';
 export const SEED_ADMIN = { email: 'e2e.admin@hospilink.test', password: 'E2e-Password-123!' };
 export const SEED_DOCTOR = { email: 'e2e.doctor@hospilink.test', password: 'E2e-Password-123!' };
 export const SEED_NURSE = { email: 'e2e.nurse@hospilink.test', password: 'E2e-Password-123!' };
+export const SEED_PHARMACIST = { email: 'e2e.pharmacist@hospilink.test', password: 'E2e-Password-123!' };
+export const SEED_BILLING = { email: 'e2e.billing@hospilink.test', password: 'E2e-Password-123!' };
 
-export type Role = 'admin' | 'doctor' | 'nurse';
-const ACCOUNTS: Record<Role, { email: string; password: string }> = { admin: SEED_ADMIN, doctor: SEED_DOCTOR, nurse: SEED_NURSE };
+export type Role = 'admin' | 'doctor' | 'nurse' | 'pharmacist' | 'billing';
+const ACCOUNTS: Record<Role, { email: string; password: string }> = {
+  admin: SEED_ADMIN, doctor: SEED_DOCTOR, nurse: SEED_NURSE, pharmacist: SEED_PHARMACIST, billing: SEED_BILLING,
+};
+// Where each role lands after signing in (pharmacy and billing staff have no dashboard).
+const HOME_PATH: Record<Role, string> = { admin: '/dashboard', doctor: '/dashboard', nurse: '/dashboard', pharmacist: '/pharmacy', billing: '/billing' };
+const homeUrl = (role: Role): RegExp => new RegExp(`${HOME_PATH[role]}$`);
 
 export const API_URL = 'http://localhost:5000/api';
-
-// Matches a URL ending in /dashboard ("http://localhost:4173/dashboard"), not "/login".
-const DASHBOARD_URL = /\/dashboard$/;
 
 type Cookies = Awaited<ReturnType<ReturnType<Page['context']>['cookies']>>;
 
@@ -26,7 +30,7 @@ export async function loginViaUi(page: Page, role: Role = 'admin'): Promise<void
   await page.getByPlaceholder('doctor@hospital.com').fill(account.email);
   await page.getByPlaceholder('••••••••').fill(account.password);
   await page.getByRole('button', { name: 'Sign In' }).click();
-  await expect(page).toHaveURL(DASHBOARD_URL);
+  await expect(page).toHaveURL(homeUrl(role));
   sessions.set(role, await page.context().cookies());
 }
 
@@ -38,8 +42,8 @@ export async function login(page: Page, role: Role = 'admin'): Promise<void> {
     return;
   }
   await page.context().addCookies(cookies);
-  await page.goto('/dashboard');
-  await expect(page).toHaveURL(DASHBOARD_URL);
+  await page.goto(HOME_PATH[role]);
+  await expect(page).toHaveURL(homeUrl(role));
 }
 
 export interface TestPatient {

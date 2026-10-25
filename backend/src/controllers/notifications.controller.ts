@@ -99,7 +99,7 @@ export const broadcastNotification = async (req: Request, res: Response) => {
     const { title, message, role, link } = req.body as {
       title: string;
       message: string;
-      role?: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER';
+      role?: 'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER' | 'PHARMACIST' | 'BILLING';
       link?: string;
     };
     const adminId = req.user?.id;
@@ -115,7 +115,7 @@ export const broadcastNotification = async (req: Request, res: Response) => {
       link,
       recipients: {
         hospitalId: admin.hospitalId,
-        roles: role ? [role] : ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER'],
+        roles: role ? [role] : ['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'PHARMACIST', 'BILLING'],
       },
     });
 

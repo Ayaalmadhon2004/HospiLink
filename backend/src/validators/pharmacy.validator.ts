@@ -16,3 +16,4 @@ export const adjustSchema = z.object({
 export const dispenseSchema = z.object({ prescriptionItemId: idSchema, quantity: qty });
 export const movementsQuery = z.object({ medicationId: idSchema.optional(), type: enumValue(StockMovementType, 'type').optional(), ...page });
 export const dispensationsQuery = z.object({ patientId: idSchema, ...page });
+export const queueQuery = z.object({ q: z.string().trim().max(100).optional(), ...page });

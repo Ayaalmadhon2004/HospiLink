@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Pill } from 'lucide-react';
+import { DispenseQueue } from '../components/Pharmacy/DispenseQueue';
 import { StockActionModal, type StockAction } from '../components/Pharmacy/StockActionModal';
 import { useAuthPermissions } from '../hooks/useAuthPermissions';
 import { getStock, pharmacyKeys } from '../services/pharmacyService';
@@ -24,6 +25,8 @@ export const PharmacyPage = () => {
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Pill className="w-6 h-6 text-blue-600" aria-hidden="true" />{t('pharmacy.title')}</h1>
         <p className="text-gray-500 text-sm mt-1">{t('pharmacy.subtitle')}</p>
       </div>
+
+      {can('pharmacy:queue') && <DispenseQueue />}
 
       <label className="inline-flex items-center gap-2 text-sm text-gray-700">
         <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />

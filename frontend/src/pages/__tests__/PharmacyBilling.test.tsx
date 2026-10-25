@@ -43,7 +43,9 @@ describe('permissions', () => {
 });
 
 describe('PharmacyPage', () => {
-  beforeEach(() => vi.mocked(apiGet).mockResolvedValue({ success: true, data: [med(), med({ id: 'm2', name: 'Ibuprofen', stockQuantity: 500 })] } as never));
+  beforeEach(() => vi.mocked(apiGet).mockImplementation((async (url: string) => ({
+    success: true, data: url === '/pharmacy/queue' ? [] : [med(), med({ id: 'm2', name: 'Ibuprofen', stockQuantity: 500 })],
+  })) as never));
 
   it('flags low stock; ADMIN gets receive/adjust, NURSE does not', async () => {
     useAuth.mockReturnValue({ user: { role: 'NURSE' } });
@@ -184,7 +186,10 @@ describe('InvoiceDetailPage', () => {
 describe('BillingPage', () => {
   it('lists invoices (Draft shows no number), filters server-side and creates a draft for a patient', async () => {
     useAuth.mockReturnValue({ user: { role: 'ADMIN' } });
-    vi.mocked(apiGet).mockResolvedValue({ success: true, data: [inv(), inv({ id: 'inv2', number: 'INV-000002', status: 'ISSUED' })] } as never);
+    vi.mocked(apiGet).mockImplementation((async (url: string) => ({
+      success: true,
+      data: url === '/billing/patients' ? [{ id: 'p1', name: 'Ali Hassan', patientCode: 'PT-1' }] : [inv(), inv({ id: 'inv2', number: 'INV-000002', status: 'ISSUED' })],
+    })) as never);
     vi.mocked(apiPost).mockResolvedValue({ success: true, data: { id: 'new1' } } as never);
     const user = userEvent.setup();
     render(<MemoryRouter><Routes><Route path="/" element={<BillingPage />} /><Route path="/billing/:id" element={<p>detail page</p>} /></Routes></MemoryRouter>, { wrapper: QueryWrapper });

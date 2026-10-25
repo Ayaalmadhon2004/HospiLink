@@ -38,7 +38,7 @@ export const DEFAULT_SETTINGS: Record<SettingKey, boolean> = {
 
 export interface RecipientSelector {
   /** Role filter (combined with `department` when both are given). */
-  roles?: Array<'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER'>;
+  roles?: Array<'ADMIN' | 'DOCTOR' | 'NURSE' | 'DISPATCHER' | 'PHARMACIST' | 'BILLING'>;
   /** Department filter (User.department). */
   department?: string;
   /** Explicit users, always included (union with the role/department match). */

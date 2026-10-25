@@ -700,6 +700,8 @@ enum Role {
   DOCTOR
   NURSE
   DISPATCHER
+  PHARMACIST
+  BILLING
 }
 
 enum PatientStatus {

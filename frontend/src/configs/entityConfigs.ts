@@ -180,6 +180,8 @@ const STAFF_LOGIN_ROLE_OPTIONS = [
   { label: 'staff.loginRoles.DOCTOR', value: 'DOCTOR' },
   { label: 'staff.loginRoles.NURSE', value: 'NURSE' },
   { label: 'staff.loginRoles.DISPATCHER', value: 'DISPATCHER' },
+  { label: 'staff.loginRoles.PHARMACIST', value: 'PHARMACIST' },
+  { label: 'staff.loginRoles.BILLING', value: 'BILLING' },
   { label: 'staff.loginRoles.ADMIN', value: 'ADMIN' },
 ];
 
@@ -218,7 +220,7 @@ export const staffValidationSchema = z.object({
   status: z.enum(['ACTIVE', 'ON_LEAVE', 'INACTIVE']),
   shiftStart: z.string().optional(),
   shiftEnd: z.string().optional(),
-  loginRole: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']).optional().or(z.literal('')),
+  loginRole: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'PHARMACIST', 'BILLING']).optional().or(z.literal('')),
 });
 
 // ─── 5. INCIDENT CONFIG (FIXED) ────────────────────────────────────

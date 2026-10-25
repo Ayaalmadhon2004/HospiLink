@@ -12,7 +12,7 @@ const router = Router();
 // Exports are heavy and carry bulk patient data: a tight per-IP limit on top of the general API limiter.
 const exportLimiter = rateLimit({ windowMs: 60 * 1000, max: 10, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many exports. Please wait a minute.' } });
 
-// Route-level gate is the widest role set; the controller narrows it per dataset (billing = ADMIN).
-router.get('/:type', exportLimiter, protect, authorize('ADMIN', 'DOCTOR'), validate({ params: exportParams, query: exportQuery }), logActivity('EXPORT_DATA'), exportData);
+// Route-level gate is the widest role set; the controller narrows it per dataset (billing = ADMIN, BILLING).
+router.get('/:type', exportLimiter, protect, authorize('ADMIN', 'DOCTOR', 'BILLING'), validate({ params: exportParams, query: exportQuery }), logActivity('EXPORT_DATA'), exportData);
 
 export default router;

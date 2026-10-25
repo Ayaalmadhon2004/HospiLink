@@ -128,21 +128,22 @@ test.describe('user management and audit log (real backend + database)', () => {
   test('every one of those actions is in the audit log, and the action filter narrows it', async ({ page }) => {
     await login(page, 'admin');
     await page.goto('/audit-logs');
-    const codes = page.locator('tbody code');
-    await expect(codes.filter({ hasText: 'APPROVE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'DEACTIVATE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'ACTIVATE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'CHANGE_USER_ROLE' }).first()).toBeVisible();
+    // The table shows the translated action; the raw code is the badge's title.
+    const action = (code: string) => page.locator(`tbody span[title="${code}"]`);
+    await expect(action('APPROVE_USER').first()).toBeVisible();
+    await expect(action('DEACTIVATE_USER').first()).toBeVisible();
+    await expect(action('ACTIVATE_USER').first()).toBeVisible();
+    await expect(action('CHANGE_USER_ROLE').first()).toBeVisible();
 
     await page.getByLabel('Action').selectOption('CHANGE_USER_ROLE');
-    await expect(codes.first()).toHaveText('CHANGE_USER_ROLE');
-    const texts = await codes.allTextContents();
-    expect(texts.length).toBeGreaterThan(0);
-    expect(new Set(texts)).toEqual(new Set(['CHANGE_USER_ROLE']));
+    await expect(action('CHANGE_USER_ROLE').first()).toHaveText('User role changed');
+    const titles = await page.locator('tbody span[title]').evaluateAll((els) => els.map((e) => e.getAttribute('title')));
+    expect(titles.length).toBeGreaterThan(0);
+    expect(new Set(titles)).toEqual(new Set(['CHANGE_USER_ROLE']));
     await expect(page.getByText('E2E Admin').first()).toBeVisible(); // who did it
 
     await page.getByRole('button', { name: 'Reset filters' }).click();
-    await expect(codes.filter({ hasText: 'APPROVE_USER' }).first()).toBeVisible();
+    await expect(action('APPROVE_USER').first()).toBeVisible();
   });
 
   test('doctors and nurses have no Users or Audit Log entry and are refused on the routes', async ({ page }) => {

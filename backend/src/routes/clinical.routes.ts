@@ -1,6 +1,6 @@
 // backend/src/routes/clinical.routes.ts
 //
-// Clinical records. Read: DOCTOR, NURSE, ADMIN. Write: see each line. DISPATCHER has no access.
+// Clinical records. Read: DOCTOR, NURSE, ADMIN. Write: see each line. DISPATCHER, PHARMACIST and BILLING have no access except the medication catalogue (PHARMACIST).
 import { Router } from 'express';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -24,9 +24,9 @@ notesRouter.post('/:id/amend', authorize('DOCTOR', 'NURSE'), validate({ params: 
 
 export const medicationsRouter = Router();
 medicationsRouter.use(protect);
-medicationsRouter.get('/', authorize(...READ), validate({ query: v.medicationListQuery }), listMedications);
-medicationsRouter.post('/', authorize('ADMIN', 'DOCTOR'), validate({ body: v.createMedicationSchema }), logActivity('CREATE_MEDICATION'), createMedication);
-medicationsRouter.put('/:id', authorize('ADMIN', 'DOCTOR'), validate({ params: idParams, body: v.updateMedicationSchema }), logActivity('UPDATE_MEDICATION'), updateMedication);
+medicationsRouter.get('/', authorize(...READ, 'PHARMACIST'), validate({ query: v.medicationListQuery }), listMedications);
+medicationsRouter.post('/', authorize('ADMIN', 'DOCTOR', 'PHARMACIST'), validate({ body: v.createMedicationSchema }), logActivity('CREATE_MEDICATION'), createMedication);
+medicationsRouter.put('/:id', authorize('ADMIN', 'DOCTOR', 'PHARMACIST'), validate({ params: idParams, body: v.updateMedicationSchema }), logActivity('UPDATE_MEDICATION'), updateMedication);
 
 export const prescriptionsRouter = Router();
 prescriptionsRouter.use(protect);

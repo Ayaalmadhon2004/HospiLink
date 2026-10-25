@@ -18,3 +18,7 @@ export const setInvoiceDiscount = (id: string, discountMinor: number) => apiPut(
 export const issueInvoice = (id: string) => apiPost(`/billing/invoices/${id}/issue`);
 export const voidInvoice = (id: string) => apiPost(`/billing/invoices/${id}/void`);
 export const recordPayment = (id: string, body: { amountMinor: number; method: PaymentMethod; reference?: string }) => apiPost(`/billing/invoices/${id}/payments`, body);
+
+export interface BillablePatient { id: string; name: string; patientCode: string }
+export const searchPatients = async (q: string): Promise<BillablePatient[]> =>
+  (await apiGet<ApiResponse<BillablePatient[]>>('/billing/patients', { q: q.trim() || undefined })).data;

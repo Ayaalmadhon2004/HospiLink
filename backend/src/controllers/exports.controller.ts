@@ -13,12 +13,12 @@ const DEFAULT_RANGE_DAYS = 30;
 const MAX_RANGE_DAYS = 366;
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-// Who may export what. Mirrors the read access of the screens each dataset comes from; billing is ADMIN-only like /billing.
+// Who may export what. Mirrors the read access of the screens each dataset comes from; billing follows /billing (ADMIN, BILLING).
 const ALLOWED_ROLES: Record<ExportType, readonly string[]> = {
   patients: ['ADMIN', 'DOCTOR'],
   appointments: ['ADMIN', 'DOCTOR'],
   vitals: ['ADMIN', 'DOCTOR'],
-  billing: ['ADMIN'],
+  billing: ['ADMIN', 'BILLING'],
 };
 
 const MIME: Record<ExportFormat, string> = {

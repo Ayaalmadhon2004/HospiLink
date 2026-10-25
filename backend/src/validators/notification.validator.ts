@@ -11,7 +11,7 @@ export const notificationsQuerySchema = z.object({
 export const broadcastSchema = z.object({
   title: nonEmpty('title', 120),
   message: nonEmpty('message', 1000),
-  role: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']).optional(),
+  role: z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'PHARMACIST', 'BILLING']).optional(),
   // Accepts internal paths only: "/incidents" matches, "//evil.com" and "https://x" are rejected.
   link: z.string().trim().max(200).regex(/^\/(?!\/)/, 'link must be an internal path starting with /').optional(),
 });

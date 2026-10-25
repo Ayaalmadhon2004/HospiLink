@@ -25,3 +25,4 @@ export const paymentSchema = z.object({
   method: enumValue(PaymentMethod, 'method'),
   reference: z.string().trim().max(100).nullable().optional(),
 });
+export const patientLookupQuery = z.object({ q: z.string().trim().max(100).optional() });

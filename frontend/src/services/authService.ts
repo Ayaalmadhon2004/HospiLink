@@ -5,7 +5,7 @@ import { apiPost, apiGet } from './api';
 // LOGIN
 // ============================================
 interface LoginPayload {
-  user?: { id: string };
+  user?: { id: string; role?: string };
   // Set instead of `user` when the account has 2FA: finish with verifyTwoFactor().
   twoFactorRequired?: boolean;
   challengeToken?: string;

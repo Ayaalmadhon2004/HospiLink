@@ -244,7 +244,8 @@
       "INTERNAL_ERROR": "حدث خطأ من جهتنا. يرجى المحاولة مرة أخرى.",
       "TWO_FACTOR_LOCKED": "تم إدخال رموز خاطئة كثيرًا. المصادقة الثنائية مقفلة لمدة 15 دقيقة.",
       "EXPORT_TOO_LARGE": "يتجاوز التصدير 10000 صف. قلّص النطاق الزمني وحاول مجددًا."
-    }
+    },
+    "backHome": "العودة إلى صفحتي الرئيسية"
   },
   "errorBoundary": {
     "title": "حدث خطأ ما",
@@ -796,7 +797,9 @@
       "DOCTOR": "طبيب",
       "NURSE": "ممرض/ة",
       "DISPATCHER": "منسّق الإسعاف",
-      "ADMIN": "مسؤول"
+      "ADMIN": "مسؤول",
+      "PHARMACIST": "صيدلاني/ة",
+      "BILLING": "موظف/ة فوترة"
     }
   },
   "dispatch": {
@@ -1124,7 +1127,9 @@
       "ADMIN": "مدير",
       "DOCTOR": "طبيب",
       "NURSE": "ممرض",
-      "DISPATCHER": "مُرسِل"
+      "DISPATCHER": "مُرسِل",
+      "PHARMACIST": "صيدلاني",
+      "BILLING": "فوترة"
     },
     "status": {
       "PENDING": "قيد الانتظار",
@@ -1277,7 +1282,22 @@
     "dispense": "صرف",
     "dispenseTitle": "صرف {{name}}",
     "dispenseFailed": "تعذّر الصرف",
-    "unitsToDispense": "عدد الوحدات المصروفة"
+    "unitsToDispense": "عدد الوحدات المصروفة",
+    "queue": {
+      "title": "بانتظار الصرف",
+      "subtitle": "الوصفات الفعّالة في مستشفاك، الأقدم أولاً.",
+      "search": "ابحث باسم المريض أو رمزه",
+      "loadFailed": "تعذّر تحميل قائمة الصرف",
+      "empty": "لا توجد وصفات بانتظار الصرف.",
+      "prescribedBy": "وصفها {{name}}",
+      "dispensedTimes_zero": "لم يُصرف",
+      "dispensedTimes_one": "صُرف مرة واحدة",
+      "dispensedTimes_two": "صُرف مرتين",
+      "dispensedTimes_few": "صُرف {{count}} مرات",
+      "dispensedTimes_many": "صُرف {{count}} مرة",
+      "dispensedTimes_other": "صُرف {{count}} مرة",
+      "retired": "الدواء مسحوب من الكتالوج"
+    }
   },
   "billing": {
     "title": "الفواتير",

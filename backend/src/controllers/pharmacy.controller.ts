@@ -90,6 +90,43 @@ export const dispense = async (req: Request, res: Response) => {
   }
 };
 
+// GET /api/pharmacy/queue?q=  ACTIVE prescriptions of the hospital, oldest first. The patient is reduced to name + code.
+export const dispenseQueue = async (req: Request, res: Response) => {
+  try {
+    const { q } = req.query as { q?: string };
+    const where: Prisma.PrescriptionWhereInput = {
+      hospitalId: hospitalIdOf(req), status: 'ACTIVE',
+      patient: {
+        deletedAt: null,
+        ...(q ? { OR: [{ name: { contains: q, mode: 'insensitive' } }, { patientCode: { contains: q, mode: 'insensitive' } }] } : {}),
+      },
+    };
+    const page = pageParams(req.query);
+    const [rows, totalCount] = await Promise.all([
+      prisma.prescription.findMany({
+        where,
+        select: {
+          id: true, createdAt: true, prescriberName: true,
+          patient: { select: { id: true, name: true, patientCode: true } },
+          items: {
+            select: {
+              id: true, dose: true, frequency: true, route: true, durationDays: true, instructions: true,
+              medication: { select: { id: true, name: true, form: true, strength: true, active: true } },
+              _count: { select: { dispensations: true } },
+            },
+          },
+        },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }], skip: page.skip, take: page.take,
+      }),
+      prisma.prescription.count({ where }),
+    ]);
+    return ok(res, rows, { count: rows.length, pagination: pageInfo(page, totalCount) });
+  } catch (error: unknown) {
+    logger.error({ err: error }, 'Dispense queue error:');
+    return fail(res, 500, 'INTERNAL_ERROR', 'Failed to load the dispensing queue');
+  }
+};
+
 // GET /api/pharmacy/dispensations?patientId=
 export const listDispensations = async (req: Request, res: Response) => {
   try {

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { ShiftType } from '@prisma/client';
 import { nonEmpty, enumValue } from './common.validator';
 
-export const roleEnum = z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER']);
+export const roleEnum = z.enum(['ADMIN', 'DOCTOR', 'NURSE', 'DISPATCHER', 'PHARMACIST', 'BILLING']);
 const accountStatusEnum = z.enum(['PENDING', 'ACTIVE', 'DISABLED']);
 
 // hospitalId is deliberately absent: users are always created in the admin's own hospital.
