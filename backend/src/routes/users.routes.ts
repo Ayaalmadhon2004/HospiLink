@@ -4,8 +4,8 @@ import { protect, authorize } from '../middlewares/auth.middleware';
 import { validate } from '../middlewares/validate.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { idParams } from '../validators/common.validator';
-import { inviteUserSchema, approveUserSchema, listUsersQuerySchema } from '../validators/user.validator';
-import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser, resetUserTwoFactor } from '../controllers/users.controller';
+import { inviteUserSchema, approveUserSchema, changeRoleSchema, activateUserSchema, listUsersQuerySchema } from '../validators/user.validator';
+import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser, changeUserRole, activateUser, resetUserTwoFactor } from '../controllers/users.controller';
 
 const router = Router();
 
@@ -17,6 +17,8 @@ router.post('/', validate({ body: inviteUserSchema }), logActivity('INVITE_USER'
 router.put('/:id/approve', validate({ params: idParams, body: approveUserSchema }), logActivity('APPROVE_USER'), approveUser);
 router.put('/:id/reject', validate({ params: idParams }), logActivity('REJECT_USER'), rejectUser);
 router.put('/:id/deactivate', validate({ params: idParams }), logActivity('DEACTIVATE_USER'), deactivateUser);
+router.put('/:id/role', validate({ params: idParams, body: changeRoleSchema }), logActivity('CHANGE_USER_ROLE'), changeUserRole);
+router.put('/:id/activate', validate({ params: idParams, body: activateUserSchema }), logActivity('ACTIVATE_USER'), activateUser);
 router.post('/:id/2fa/reset', validate({ params: idParams }), logActivity('RESET_2FA'), resetUserTwoFactor);
 
 export default router;

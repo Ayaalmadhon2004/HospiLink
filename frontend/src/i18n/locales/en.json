@@ -105,7 +105,8 @@
       "Incidents": "Incidents",
       "Dispatch": "Dispatch",
       "Settings": "Settings",
-      "Audit Log": "Audit Log"
+      "Audit Log": "Audit Log",
+      "Users": "Users"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
@@ -227,7 +228,8 @@
       "UNIT_NOT_FOUND": "Unit not found.",
       "THRESHOLD_NOT_FOUND": "Threshold not found.",
       "FILE_NOT_FOUND": "File not found.",
-      "WARD_HAS_BEDS": "This ward still has beds. Move or delete its beds first."
+      "WARD_HAS_BEDS": "This ward still has beds. Move or delete its beds first.",
+      "LAST_ADMIN": "The hospital must keep at least one active admin."
     }
   },
   "errorBoundary": {
@@ -1011,5 +1013,53 @@
     "total_other": "{{count}} entries",
     "prev": "Previous page",
     "next": "Next page"
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Approve sign-ups, change roles and activate or deactivate accounts",
+    "filter": "Filter by account status",
+    "filters": {
+      "ALL": "All",
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Deactivated"
+    },
+    "loading": "Loading users",
+    "loadFailed": "Could not load users",
+    "empty": "No users in this view",
+    "you": "you",
+    "roleFor": "Role for {{name}}",
+    "cols": {
+      "user": "User",
+      "department": "Department",
+      "role": "Role",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "roles": {
+      "ADMIN": "Admin",
+      "DOCTOR": "Doctor",
+      "NURSE": "Nurse",
+      "DISPATCHER": "Dispatcher"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Deactivated"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "confirmRoleTitle": "Change role?",
+    "confirmRole": "Change {{name}} from {{from}} to {{to}}? They will be signed out everywhere and must sign in again.",
+    "actionFailed": "The action failed",
+    "done": {
+      "approve": "User approved",
+      "reject": "User rejected",
+      "deactivate": "User deactivated",
+      "activate": "User activated",
+      "role": "Role changed"
+    }
   }
 }

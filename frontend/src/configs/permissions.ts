@@ -14,6 +14,7 @@ export const ROUTE_ROLES: Readonly<Record<string, readonly Role[]>> = {
   '/staff': ['ADMIN', 'DOCTOR', 'NURSE'],
   '/dispatch': ['ADMIN', 'DISPATCHER'],
   '/audit-logs': ['ADMIN'],
+  '/users': ['ADMIN'],
 };
 
 export const hasPermission = (role: string | undefined, permission: Permission): boolean =>
