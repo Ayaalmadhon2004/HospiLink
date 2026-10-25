@@ -32,7 +32,7 @@ export const startServer = async (): Promise<RunningServer> => {
   const port = await freePort();
   const child: ChildProcess = spawn(path.join(BACKEND, 'node_modules/.bin/tsx'), ['src/server.ts'], {
     cwd: BACKEND,
-    env: { ...process.env, PORT: String(port), NODE_ENV: 'test', CORS_ORIGINS: ORIGIN, LOG_LEVEL: 'silent' },
+    env: { ...process.env, PORT: String(port), NODE_ENV: 'test', CORS_ORIGINS: ORIGIN, LOG_LEVEL: 'silent', INGEST_RATE_LIMIT_MAX: '6000' /* production default: the in-process suites use a tiny budget */ },
     stdio: ['ignore', 'ignore', 'pipe'],
   });
   let stderr = '';

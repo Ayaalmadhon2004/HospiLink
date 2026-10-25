@@ -13,7 +13,7 @@ The API speaks HTTP only. MLLP (TCP) and MQTT are terminated by a bridge you run
 ADMIN creates one key per device/gateway: `POST /api/devices {"name":"ICU-3 monitor"}` → `{ data: { id, key } }` (**the key is shown once**, only its SHA-256 is stored). `GET /api/devices` lists keys (with `lastUsedAt`), `DELETE /api/devices/:id` revokes. A key is bound to the hospital that created it; stored readings are tagged `recordedBy = device:<keyId>`.
 
 ## Endpoint
-`POST /api/vitals/ingest/:protocol` (rate limited to 600/min per IP, body ≤ 256 kB)
+`POST /api/vitals/ingest/:protocol` (body ≤ 256 kB). Rate limits: **per device key**, 6 000 requests/minute by default (`INGEST_RATE_LIMIT_MAX`), so a gateway carrying 50+ devices is not throttled by its shared IP and one noisy key cannot starve another hospital; rejected requests (wrong key, bad payload) are limited per IP at 60/minute and a limited address is refused entirely for the rest of that minute (a misbehaving device behind the same NAT blocks the good ones briefly). Batch readings (`{readings:[...]}`, up to 100 per request) to stay far below the limit
 
 | protocol | Content-Type | Payload |
 |---|---|---|

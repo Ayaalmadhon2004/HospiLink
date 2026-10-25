@@ -192,3 +192,17 @@ describe('fan-out does not leak through reconnects or repeated joins', () => {
     expect(seen).toHaveLength(0);
   });
 });
+
+describe('device ingestion and the general per-IP API limiter', () => {
+  it('250 ingest requests in a row from one address are all accepted (200/min is the general limit; ingest has its own per-device one)', async () => {
+    const key = (await http(server, 'POST', '/api/devices', A.admin.id, { name: 'burst' })).body.data.key as string;
+    const statuses: number[] = [];
+    for (let batch = 0; batch < 25; batch++) {
+      const results = await Promise.all(
+        Array.from({ length: 10 }, () => http(server, 'POST', '/api/vitals/ingest/json', null, { patientCode: A.patient.patientCode, heartRate: 70 }, { 'x-device-key': key })),
+      );
+      statuses.push(...results.map((r) => r.status));
+    }
+    expect(statuses.filter((s) => s === 201)).toHaveLength(250);
+  }, 60_000);
+});

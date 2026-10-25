@@ -93,8 +93,10 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// General API rate limiter
+// General API rate limiter. Device ingestion is exempt: it has its own failure + per-device-key limiters (routes/vitals.routes.ts),
+// because one hospital gateway carries every bedside device and would exhaust a per-IP budget in seconds.
 const apiLimiter = rateLimit({
+  skip: (req) => req.originalUrl.startsWith('/api/vitals/ingest/'),
   windowMs: 1 * 60 * 1000, // 1 minute
   max: limitFromEnv('API_RATE_LIMIT_MAX', 200), // 200 requests per minute
   message: { success: false, message: 'Too many requests. Please slow down.' },
