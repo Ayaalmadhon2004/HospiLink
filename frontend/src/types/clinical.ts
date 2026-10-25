@@ -19,6 +19,10 @@ export interface Medication {
   form: string;
   strength: string;
   active: boolean;
+  /** Pharmacy (absent in payloads that predate it). */
+  stockQuantity?: number;
+  reorderLevel?: number;
+  unitPriceMinor?: number;
 }
 
 export type PrescriptionStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';

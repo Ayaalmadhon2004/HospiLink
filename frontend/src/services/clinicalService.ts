@@ -21,7 +21,7 @@ export const amendNote = (id: string, content: string) => apiPost(`/clinical-not
 
 // medications
 export const getMedications = (activeOnly = false) => list<Medication>('/medications', activeOnly ? { active: true } : {});
-export const createMedication = (body: { name: string; genericName?: string; form: string; strength: string }) => apiPost('/medications', body);
+export const createMedication = (body: { name: string; genericName?: string; form: string; strength: string; unitPriceMinor?: number; reorderLevel?: number }) => apiPost('/medications', body);
 export const setMedicationActive = (id: string, active: boolean) => apiPut(`/medications/${id}`, { active });
 
 // prescriptions

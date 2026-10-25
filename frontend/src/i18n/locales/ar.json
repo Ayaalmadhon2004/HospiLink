@@ -106,7 +106,9 @@
       "Dispatch": "الإسعاف",
       "Settings": "الإعدادات",
       "Audit Log": "سجل التدقيق",
-      "Users": "المستخدمون"
+      "Users": "المستخدمون",
+      "Pharmacy": "الصيدلية",
+      "Billing": "الفواتير"
     },
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة"
@@ -229,7 +231,10 @@
       "THRESHOLD_NOT_FOUND": "الحد غير موجود.",
       "FILE_NOT_FOUND": "الملف غير موجود.",
       "WARD_HAS_BEDS": "لا يزال في هذا القسم أسرّة. انقل أسرّته أو احذفها أولاً.",
-      "LAST_ADMIN": "يجب أن يبقى في المستشفى مدير نشط واحد على الأقل."
+      "LAST_ADMIN": "يجب أن يبقى في المستشفى مدير نشط واحد على الأقل.",
+      "INSUFFICIENT_STOCK": "لا توجد كمية كافية في المخزون.",
+      "INVOICE_NOT_EDITABLE": "يمكن تعديل الفاتورة المسودة فقط.",
+      "OVERPAYMENT": "الفاتورة غير مفتوحة للدفع، أو أن المبلغ أكبر من الرصيد المستحق."
     }
   },
   "errorBoundary": {
@@ -358,7 +363,11 @@
       "form": "الشكل",
       "formPlaceholder": "أقراص، حقن...",
       "strength": "التركيز",
-      "strengthPlaceholder": "مثال: 500 ملغ"
+      "strengthPlaceholder": "مثال: 500 ملغ",
+      "unitPrice": "سعر الوحدة",
+      "unitPricePlaceholder": "مثال: 2.50",
+      "reorderLevel": "حد إعادة الطلب",
+      "reorderHint": "المخزون عند هذا الحد أو أقل يُعرض كمنخفض"
     }
   },
   "patients": {
@@ -1230,5 +1239,95 @@
         "CRITICAL_HIGH": "مرتفع حرج"
       }
     }
+  },
+  "pharmacy": {
+    "title": "الصيدلية",
+    "subtitle": "المخزون المتوفر وصرف الأدوية",
+    "lowOnly": "عرض المخزون المنخفض فقط",
+    "loadFailed": "تعذّر تحميل المخزون",
+    "empty": "لا توجد أدوية للعرض",
+    "low": "منخفض",
+    "cols": {
+      "medication": "الدواء",
+      "onHand": "المتوفر",
+      "reorder": "حد إعادة الطلب",
+      "price": "سعر الوحدة"
+    },
+    "receive": "استلام",
+    "adjust": "تعديل",
+    "receiveTitle": "استلام مخزون: {{name}}",
+    "adjustTitle": "تعديل المخزون: {{name}}",
+    "onHand": "المتوفر حاليًا: {{qty}}",
+    "quantity": "الوحدات المستلمة",
+    "change": "التغيير (وحدات)",
+    "changeHint": "استخدم رقمًا سالبًا لإنقاص المخزون (تلف، انتهاء صلاحية، تصحيح جرد).",
+    "noteOptional": "ملاحظة (اختياري)",
+    "reason": "السبب",
+    "save": "حفظ",
+    "saveFailed": "تعذّر تحديث المخزون",
+    "dispense": "صرف",
+    "dispenseTitle": "صرف {{name}}",
+    "dispenseFailed": "تعذّر الصرف",
+    "unitsToDispense": "عدد الوحدات المصروفة"
+  },
+  "billing": {
+    "title": "الفواتير",
+    "subtitle": "الفواتير والمدفوعات",
+    "new": "فاتورة جديدة",
+    "filter": "تصفية حسب حالة الفاتورة",
+    "loadFailed": "تعذّر تحميل بيانات الفواتير",
+    "empty": "لا توجد فواتير بعد",
+    "draft": "مسودة",
+    "back": "كل الفواتير",
+    "issue": "إصدار الفاتورة",
+    "void": "إلغاء",
+    "confirmIssueTitle": "إصدار هذه الفاتورة؟",
+    "confirmIssue": "ستحصل على رقم فاتورة ولن يمكن تعديلها بعد ذلك.",
+    "confirmVoidTitle": "إلغاء هذه الفاتورة؟",
+    "confirmVoid": "ستُلغى الفاتورة، ويمكن فوترة الأدوية المصروفة عليها من جديد.",
+    "lines": "البنود",
+    "noLines": "لا توجد بنود بعد",
+    "cols": {
+      "number": "الفاتورة",
+      "patient": "المريض",
+      "status": "الحالة",
+      "total": "الإجمالي",
+      "paid": "المدفوع",
+      "date": "التاريخ",
+      "description": "الوصف",
+      "quantity": "الكمية",
+      "unitPrice": "سعر الوحدة"
+    },
+    "removeLine": "إزالة {{name}}",
+    "subtotal": "المجموع الفرعي",
+    "discount": "الخصم",
+    "total": "الإجمالي",
+    "addLine": "إضافة بند",
+    "applyDiscount": "تطبيق الخصم",
+    "payments": "المدفوعات",
+    "paidOf": "مدفوع {{paid}} من {{total}}",
+    "balance": "الرصيد {{amount}}",
+    "amount": "المبلغ",
+    "method": "الطريقة",
+    "reference": "المرجع",
+    "recordPayment": "تسجيل دفعة",
+    "methods": {
+      "CASH": "نقدًا",
+      "CARD": "بطاقة",
+      "INSURANCE": "تأمين",
+      "TRANSFER": "تحويل بنكي"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "ISSUED": "صادرة",
+      "PAID": "مدفوعة",
+      "VOID": "ملغاة"
+    },
+    "patient": "المريض",
+    "selectPatient": "اختر مريضًا",
+    "includeDispensations": "إضافة الأدوية المصروفة للمريض وغير المفوترة",
+    "create": "إنشاء مسودة",
+    "createFailed": "تعذّر إنشاء الفاتورة",
+    "actionFailed": "فشل الإجراء"
   }
 }

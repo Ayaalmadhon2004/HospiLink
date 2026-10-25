@@ -5,10 +5,12 @@ import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 import { PrescriptionModal } from './PrescriptionModal';
 import { MedicationCatalogModal } from './MedicationCatalogModal';
+import { DispenseModal } from '../Pharmacy/DispenseModal';
 import { useAuthPermissions } from '../../hooks/useAuthPermissions';
 import { clinicalKeys, getPrescriptions, closePrescription } from '../../services/clinicalService';
 import { getErrorMessage } from '../../types/api';
 import { formatDateTime } from '../../utils/datetime';
+import type { PrescriptionItem } from '../../types/clinical';
 
 const STATUS_STYLE = {
   ACTIVE: 'bg-emerald-50 text-emerald-800',
@@ -22,6 +24,7 @@ export const PrescriptionsTab = ({ patientId }: { patientId: string }) => {
   const { can } = useAuthPermissions();
   const [creating, setCreating] = useState(false);
   const [catalog, setCatalog] = useState(false);
+  const [dispensing, setDispensing] = useState<PrescriptionItem | null>(null);
   const { data: list = [], isPending } = useQuery({ queryKey: clinicalKeys.prescriptions(patientId), queryFn: () => getPrescriptions(patientId) });
   const refresh = () => queryClient.invalidateQueries({ queryKey: clinicalKeys.prescriptions(patientId) });
 
@@ -58,6 +61,9 @@ export const PrescriptionsTab = ({ patientId }: { patientId: string }) => {
                     <span className="font-medium">{i.medication.name} {i.medication.strength}</span> ({i.medication.form}) — {i.dose}, {i.frequency}
                     {i.route && `, ${i.route}`}{i.durationDays && `, ${t('clinical.rx.forDays', { count: i.durationDays })}`}
                     {i.instructions && <span className="text-gray-500"> · {i.instructions}</span>}
+                    {rx.status === 'ACTIVE' && can('pharmacy:dispense') && (
+                      <button className="ms-2 text-blue-700 underline" onClick={() => setDispensing(i)}>{t('pharmacy.dispense')}</button>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -74,6 +80,7 @@ export const PrescriptionsTab = ({ patientId }: { patientId: string }) => {
       )}
       {creating && <PrescriptionModal patientId={patientId} onClose={() => setCreating(false)} onSaved={refresh} />}
       {catalog && <MedicationCatalogModal onClose={() => setCatalog(false)} />}
+      {dispensing && <DispenseModal item={dispensing} onClose={() => setDispensing(null)} onDone={() => queryClient.invalidateQueries({ queryKey: ['pharmacy'] })} />}
     </div>
   );
 };

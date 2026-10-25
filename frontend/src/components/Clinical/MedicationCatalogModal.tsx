@@ -8,6 +8,7 @@ import { FormModal } from '../Form';
 import { medicationFields, type MedicationFormValues } from '../../configs/entityConfigs';
 import { clinicalKeys, getMedications, createMedication, setMedicationActive } from '../../services/clinicalService';
 import { getErrorMessage } from '../../types/api';
+import { MINOR_PER_MAJOR, formatMoney } from '../../utils/money';
 
 /** Hospital drug catalogue: add medications and retire them (no delete: prescriptions keep pointing at them). */
 export const MedicationCatalogModal = ({ onClose }: { onClose: () => void }) => {
@@ -37,7 +38,7 @@ export const MedicationCatalogModal = ({ onClose }: { onClose: () => void }) => 
         <ul className="divide-y divide-slate-100">
           {meds.map((m) => (
             <li key={m.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-              <span className={m.active ? '' : 'text-gray-400 line-through'}>{m.name} · {m.form} · {m.strength}</span>
+              <span className={m.active ? '' : 'text-gray-400 line-through'}>{m.name} · {m.form} · {m.strength}{m.unitPriceMinor ? ` · ${formatMoney(m.unitPriceMinor)}` : ''}</span>
               <button className="text-blue-700 underline shrink-0" onClick={() => toggle(m.id, !m.active)}>
                 {m.active ? t('clinical.medications.retire') : t('clinical.medications.restore')}
               </button>
@@ -50,7 +51,15 @@ export const MedicationCatalogModal = ({ onClose }: { onClose: () => void }) => 
             onClose={() => setAdding(false)}
             title={t('clinical.medications.add')}
             fields={medicationFields}
-            onSubmit={async (v) => { await createMedication(v); await refresh(); }}
+            onSubmit={async (v) => {
+              const { unitPrice, reorderLevel, ...rest } = v;
+              await createMedication({
+                ...rest,
+                unitPriceMinor: unitPrice ? Math.round(Number(unitPrice) * MINOR_PER_MAJOR) : undefined,
+                reorderLevel: reorderLevel ? Number(reorderLevel) : undefined,
+              });
+              await refresh();
+            }}
             submitLabel={t('clinical.medications.add')}
             submittingLabel={t('common.saving')}
           />

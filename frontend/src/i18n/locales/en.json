@@ -106,7 +106,9 @@
       "Dispatch": "Dispatch",
       "Settings": "Settings",
       "Audit Log": "Audit Log",
-      "Users": "Users"
+      "Users": "Users",
+      "Pharmacy": "Pharmacy",
+      "Billing": "Billing"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
@@ -229,7 +231,10 @@
       "THRESHOLD_NOT_FOUND": "Threshold not found.",
       "FILE_NOT_FOUND": "File not found.",
       "WARD_HAS_BEDS": "This ward still has beds. Move or delete its beds first.",
-      "LAST_ADMIN": "The hospital must keep at least one active admin."
+      "LAST_ADMIN": "The hospital must keep at least one active admin.",
+      "INSUFFICIENT_STOCK": "Not enough stock on hand.",
+      "INVOICE_NOT_EDITABLE": "Only a draft invoice can be changed.",
+      "OVERPAYMENT": "The invoice is not open for payment, or the amount is more than the balance."
     }
   },
   "errorBoundary": {
@@ -358,7 +363,11 @@
       "form": "Form",
       "formPlaceholder": "tablet, injection...",
       "strength": "Strength",
-      "strengthPlaceholder": "e.g. 500 mg"
+      "strengthPlaceholder": "e.g. 500 mg",
+      "unitPrice": "Unit price",
+      "unitPricePlaceholder": "e.g. 2.50",
+      "reorderLevel": "Reorder level",
+      "reorderHint": "Stock at or below this is flagged as low"
     }
   },
   "patients": {
@@ -1182,5 +1191,95 @@
         "CRITICAL_HIGH": "Critical high"
       }
     }
+  },
+  "pharmacy": {
+    "title": "Pharmacy",
+    "subtitle": "Stock on hand and dispensing",
+    "lowOnly": "Show low stock only",
+    "loadFailed": "Could not load the stock",
+    "empty": "No medications to show",
+    "low": "Low",
+    "cols": {
+      "medication": "Medication",
+      "onHand": "On hand",
+      "reorder": "Reorder level",
+      "price": "Unit price"
+    },
+    "receive": "Receive",
+    "adjust": "Adjust",
+    "receiveTitle": "Receive stock: {{name}}",
+    "adjustTitle": "Adjust stock: {{name}}",
+    "onHand": "Currently on hand: {{qty}}",
+    "quantity": "Units received",
+    "change": "Change (units)",
+    "changeHint": "Use a negative number to remove stock (damage, expiry, count correction).",
+    "noteOptional": "Note (optional)",
+    "reason": "Reason",
+    "save": "Save",
+    "saveFailed": "Could not update the stock",
+    "dispense": "Dispense",
+    "dispenseTitle": "Dispense {{name}}",
+    "dispenseFailed": "Could not dispense",
+    "unitsToDispense": "Units to dispense"
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Invoices and payments",
+    "new": "New invoice",
+    "filter": "Filter by invoice status",
+    "loadFailed": "Could not load billing data",
+    "empty": "No invoices yet",
+    "draft": "Draft",
+    "back": "All invoices",
+    "issue": "Issue invoice",
+    "void": "Void",
+    "confirmIssueTitle": "Issue this invoice?",
+    "confirmIssue": "It receives its invoice number and can no longer be edited.",
+    "confirmVoidTitle": "Void this invoice?",
+    "confirmVoid": "The invoice is cancelled. Dispensed medications on it can be billed again.",
+    "lines": "Items",
+    "noLines": "No items yet",
+    "cols": {
+      "number": "Invoice",
+      "patient": "Patient",
+      "status": "Status",
+      "total": "Total",
+      "paid": "Paid",
+      "date": "Date",
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price"
+    },
+    "removeLine": "Remove {{name}}",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "total": "Total",
+    "addLine": "Add item",
+    "applyDiscount": "Apply discount",
+    "payments": "Payments",
+    "paidOf": "Paid {{paid}} of {{total}}",
+    "balance": "Balance {{amount}}",
+    "amount": "Amount",
+    "method": "Method",
+    "reference": "Reference",
+    "recordPayment": "Record payment",
+    "methods": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "INSURANCE": "Insurance",
+      "TRANSFER": "Bank transfer"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "PAID": "Paid",
+      "VOID": "Void"
+    },
+    "patient": "Patient",
+    "selectPatient": "Select a patient",
+    "includeDispensations": "Add the patient's unbilled dispensed medications",
+    "create": "Create draft",
+    "createFailed": "Could not create the invoice",
+    "actionFailed": "The action failed"
   }
 }

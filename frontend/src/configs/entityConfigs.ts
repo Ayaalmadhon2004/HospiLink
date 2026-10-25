@@ -317,10 +317,15 @@ export interface MedicationFormValues {
   genericName?: string;
   form: string;
   strength: string;
+  /** Major units as typed ("2.50"); converted to minor units on submit. */
+  unitPrice?: string;
+  reorderLevel?: string;
 }
 export const medicationFields: FieldConfig<MedicationFormValues>[] = [
   { name: 'name', label: 'forms.medication.name', type: 'text', required: true, colSpan: 1 },
   { name: 'genericName', label: 'forms.medication.genericName', type: 'text', colSpan: 1 },
   { name: 'form', label: 'forms.medication.form', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.formPlaceholder' },
   { name: 'strength', label: 'forms.medication.strength', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.strengthPlaceholder' },
+  { name: 'unitPrice', label: 'forms.medication.unitPrice', type: 'number', colSpan: 1, placeholder: 'forms.medication.unitPricePlaceholder' },
+  { name: 'reorderLevel', label: 'forms.medication.reorderLevel', type: 'number', colSpan: 1, helperText: 'forms.medication.reorderHint' },
 ];
