@@ -1,4 +1,5 @@
-import { Router } from 'express';
+import express, { Router } from 'express';
+import rateLimit from 'express-rate-limit';
 import {
   recordVitals,
   getVitals,
@@ -10,6 +11,9 @@ import {
   upsertThreshold,
   deleteThreshold,
 } from '../controllers/vitals.controller';
+import { ingestVitals } from '../controllers/devices.controller';
+import { deviceAuth } from '../middlewares/deviceAuth.middleware';
+import { ingestParams } from '../validators/devices.validator';
 import { protect, authorize } from '../middlewares/auth.middleware';
 import { logActivity } from '../middlewares/audit.middleware';
 import { validate } from '../middlewares/validate.middleware';
@@ -17,6 +21,18 @@ import { idParams } from '../validators/common.validator';
 import { recordVitalsSchema, updateVitalsSchema, vitalsQuerySchema, vitalsAlertsQuerySchema, upsertThresholdSchema, thresholdsQuerySchema } from '../validators/vitals.validator';
 
 const router = Router();
+
+// Device ingestion (HL7 v2 / FHIR / JSON). Declared before the `/:id` routes; authenticated by x-device-key, not a user.
+const ingestLimiter = rateLimit({ windowMs: 60 * 1000, max: 600, standardHeaders: true, legacyHeaders: false, message: { success: false, message: 'Too many readings. Slow down.' } });
+router.post(
+  '/ingest/:protocol',
+  ingestLimiter,
+  express.text({ type: ['text/plain', 'x-application/hl7-v2+er7'], limit: '256kb' }),
+  express.json({ type: ['application/json', 'application/fhir+json'], limit: '256kb' }),
+  validate({ params: ingestParams }),
+  deviceAuth,
+  ingestVitals
+);
 
 router.post(
   '/',

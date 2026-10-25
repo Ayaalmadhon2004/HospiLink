@@ -25,6 +25,7 @@ model Hospital {
   dispatchUnits DispatchUnit[]
   dispatchCalls DispatchCall[]
   vitalThresholds VitalThresholds[]
+  deviceKeys DeviceKey[]
 }
 
 model User {
@@ -233,6 +234,21 @@ model VitalThresholds {
   hospital     Hospital @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
 
   @@unique([hospitalId, department, vitalType])
+  @@index([hospitalId])
+}
+
+// Credential of a medical device / gateway / MQTT bridge that pushes readings to POST /api/vitals/ingest/:protocol.
+// Only the SHA-256 of the key is stored (keys are 256-bit random, so a fast hash is enough); the key is shown once on creation.
+model DeviceKey {
+  id         String    @id @default(uuid())
+  hospitalId String
+  name       String
+  keyHash    String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
   @@index([hospitalId])
 }
 
