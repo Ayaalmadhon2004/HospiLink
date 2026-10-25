@@ -6,14 +6,20 @@ import type { VitePWAOptions } from 'vite-plugin-pwa';
 export const pwaOptions: Partial<VitePWAOptions> = {
   registerType: 'autoUpdate',
   injectRegister: false, // registered manually in src/pwa.ts (production only)
-  includeAssets: ['favicon.svg', 'icons/apple-touch-icon.png'],
+  includeAssets: ['favicon.svg', 'icons/favicon-32.png', 'icons/favicon-48.png', 'icons/apple-touch-icon.png'],
   manifest: {
     name: 'HospiLink',
     short_name: 'HospiLink',
-    description: 'Hospital operations dashboard for authorized staff.',
+    description:
+      'HospiLink is a hospital operations dashboard for authorized staff: patients, beds, appointments, vitals and incidents.',
+    id: '/',
     start_url: '/',
     scope: '/',
     display: 'standalone',
+    orientation: 'any',
+    lang: 'en',
+    dir: 'ltr', // default language is English; the UI itself flips to RTL for Arabic
+    categories: ['medical', 'business', 'productivity'],
     theme_color: '#0b3c34',
     background_color: '#ffffff',
     icons: [
@@ -21,6 +27,10 @@ export const pwaOptions: Partial<VitePWAOptions> = {
       { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
       { src: '/icons/maskable-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
       { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+    ],
+    shortcuts: [
+      { name: 'Patients', short_name: 'Patients', url: '/patients', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
+      { name: 'Appointments', short_name: 'Appts', url: '/appointments', icons: [{ src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }] },
     ],
   },
   workbox: {

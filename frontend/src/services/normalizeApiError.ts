@@ -12,6 +12,9 @@ interface ApiErrorBody {
 // 403 answers that the login page reacts to: keep the server's own reason instead of the generic "forbidden".
 const ACCOUNT_CODES = new Set(['ACCOUNT_PENDING', 'ACCOUNT_DISABLED', 'EMAIL_NOT_VERIFIED']);
 
+// Generic codes whose server message carries the useful detail (which field, which rule): keep it, the locale text is the fallback.
+const DETAIL_CODES = new Set(['VALIDATION_ERROR', 'CONFLICT']);
+
 const HTTP_SERVER_ERROR = 500;
 const HTTP_FORBIDDEN = 403;
 
@@ -38,5 +41,7 @@ export const toApiError = (error: unknown): ApiError => {
   if (status !== undefined && status >= HTTP_SERVER_ERROR) {
     return new ApiError(i18n.t('errors.server'), { code, status });
   }
-  return new ApiError(translated || serverMessage || error.message, { code, status });
+  const preferServer = code !== undefined && DETAIL_CODES.has(code);
+  const text = preferServer ? serverMessage || translated : translated || serverMessage;
+  return new ApiError(text || error.message, { code, status });
 };

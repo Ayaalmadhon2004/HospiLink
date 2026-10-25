@@ -104,7 +104,11 @@
       "Vitals Monitor": "مراقبة العلامات الحيوية",
       "Incidents": "الحوادث",
       "Dispatch": "الإسعاف",
-      "Settings": "الإعدادات"
+      "Settings": "الإعدادات",
+      "Audit Log": "سجل التدقيق",
+      "Users": "المستخدمون",
+      "Pharmacy": "الصيدلية",
+      "Billing": "الفواتير"
     },
     "openMenu": "فتح القائمة",
     "closeMenu": "إغلاق القائمة"
@@ -206,6 +210,7 @@
     "updateFailed": "تعذّر تحديث {{item}}"
   },
   "errors": {
+    "unexpectedError": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
     "forbidden": "ليس لديك صلاحية لتنفيذ هذا الإجراء.",
     "server": "خطأ في الخادم. يرجى المحاولة مرة أخرى لاحقاً.",
     "codes": {
@@ -225,7 +230,20 @@
       "DOCTOR_NOT_FOUND": "الطبيب غير موجود.",
       "UNIT_NOT_FOUND": "الوحدة غير موجودة.",
       "THRESHOLD_NOT_FOUND": "الحد غير موجود.",
-      "FILE_NOT_FOUND": "الملف غير موجود."
+      "FILE_NOT_FOUND": "الملف غير موجود.",
+      "WARD_HAS_BEDS": "لا يزال في هذا القسم أسرّة. انقل أسرّته أو احذفها أولاً.",
+      "LAST_ADMIN": "يجب أن يبقى في المستشفى مدير نشط واحد على الأقل.",
+      "INSUFFICIENT_STOCK": "لا توجد كمية كافية في المخزون.",
+      "INVOICE_NOT_EDITABLE": "يمكن تعديل الفاتورة المسودة فقط.",
+      "OVERPAYMENT": "الفاتورة غير مفتوحة للدفع، أو أن المبلغ أكبر من الرصيد المستحق.",
+      "VALIDATION_ERROR": "البيانات المدخلة غير صالحة. يرجى مراجعتها والمحاولة مجددًا.",
+      "UNAUTHORIZED": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مجددًا.",
+      "FORBIDDEN": "ليست لديك صلاحية لتنفيذ هذا الإجراء.",
+      "NOT_FOUND": "العنصر المطلوب غير موجود.",
+      "CONFLICT": "يتعارض هذا الإجراء مع الحالة الحالية. حدّث الصفحة وحاول مجددًا.",
+      "INTERNAL_ERROR": "حدث خطأ من جهتنا. يرجى المحاولة مرة أخرى.",
+      "TWO_FACTOR_LOCKED": "تم إدخال رموز خاطئة كثيرًا. المصادقة الثنائية مقفلة لمدة 15 دقيقة.",
+      "EXPORT_TOO_LARGE": "يتجاوز التصدير 10000 صف. قلّص النطاق الزمني وحاول مجددًا."
     }
   },
   "errorBoundary": {
@@ -327,6 +345,38 @@
       "reportedByPlaceholder": "اسم الموظف",
       "description": "الوصف",
       "descriptionPlaceholder": "صف الحادثة بالتفصيل..."
+    },
+    "ward": {
+      "name": "اسم القسم",
+      "namePlaceholder": "مثال: القلبية",
+      "floor": "الطابق",
+      "floorPlaceholder": "مثال: 2"
+    },
+    "note": {
+      "type": "نوع الملاحظة",
+      "content": "الملاحظة",
+      "contentPlaceholder": "اكتب الملاحظة السريرية...",
+      "correctedContent": "الملاحظة المصحّحة",
+      "amendHint": "تبقى النسخة الأصلية محفوظة، ويُحفظ تصحيحك كنسخة جديدة."
+    },
+    "labOrder": {
+      "testName": "الفحص",
+      "testNamePlaceholder": "مثال: تعداد دم كامل",
+      "testCode": "الرمز",
+      "priority": "الأولوية",
+      "notes": "ملاحظات"
+    },
+    "medication": {
+      "name": "الاسم",
+      "genericName": "الاسم العلمي",
+      "form": "الشكل",
+      "formPlaceholder": "أقراص، حقن...",
+      "strength": "التركيز",
+      "strengthPlaceholder": "مثال: 500 ملغ",
+      "unitPrice": "سعر الوحدة",
+      "unitPricePlaceholder": "مثال: 2.50",
+      "reorderLevel": "حد إعادة الطلب",
+      "reorderHint": "المخزون عند هذا الحد أو أقل يُعرض كمنخفض"
     }
   },
   "patients": {
@@ -987,6 +1037,434 @@
       "chartBP": "ضغط الدم (ملم زئبق)",
       "chartSpO2": "تشبّع الأكسجين SpO2 (%)",
       "chartTemperature": "درجة الحرارة (°م)"
+    }
+  },
+  "wards": {
+    "title": "الأقسام",
+    "subtitle": "إدارة الأقسام التي تنتمي إليها الأسرّة",
+    "itemName": "القسم",
+    "itemType": "القسم",
+    "add": "إضافة قسم",
+    "empty": "لا توجد أقسام بعد",
+    "floor": "الطابق {{floor}}",
+    "bedCount_zero": "لا أسرّة",
+    "bedCount_one": "سرير واحد",
+    "bedCount_two": "سريران",
+    "bedCount_few": "{{count}} أسرّة",
+    "bedCount_many": "{{count}} سريرًا",
+    "bedCount_other": "{{count}} سرير",
+    "edit": "تعديل القسم {{name}}",
+    "delete": "حذف القسم {{name}}",
+    "hasBeds": "أزل أسرّته أو انقلها قبل الحذف",
+    "modalAdd": "إضافة قسم",
+    "modalEdit": "تعديل القسم",
+    "modalAddSubtitle": "أنشئ قسمًا لأسرّتك",
+    "modalEditSubtitle": "غيّر اسم القسم أو طابقه",
+    "save": "حفظ التغييرات",
+    "created": "تم إنشاء القسم",
+    "updated": "تم تحديث القسم"
+  },
+  "audit": {
+    "title": "سجل التدقيق",
+    "subtitle": "من فعل ماذا ومتى. للقراءة فقط.",
+    "filters": {
+      "action": "الإجراء",
+      "allActions": "كل الإجراءات",
+      "from": "من",
+      "to": "إلى",
+      "entityId": "معرّف الكيان",
+      "entityPlaceholder": "معرّف مريض أو سرير أو قسم...",
+      "reset": "إعادة ضبط الفلاتر"
+    },
+    "cols": {
+      "time": "الوقت",
+      "user": "المستخدم",
+      "action": "الإجراء",
+      "entity": "الكيان",
+      "details": "التفاصيل"
+    },
+    "deletedUser": "مستخدم محذوف",
+    "empty": "لا يوجد نشاط يطابق هذه الفلاتر",
+    "loading": "جارٍ تحميل سجل التدقيق",
+    "loadFailed": "تعذّر تحميل سجل التدقيق",
+    "retry": "إعادة المحاولة",
+    "page": "الصفحة {{page}} من {{total}}",
+    "total_zero": "لا إدخالات",
+    "total_one": "إدخال واحد",
+    "total_two": "إدخالان",
+    "total_few": "{{count}} إدخالات",
+    "total_many": "{{count}} إدخالًا",
+    "total_other": "{{count}} إدخال",
+    "prev": "الصفحة السابقة",
+    "next": "الصفحة التالية"
+  },
+  "users": {
+    "title": "إدارة المستخدمين",
+    "subtitle": "اعتمد طلبات التسجيل، غيّر الأدوار، وفعّل الحسابات أو عطّلها",
+    "filter": "تصفية حسب حالة الحساب",
+    "filters": {
+      "ALL": "الكل",
+      "PENDING": "قيد الانتظار",
+      "ACTIVE": "نشط",
+      "DISABLED": "معطّل"
+    },
+    "loading": "جارٍ تحميل المستخدمين",
+    "loadFailed": "تعذّر تحميل المستخدمين",
+    "empty": "لا يوجد مستخدمون في هذا العرض",
+    "you": "أنت",
+    "roleFor": "دور {{name}}",
+    "cols": {
+      "user": "المستخدم",
+      "department": "القسم",
+      "role": "الدور",
+      "status": "الحالة",
+      "actions": "الإجراءات"
+    },
+    "roles": {
+      "ADMIN": "مدير",
+      "DOCTOR": "طبيب",
+      "NURSE": "ممرض",
+      "DISPATCHER": "مُرسِل"
+    },
+    "status": {
+      "PENDING": "قيد الانتظار",
+      "ACTIVE": "نشط",
+      "DISABLED": "معطّل"
+    },
+    "approve": "اعتماد",
+    "reject": "رفض",
+    "activate": "تفعيل",
+    "deactivate": "تعطيل",
+    "confirmRoleTitle": "تغيير الدور؟",
+    "confirmRole": "تغيير دور {{name}} من {{from}} إلى {{to}}؟ سيتم تسجيل خروجه من كل الأجهزة وعليه تسجيل الدخول من جديد.",
+    "actionFailed": "فشل الإجراء",
+    "done": {
+      "approve": "تم اعتماد المستخدم",
+      "reject": "تم رفض المستخدم",
+      "deactivate": "تم تعطيل المستخدم",
+      "activate": "تم تفعيل المستخدم",
+      "role": "تم تغيير الدور"
+    }
+  },
+  "clinical": {
+    "title": "السجلات السريرية",
+    "tabs": {
+      "notes": "الملاحظات",
+      "prescriptions": "الوصفات",
+      "labs": "نتائج المختبر"
+    },
+    "noteTypes": {
+      "PROGRESS": "متابعة",
+      "ADMISSION": "إدخال",
+      "CONSULTATION": "استشارة",
+      "DISCHARGE": "خروج",
+      "NURSING": "تمريضية"
+    },
+    "priority": {
+      "ROUTINE": "عادي",
+      "URGENT": "عاجل",
+      "STAT": "فوري"
+    },
+    "notes": {
+      "add": "إضافة ملاحظة",
+      "empty": "لا توجد ملاحظات بعد",
+      "amended": "معدّلة",
+      "amend": "تعديل",
+      "history": "النسخ السابقة",
+      "save": "حفظ الملاحظة",
+      "saveAmendment": "حفظ التعديل"
+    },
+    "medications": {
+      "title": "قائمة الأدوية",
+      "manage": "قائمة الأدوية",
+      "add": "إضافة دواء",
+      "retire": "إيقاف",
+      "restore": "استعادة",
+      "updateFailed": "تعذّر تحديث الدواء"
+    },
+    "rx": {
+      "add": "وصفة جديدة",
+      "empty": "لا توجد وصفات بعد",
+      "item": "البند {{n}}",
+      "medication": "الدواء",
+      "dose": "الجرعة",
+      "frequency": "التكرار",
+      "route": "طريقة الإعطاء",
+      "days": "الأيام",
+      "instructions": "التعليمات",
+      "removeItem": "إزالة البند",
+      "addItem": "إضافة دواء آخر",
+      "notes": "ملاحظات",
+      "save": "حفظ الوصفة",
+      "saveFailed": "تعذّر حفظ الوصفة",
+      "closeFailed": "تعذّر تحديث الوصفة",
+      "complete": "تمييز كمكتملة",
+      "cancel": "إلغاء الوصفة",
+      "forDays_zero": "لمدة {{count}} يوم",
+      "forDays_one": "لمدة يوم واحد",
+      "forDays_two": "لمدة يومين",
+      "forDays_few": "لمدة {{count}} أيام",
+      "forDays_many": "لمدة {{count}} يومًا",
+      "forDays_other": "لمدة {{count}} يوم",
+      "status": {
+        "ACTIVE": "نشطة",
+        "COMPLETED": "مكتملة",
+        "CANCELLED": "ملغاة"
+      }
+    },
+    "labs": {
+      "order": "طلب فحص مخبري",
+      "empty": "لا توجد طلبات مخبرية بعد",
+      "enterResults": "إدخال النتائج: {{test}}",
+      "flagHint": "تُحسب العلامات (منخفض، مرتفع، حرج) من الحدود التي تدخلها.",
+      "saveFailed": "تعذّر حفظ النتائج",
+      "cancelFailed": "تعذّر إلغاء الطلب",
+      "analyteN": "النتيجة {{n}}",
+      "addAnalyte": "إضافة نتيجة أخرى",
+      "saveResults": "حفظ النتائج",
+      "enter": "إدخال النتائج",
+      "cancel": "إلغاء الطلب",
+      "reference": "المرجع",
+      "flag": "العلامة",
+      "status": {
+        "ORDERED": "بانتظار النتائج",
+        "RESULTED": "ظهرت النتائج",
+        "CANCELLED": "ملغى"
+      },
+      "fields": {
+        "analyte": "الفحص",
+        "value": "القيمة",
+        "unit": "الوحدة",
+        "refLow": "الطبيعي من",
+        "refHigh": "الطبيعي إلى",
+        "criticalLow": "حرج دون",
+        "criticalHigh": "حرج فوق"
+      },
+      "flags": {
+        "NORMAL": "طبيعي",
+        "LOW": "منخفض",
+        "HIGH": "مرتفع",
+        "CRITICAL_LOW": "منخفض حرج",
+        "CRITICAL_HIGH": "مرتفع حرج"
+      }
+    }
+  },
+  "pharmacy": {
+    "title": "الصيدلية",
+    "subtitle": "المخزون المتوفر وصرف الأدوية",
+    "lowOnly": "عرض المخزون المنخفض فقط",
+    "loadFailed": "تعذّر تحميل المخزون",
+    "empty": "لا توجد أدوية للعرض",
+    "low": "منخفض",
+    "cols": {
+      "medication": "الدواء",
+      "onHand": "المتوفر",
+      "reorder": "حد إعادة الطلب",
+      "price": "سعر الوحدة"
+    },
+    "receive": "استلام",
+    "adjust": "تعديل",
+    "receiveTitle": "استلام مخزون: {{name}}",
+    "adjustTitle": "تعديل المخزون: {{name}}",
+    "onHand": "المتوفر حاليًا: {{qty}}",
+    "quantity": "الوحدات المستلمة",
+    "change": "التغيير (وحدات)",
+    "changeHint": "استخدم رقمًا سالبًا لإنقاص المخزون (تلف، انتهاء صلاحية، تصحيح جرد).",
+    "noteOptional": "ملاحظة (اختياري)",
+    "reason": "السبب",
+    "save": "حفظ",
+    "saveFailed": "تعذّر تحديث المخزون",
+    "dispense": "صرف",
+    "dispenseTitle": "صرف {{name}}",
+    "dispenseFailed": "تعذّر الصرف",
+    "unitsToDispense": "عدد الوحدات المصروفة"
+  },
+  "billing": {
+    "title": "الفواتير",
+    "subtitle": "الفواتير والمدفوعات",
+    "new": "فاتورة جديدة",
+    "filter": "تصفية حسب حالة الفاتورة",
+    "loadFailed": "تعذّر تحميل بيانات الفواتير",
+    "empty": "لا توجد فواتير بعد",
+    "draft": "مسودة",
+    "back": "كل الفواتير",
+    "issue": "إصدار الفاتورة",
+    "void": "إلغاء",
+    "confirmIssueTitle": "إصدار هذه الفاتورة؟",
+    "confirmIssue": "ستحصل على رقم فاتورة ولن يمكن تعديلها بعد ذلك.",
+    "confirmVoidTitle": "إلغاء هذه الفاتورة؟",
+    "confirmVoid": "ستُلغى الفاتورة، ويمكن فوترة الأدوية المصروفة عليها من جديد.",
+    "lines": "البنود",
+    "noLines": "لا توجد بنود بعد",
+    "cols": {
+      "number": "الفاتورة",
+      "patient": "المريض",
+      "status": "الحالة",
+      "total": "الإجمالي",
+      "paid": "المدفوع",
+      "date": "التاريخ",
+      "description": "الوصف",
+      "quantity": "الكمية",
+      "unitPrice": "سعر الوحدة"
+    },
+    "removeLine": "إزالة {{name}}",
+    "subtotal": "المجموع الفرعي",
+    "discount": "الخصم",
+    "total": "الإجمالي",
+    "addLine": "إضافة بند",
+    "applyDiscount": "تطبيق الخصم",
+    "payments": "المدفوعات",
+    "paidOf": "مدفوع {{paid}} من {{total}}",
+    "balance": "الرصيد {{amount}}",
+    "amount": "المبلغ",
+    "method": "الطريقة",
+    "reference": "المرجع",
+    "recordPayment": "تسجيل دفعة",
+    "methods": {
+      "CASH": "نقدًا",
+      "CARD": "بطاقة",
+      "INSURANCE": "تأمين",
+      "TRANSFER": "تحويل بنكي"
+    },
+    "status": {
+      "DRAFT": "مسودة",
+      "ISSUED": "صادرة",
+      "PAID": "مدفوعة",
+      "VOID": "ملغاة"
+    },
+    "patient": "المريض",
+    "selectPatient": "اختر مريضًا",
+    "includeDispensations": "إضافة الأدوية المصروفة للمريض وغير المفوترة",
+    "create": "إنشاء مسودة",
+    "createFailed": "تعذّر إنشاء الفاتورة",
+    "actionFailed": "فشل الإجراء"
+  },
+  "export": {
+    "button": "تصدير",
+    "title": "تصدير البيانات",
+    "hint": "اختر فترة (اختياري، الافتراضي: آخر 30 يومًا).",
+    "excel": "إكسل",
+    "pdf": "PDF",
+    "preparing": "جارٍ التحضير…",
+    "badRange": "يجب ألا يكون تاريخ \"من\" بعد \"إلى\".",
+    "tooLarge": "عدد الصفوف أكبر من أن يُصدَّر دفعة واحدة. اختر فترة أقصر.",
+    "failed": "فشل التصدير. حاول مرة أخرى."
+  },
+  "enums": {
+    "appointmentStatus": {
+      "SCHEDULED": "مجدول",
+      "CONFIRMED": "مؤكد",
+      "IN_PROGRESS": "قيد التنفيذ",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى",
+      "NO_SHOW": "لم يحضر"
+    },
+    "dutyStatus": {
+      "ON_DUTY": "على رأس العمل",
+      "OFF_DUTY": "خارج الدوام"
+    },
+    "callStatus": {
+      "PENDING": "قيد الانتظار",
+      "ASSIGNED": "مُسنَد",
+      "EN_ROUTE": "في الطريق",
+      "ON_SCENE": "في موقع الحدث",
+      "COMPLETED": "مكتمل",
+      "CANCELLED": "ملغى"
+    },
+    "priority": {
+      "LOW": "منخفضة",
+      "MEDIUM": "متوسطة",
+      "HIGH": "عالية",
+      "CRITICAL": "حرجة"
+    },
+    "stockMovement": {
+      "RECEIVE": "استلام",
+      "DISPENSE": "صرف",
+      "ADJUST": "تعديل"
+    },
+    "authTokenType": {
+      "PASSWORD_RESET": "إعادة تعيين كلمة المرور",
+      "EMAIL_VERIFY": "تأكيد البريد الإلكتروني"
+    },
+    "auditAction": {
+      "2FA_DISABLE": "تعطيل المصادقة الثنائية",
+      "2FA_ENABLE": "تفعيل المصادقة الثنائية",
+      "2FA_RECOVERY_CODES": "إعادة إنشاء رموز الاسترداد",
+      "2FA_SETUP": "بدء إعداد المصادقة الثنائية",
+      "ACTIVATE_USER": "تفعيل مستخدم",
+      "ADD_INVOICE_LINE": "إضافة بند إلى فاتورة",
+      "ADJUST_STOCK": "تعديل المخزون",
+      "ADMIT_PATIENT": "قبول مريض",
+      "AMEND_CLINICAL_NOTE": "تعديل ملاحظة سريرية",
+      "APPROVE_USER": "اعتماد مستخدم",
+      "ASSIGN_CALL": "إسناد بلاغ",
+      "BROADCAST_NOTIFICATION": "بث إشعار",
+      "CANCEL_CALL": "إلغاء بلاغ",
+      "CANCEL_LAB_ORDER": "إلغاء طلب مخبري",
+      "CHANGE_USER_ROLE": "تغيير دور مستخدم",
+      "CLOSE_PRESCRIPTION": "إغلاق وصفة طبية",
+      "COMPLETE_CALL": "إنهاء بلاغ",
+      "CREATE_APPOINTMENT": "إنشاء موعد",
+      "CREATE_CALL": "إنشاء بلاغ",
+      "CREATE_CLINICAL_NOTE": "إنشاء ملاحظة سريرية",
+      "CREATE_DEVICE_KEY": "إنشاء مفتاح جهاز",
+      "CREATE_INCIDENT": "إنشاء حادثة",
+      "CREATE_INVOICE": "إنشاء فاتورة",
+      "CREATE_LAB_ORDER": "إنشاء طلب مخبري",
+      "CREATE_MEDICATION": "إضافة دواء",
+      "CREATE_PRESCRIPTION": "إنشاء وصفة طبية",
+      "CREATE_SHIFT": "إنشاء وردية",
+      "CREATE_STAFF": "إضافة موظف",
+      "CREATE_UNIT": "إضافة وحدة",
+      "CREATE_WARD": "إضافة جناح",
+      "DEACTIVATE_USER": "تعطيل مستخدم",
+      "DELETE_APPOINTMENT": "حذف موعد",
+      "DELETE_INCIDENT": "حذف حادثة",
+      "DELETE_PATIENT": "حذف مريض",
+      "DELETE_SHIFT": "حذف وردية",
+      "DELETE_STAFF": "حذف موظف",
+      "DELETE_UNIT": "حذف وحدة",
+      "DELETE_VITALS": "حذف قراءة علامات حيوية",
+      "DELETE_VITAL_THRESHOLD": "حذف حد علامة حيوية",
+      "DELETE_WARD": "حذف جناح",
+      "DISCHARGE_PATIENT": "إخراج مريض",
+      "DISPENSE_MEDICATION": "صرف دواء",
+      "EXPORT_DATA": "تصدير بيانات",
+      "INVITE_USER": "دعوة مستخدم",
+      "ISSUE_INVOICE": "إصدار فاتورة",
+      "LINK_STAFF_LOGIN": "ربط حساب دخول بموظف",
+      "LIST_PATIENTS": "عرض قائمة المرضى",
+      "RECEIVE_STOCK": "استلام مخزون",
+      "RECORD_PAYMENT": "تسجيل دفعة",
+      "RECORD_VITALS": "تسجيل علامات حيوية",
+      "REJECT_USER": "رفض مستخدم",
+      "REMOVE_INVOICE_LINE": "حذف بند من فاتورة",
+      "RESET_2FA": "إعادة ضبط المصادقة الثنائية",
+      "REVOKE_DEVICE_KEY": "إلغاء مفتاح جهاز",
+      "SET_INVOICE_DISCOUNT": "تحديد خصم الفاتورة",
+      "SUBMIT_LAB_RESULTS": "إدخال نتائج مخبرية",
+      "UPDATE_APPOINTMENT": "تحديث موعد",
+      "UPDATE_DISPLAY": "تحديث إعدادات العرض",
+      "UPDATE_HOSPITAL": "تحديث إعدادات المستشفى",
+      "UPDATE_INCIDENT": "تحديث حادثة",
+      "UPDATE_INCIDENT_STATUS": "تحديث حالة حادثة",
+      "UPDATE_MEDICATION": "تحديث دواء",
+      "UPDATE_NOTIFICATIONS": "تحديث إعدادات الإشعارات",
+      "UPDATE_PATIENT": "تحديث بيانات مريض",
+      "UPDATE_PROFILE": "تحديث الملف الشخصي",
+      "UPDATE_SECURITY": "تحديث إعدادات الأمان",
+      "UPDATE_SHIFT": "تحديث وردية",
+      "UPDATE_STAFF": "تحديث بيانات موظف",
+      "UPDATE_UNIT": "تحديث وحدة",
+      "UPDATE_UNIT_STATUS": "تحديث حالة وحدة",
+      "UPDATE_VITALS": "تحديث علامات حيوية",
+      "UPDATE_WARD": "تحديث جناح",
+      "UPLOAD_REPORT": "رفع تقرير",
+      "UPSERT_VITAL_THRESHOLD": "حفظ حد علامة حيوية",
+      "VIEW_PATIENT": "عرض بيانات مريض",
+      "VIEW_PATIENT_REPORTS": "عرض تقارير مريض",
+      "VIEW_REPORT_FILE": "عرض ملف تقرير",
+      "VOID_INVOICE": "إلغاء فاتورة"
     }
   }
 }

@@ -12,6 +12,7 @@ export const logActivity = (action: string) => {
           data: {
             action,
             userId,
+            hospitalId: req.user?.hospitalId,
             entityId: req.body?.patientId || req.params.id || 'N/A',
             details: `User ${userId} performed ${action} on ${req.originalUrl}`
           }

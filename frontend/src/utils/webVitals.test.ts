@@ -46,7 +46,7 @@ describe('webVitals', () => {
 
   it('toPayload keeps only name, value, rating and pathname', async () => {
     const { toPayload } = await import('./webVitals');
-    expect(toPayload(metric)).toEqual({ name: 'LCP', value: ROUNDED_VALUE, rating: 'good', path: '/patients' });
+    expect(toPayload(metric)).toEqual({ name: 'LCP', value: ROUNDED_VALUE, rating: 'good', path: '/patients', id: 'secret-id' });
   });
 
   it('registers all five metrics and logs in dev', async () => {
@@ -77,6 +77,53 @@ describe('webVitals', () => {
     handlers.LCP(metric);
     expect(beacon).toHaveBeenCalledWith('https://vitals.example.test/collect', expect.any(Blob));
     expect(log).not.toHaveBeenCalled();
+  });
+
+  it('sends text/plain so the beacon needs no CORS preflight', async () => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('VITE_VITALS_ENDPOINT', 'https://vitals.example.test/collect');
+    const beacon = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, 'sendBeacon', { value: beacon, configurable: true });
+    const { reportWebVitals } = await import('./webVitals');
+    await reportWebVitals();
+    handlers.LCP(metric);
+    const blob = beacon.mock.calls[0][1] as Blob;
+    expect(blob.type).toContain('text/plain');
+    expect(JSON.parse(await blob.text())).not.toHaveProperty('url');
+  });
+
+  it('never sends in dev even when an endpoint is set', async () => {
+    vi.stubEnv('VITE_VITALS_ENDPOINT', 'https://vitals.example.test/collect');
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const beacon = vi.fn().mockReturnValue(true);
+    Object.defineProperty(navigator, 'sendBeacon', { value: beacon, configurable: true });
+    const { reportWebVitals } = await import('./webVitals');
+    await reportWebVitals();
+    handlers.LCP(metric);
+    expect(beacon).not.toHaveBeenCalled();
+  });
+
+  it('honours the sample rate (0 disables, invalid means 1)', async () => {
+    vi.stubEnv('PROD', true);
+    vi.stubEnv('VITE_VITALS_ENDPOINT', 'https://vitals.example.test/collect');
+    vi.stubEnv('VITE_VITALS_SAMPLE', '0');
+    const { reportWebVitals, parseSampleRate } = await import('./webVitals');
+    await reportWebVitals();
+    expect(Object.keys(handlers)).toHaveLength(0);
+    expect(parseSampleRate('abc')).toBe(1);
+    expect(parseSampleRate('2')).toBe(1);
+    expect(parseSampleRate('0.25')).toBe(0.25);
+    expect(parseSampleRate(undefined)).toBe(1);
+  });
+
+  it('never throws when sendBeacon and fetch both fail', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')));
+    Object.defineProperty(navigator, 'sendBeacon', {
+      value: vi.fn(() => { throw new Error('boom'); }),
+      configurable: true,
+    });
+    const { sendVital } = await import('./webVitals');
+    await expect(sendVital('https://x.test/c', { name: 'CLS', value: 0, rating: 'good', path: '/' })).resolves.toBeUndefined();
   });
 
   it('falls back to fetch with keepalive when sendBeacon refuses', async () => {

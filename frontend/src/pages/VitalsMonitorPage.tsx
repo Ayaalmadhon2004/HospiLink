@@ -1,3 +1,4 @@
+import { ExportMenu } from '../components/Export/ExportMenu';
 // pages/VitalsMonitorPage.tsx
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -55,15 +56,18 @@ export const VitalsMonitorPage = () => {
           </h1>
           <p className="text-clinic-text/50 text-sm">{t('vitals.page.subtitle')}</p>
         </div>
-        <button
-          onClick={() => void handleRefresh()}
-          className="flex items-center gap-2 bg-white text-clinic-text px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition shadow-sm"
-          disabled={refreshing}
-          aria-label={t('vitals.page.refreshLabel')}
-        >
-          <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
-          {t('staff.refresh')}
-        </button>
+        <div className="flex items-center gap-2">
+          <ExportMenu type="vitals" />
+          <button
+            onClick={() => void handleRefresh()}
+            className="flex items-center gap-2 bg-white text-clinic-text px-4 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 transition shadow-sm"
+            disabled={refreshing}
+            aria-label={t('vitals.page.refreshLabel')}
+          >
+            <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} aria-hidden="true" />
+            {t('staff.refresh')}
+          </button>
+        </div>
       </div>
 
       <div className="mb-6">

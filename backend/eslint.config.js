@@ -17,7 +17,7 @@ module.exports = tseslint.config(
   },
   {
     // Tests mock Prisma/Express with loose shapes; `any` is tolerated there only.
-    files: ['tests/**/*.ts'],
+    files: ['tests/**/*.ts', 'tests-int/**/*.ts'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-require-imports': 'off', // require() after jest.mock/resetModules is deliberate

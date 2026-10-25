@@ -8,6 +8,10 @@ import {
   AlertTriangle,
   Truck,
   Settings,
+  ScrollText,
+  UserCog,
+  Pill,
+  Receipt,
   type LucideIcon,
 } from 'lucide-react';
 import type { BadgeItemId } from '../hooks/useSidebarBadges';
@@ -31,6 +35,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { id: 'Vitals Monitor', path: '/vitals', icon: Activity, badge: 'Vitals' },
   { id: 'Incidents', path: '/incidents', icon: AlertTriangle, badge: 'Incidents' },
   { id: 'Dispatch', path: '/dispatch', icon: Truck },
+  { id: 'Pharmacy', path: '/pharmacy', icon: Pill },
+  { id: 'Billing', path: '/billing', icon: Receipt },
+  { id: 'Users', path: '/users', icon: UserCog },
+  { id: 'Audit Log', path: '/audit-logs', icon: ScrollText },
 ];
 
 export const SETTINGS_NAV_ITEM: NavItem = { id: 'Settings', path: '/settings', icon: Settings };

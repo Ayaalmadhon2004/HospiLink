@@ -10,6 +10,11 @@ const AGE_SECOND_PATIENT = 32;
 
 export const E2E_ADMIN = { email: 'e2e.admin@hospilink.test', password: 'E2e-Password-123!' };
 
+// Role accounts for the RBAC flows. Their department matches the seeded patients' "General" so department-scoped
+// notifications (critical lab results) reach them.
+export const E2E_DOCTOR = { email: 'e2e.doctor@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Doctor', role: 'DOCTOR' as const };
+export const E2E_NURSE = { email: 'e2e.nurse@hospilink.test', password: 'E2e-Password-123!', name: 'E2E Nurse', role: 'NURSE' as const };
+
 // Codes deliberately sit outside the PT-20xx range that POST /patients/admit generates
 // (see "Known issues" in CLAUDE.md about the count-based patientCode).
 const SEED_PATIENTS = [
@@ -45,6 +50,24 @@ async function main(): Promise<void> {
       hospitalId: hospital.id,
     },
   });
+
+  for (const u of [E2E_DOCTOR, E2E_NURSE]) {
+    await prisma.user.upsert({
+      where: { email: u.email },
+      update: {},
+      create: {
+        email: u.email,
+        password: await bcrypt.hash(u.password, BCRYPT_ROUNDS),
+        name: u.name,
+        role: u.role,
+        department: 'General',
+        shift: 'DAY',
+        status: 'ON_DUTY',
+        emailVerifiedAt: new Date(),
+        hospitalId: hospital.id,
+      },
+    });
+  }
 
   // One unread notification for the admin (the bell badge shows 1 on a fresh database).
   await prisma.notification.upsert({

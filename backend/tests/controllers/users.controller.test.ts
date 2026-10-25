@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs';
 import { prismaMock } from '../mocks/prisma';
 import { mockRequest, mockResponse } from '../mocks/http';
-import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser, resetUserTwoFactor } from '../../src/controllers/users.controller';
+import { listUsers, inviteUser, approveUser, rejectUser, deactivateUser, resetUserTwoFactor, changeUserRole, activateUser } from '../../src/controllers/users.controller';
 
 jest.mock('../../src/services/securityNotices', () => ({ sendSecurityNotice: jest.fn() }));
 import { sendSecurityNotice } from '../../src/services/securityNotices';
@@ -216,6 +216,108 @@ describe('users.controller (ADMIN account administration)', () => {
       const missing = mockResponse();
       await deactivateUser(mockRequest({ params: { id: 'foreign' } }), missing);
       expect(missing.status).toHaveBeenCalledWith(404);
+    });
+  });
+
+  describe('changeUserRole', () => {
+    const asTx = () => prismaMock.$transaction.mockImplementation((async (cb: any) => cb(prismaMock)) as any);
+
+    it('refuses to change your own role', async () => {
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'user-1' }, body: { role: 'NURSE' } }), res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+    });
+
+    it('404 for another hospital; 409 for a pending user', async () => {
+      prismaMock.user.findFirst.mockResolvedValueOnce(null);
+      const missing = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'x' }, body: { role: 'NURSE' } }), missing);
+      expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'x', hospitalId: 'hosp-1' } }));
+      expect(missing.status).toHaveBeenCalledWith(404);
+
+      prismaMock.user.findFirst.mockResolvedValueOnce({ id: 'p', role: 'DOCTOR', accountStatus: 'PENDING' } as any);
+      const pending = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'p' }, body: { role: 'NURSE' } }), pending);
+      expect(pending.status).toHaveBeenCalledWith(409);
+    });
+
+    it('changes the role, revokes sessions and notifies the user', async () => {
+      asTx();
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'u2@h.com', role: 'DOCTOR', accountStatus: 'ACTIVE' } as any);
+      prismaMock.user.update.mockResolvedValue({ id: 'u2', role: 'NURSE' } as any);
+      prismaMock.user.count.mockResolvedValue(1);
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      const data = (prismaMock.user.update.mock.calls[0][0] as any).data;
+      expect(data.role).toBe('NURSE');
+      expect(data.passwordChangedAt).toBeInstanceOf(Date);
+      expect(prismaMock.user.count).toHaveBeenCalledWith({ where: { hospitalId: 'hosp-1', role: 'ADMIN', accountStatus: 'ACTIVE' } });
+      expect(sendSecurityNotice).toHaveBeenCalledWith('u2@h.com', expect.any(String), expect.stringContaining('DOCTOR to NURSE'));
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('is a no-op (no update, no logout) when the role is unchanged', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'NURSE', accountStatus: 'ACTIVE' } as any);
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('409 LAST_ADMIN when no active admin would remain (transaction rolled back)', async () => {
+      asTx();
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'ADMIN', accountStatus: 'ACTIVE' } as any);
+      prismaMock.user.update.mockResolvedValue({} as any);
+      prismaMock.user.count.mockResolvedValue(0);
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'DOCTOR' } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+      expect((res.json as jest.Mock).mock.calls[0][0].code).toBe('LAST_ADMIN');
+      expect(sendSecurityNotice).not.toHaveBeenCalledWith('e', expect.any(String), expect.stringContaining('ADMIN to DOCTOR'));
+    });
+
+    it('409 when the pg adapter reports the lost race as a bare TransactionWriteConflict (40001), not P2034', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'DOCTOR', accountStatus: 'ACTIVE' } as any);
+      prismaMock.$transaction.mockRejectedValue(Object.assign(new Error('TransactionWriteConflict'), { cause: { originalCode: '40001' } }));
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+
+    it('409 when a concurrent serializable transaction wins (P2034)', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'e', role: 'DOCTOR', accountStatus: 'ACTIVE' } as any);
+      prismaMock.$transaction.mockRejectedValue(Object.assign(new Error('conflict'), { code: 'P2034' }));
+      const res = mockResponse();
+      await changeUserRole(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      expect(res.status).toHaveBeenCalledWith(409);
+    });
+  });
+
+  describe('activateUser', () => {
+    it('re-enables a DISABLED user of the same hospital with the chosen role and links their staff record', async () => {
+      prismaMock.user.findFirst.mockResolvedValue({ id: 'u2', email: 'u2@h.com', accountStatus: 'DISABLED' } as any);
+      prismaMock.user.update.mockResolvedValue({ id: 'u2', accountStatus: 'ACTIVE' } as any);
+      const res = mockResponse();
+      await activateUser(mockRequest({ params: { id: 'u2' }, body: { role: 'NURSE' } }), res);
+      expect(prismaMock.user.findFirst).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u2', hospitalId: 'hosp-1' } }));
+      expect(prismaMock.user.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: 'u2' }, data: { accountStatus: 'ACTIVE', role: 'NURSE' } }));
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('404 for another hospital; 409 unless the user is DISABLED', async () => {
+      prismaMock.user.findFirst.mockResolvedValueOnce(null);
+      const missing = mockResponse();
+      await activateUser(mockRequest({ params: { id: 'x' }, body: { role: 'NURSE' } }), missing);
+      expect(missing.status).toHaveBeenCalledWith(404);
+
+      for (const accountStatus of ['ACTIVE', 'PENDING']) {
+        prismaMock.user.findFirst.mockResolvedValueOnce({ id: 'u', email: 'e', accountStatus } as any);
+        const res = mockResponse();
+        await activateUser(mockRequest({ params: { id: 'u' }, body: { role: 'NURSE' } }), res);
+        expect(res.status).toHaveBeenCalledWith(409);
+      }
+      expect(prismaMock.user.update).not.toHaveBeenCalled();
     });
   });
 });

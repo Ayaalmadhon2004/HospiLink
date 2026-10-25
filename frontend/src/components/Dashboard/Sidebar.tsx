@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/authContext';
 import { canAccessRoute } from '../../configs/permissions';
 import { useSidebarBadges } from '../../hooks/useSidebarBadges';
+import { enumLabel } from '../../utils/enumLabel';
 import { NAV_ITEMS, SETTINGS_NAV_ITEM, type NavItem } from '../../configs/navigation';
 
 interface SidebarProps {
@@ -109,7 +110,7 @@ const Sidebar = ({ onNavigate }: SidebarProps) => {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user.name}</p>
-              <p className="text-xs text-slate-400 truncate">{user.role}</p>
+              <p className="text-xs text-slate-400 truncate">{enumLabel(t, 'role', user.role)}</p>
             </div>
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
           </div>

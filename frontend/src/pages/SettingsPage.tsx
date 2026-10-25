@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import useSettings, { type DisplaySettings, type ProfileSettings } from '../hooks/useSettings';
 import { Bell, Shield, Monitor, User, Building2, Loader2 } from 'lucide-react';
 import { getTimezoneOptions } from '../utils/datetime';
+import { enumLabel } from '../utils/enumLabel';
 import { TwoFactorPanel } from '../components/TwoFactorPanel';
 
 const FIELD_GRID = 'grid grid-cols-[repeat(auto-fit,minmax(15rem,1fr))] gap-4';
@@ -121,7 +122,7 @@ const ProfileForm: React.FC<{
         <input type="text" maxLength={100} autoComplete="name" {...bind('name')} />
       </Field>
       <Field label={t('settings.profile.role')} htmlFor={`${uid}-role`}>
-        <input id={`${uid}-role`} type="text" value={profile.role} disabled className={READONLY_CLASS} />
+        <input id={`${uid}-role`} type="text" value={enumLabel(t, 'role', profile.role)} disabled className={READONLY_CLASS} />
       </Field>
       <Field label={t('settings.profile.email')} htmlFor={`${uid}-email`}>
         <input id={`${uid}-email`} type="email" value={profile.email} disabled className={READONLY_CLASS} />

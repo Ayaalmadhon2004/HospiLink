@@ -25,6 +25,17 @@ model Hospital {
   dispatchUnits DispatchUnit[]
   dispatchCalls DispatchCall[]
   vitalThresholds VitalThresholds[]
+  deviceKeys DeviceKey[]
+  // Last invoice number handed out (incremented atomically when an invoice is issued, so numbers are gap-free).
+  invoiceSeq Int @default(0)
+  stockMovements StockMovement[]
+  dispensations Dispensation[]
+  invoices Invoice[]
+  auditLogs AuditLog[]
+  medications Medication[]
+  clinicalNotes ClinicalNote[]
+  prescriptions Prescription[]
+  labOrders LabOrder[]
 }
 
 model User {
@@ -58,6 +69,12 @@ model User {
   // Staff record (doctor, nurse...) of this login, if any. The link is explicit, never matched by email at runtime.
   staff                Staff?
   auditLogs            AuditLog[]
+  authoredNotes        ClinicalNote[]
+  prescribed           Prescription[]
+  orderedLabs          LabOrder[]
+  stockMovements       StockMovement[]
+  dispensed            Dispensation[]
+  receivedPayments     Payment[]
 }
 
 model TwoFactorRecoveryCode {
@@ -115,9 +132,14 @@ model AuditLog {
   userId    String?
   entityId  String
   details   String?
+  // Tenant of the actor, copied at write time so the trail stays scoped after the user is deleted (NULL = legacy row
+  // whose actor was already gone: never shown to any hospital).
+  hospitalId String?
   createdAt DateTime @default(now())
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  hospital  Hospital? @relation(fields: [hospitalId], references: [id], onDelete: SetNull)
 
+  @@index([hospitalId, createdAt])
   @@index([userId, createdAt])
   @@index([entityId])
   @@index([action, createdAt])
@@ -149,6 +171,11 @@ model Patient {
   hospital      Hospital        @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
   vitals        PatientVitals[]
   reports       Report[]
+  clinicalNotes ClinicalNote[]
+  prescriptions Prescription[]
+  labOrders     LabOrder[]
+  dispensations Dispensation[]
+  invoices      Invoice[]
 
   @@index([hospitalId, deletedAt])
   @@index([doctorId])
@@ -234,6 +261,301 @@ model VitalThresholds {
 
   @@unique([hospitalId, department, vitalType])
   @@index([hospitalId])
+}
+
+// Credential of a medical device / gateway / MQTT bridge that pushes readings to POST /api/vitals/ingest/:protocol.
+// Only the SHA-256 of the key is stored (keys are 256-bit random, so a fast hash is enough); the key is shown once on creation.
+model DeviceKey {
+  id         String    @id @default(uuid())
+  hospitalId String
+  name       String
+  keyHash    String    @unique
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+  revokedAt  DateTime?
+  hospital   Hospital  @relation(fields: [hospitalId], references: [id], onDelete: Cascade)
+
+  @@index([hospitalId])
+}
+
+// ---- Clinical records. Hospital-scoped, never hard-deleted (Restrict) and never edited in place where noted. ----
+
+enum NoteType {
+  PROGRESS
+  ADMISSION
+  CONSULTATION
+  DISCHARGE
+  NURSING
+}
+
+// Append-only: a correction is a NEW row with supersedesId = the corrected note (DB trigger rejects UPDATE/DELETE).
+// supersedesId is unique, so a note has at most one amendment and the history is a chain, never a fork.
+model ClinicalNote {
+  id           String        @id @default(uuid())
+  hospitalId   String
+  patientId    String
+  type         NoteType
+  content      String
+  // Login of the author, plus a snapshot of the name so the note stays attributable after the account is deleted.
+  authorId     String?
+  authorName   String
+  supersedesId String?       @unique
+  createdAt    DateTime      @default(now())
+  hospital     Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient      Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  author       User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  supersedes   ClinicalNote? @relation("NoteAmendment", fields: [supersedesId], references: [id], onDelete: Restrict)
+  amendment    ClinicalNote? @relation("NoteAmendment")
+
+  @@index([patientId, createdAt])
+  @@index([hospitalId])
+}
+
+// Per-hospital drug catalogue. Retired with active=false (prescriptions keep pointing at it).
+model Medication {
+  id          String             @id @default(uuid())
+  hospitalId  String
+  name        String
+  genericName String?
+  form        String // tablet, injection, syrup...
+  strength    String // "500 mg"
+  active      Boolean            @default(true)
+  // Pharmacy: units on hand (a DB CHECK keeps it >= 0), alert threshold, and the price per unit in minor currency units.
+  stockQuantity  Int @default(0)
+  reorderLevel   Int @default(0)
+  unitPriceMinor Int @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  hospital    Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  items       PrescriptionItem[]
+  movements   StockMovement[]
+  dispensations Dispensation[]
+
+  @@unique([hospitalId, name, form, strength])
+  @@index([hospitalId, active])
+}
+
+enum PrescriptionStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// Items are fixed at creation; only the status moves (ACTIVE -> COMPLETED | CANCELLED). To change a dose, cancel and re-prescribe.
+model Prescription {
+  id             String             @id @default(uuid())
+  hospitalId     String
+  patientId      String
+  status         PrescriptionStatus @default(ACTIVE)
+  notes          String?
+  prescriberId   String?
+  prescriberName String
+  createdAt      DateTime           @default(now())
+  closedAt       DateTime?
+  hospital       Hospital           @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient        Patient            @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  prescriber     User?              @relation(fields: [prescriberId], references: [id], onDelete: SetNull)
+  items          PrescriptionItem[]
+
+  @@index([patientId, createdAt])
+  @@index([hospitalId, status])
+}
+
+model PrescriptionItem {
+  id             String       @id @default(uuid())
+  prescriptionId String
+  medicationId   String
+  dose           String
+  frequency      String
+  route          String?
+  durationDays   Int?
+  instructions   String?
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  medication     Medication   @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  dispensations  Dispensation[]
+
+  @@index([prescriptionId])
+  @@index([medicationId])
+}
+
+// ---- Pharmacy and billing. Money is always an integer in minor units (cents/fils): never a float. ----
+
+enum StockMovementType {
+  RECEIVE
+  DISPENSE
+  ADJUST
+}
+
+// Append-only ledger behind Medication.stockQuantity: every change to the stock writes one row in the same transaction.
+model StockMovement {
+  id           String            @id @default(uuid())
+  hospitalId   String
+  medicationId String
+  type         StockMovementType
+  delta        Int
+  note         String?
+  userId       String?
+  userName     String
+  createdAt    DateTime          @default(now())
+  hospital     Hospital          @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  medication   Medication        @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  user         User?             @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([medicationId, createdAt])
+  @@index([hospitalId, createdAt])
+}
+
+// Units handed to a patient against a prescription item. The price is a snapshot; invoiceLineId is set once billed.
+model Dispensation {
+  id               String           @id @default(uuid())
+  hospitalId       String
+  patientId        String
+  prescriptionItemId String
+  medicationId     String
+  quantity         Int
+  unitPriceMinor   Int
+  dispensedById    String?
+  dispensedByName  String
+  createdAt        DateTime         @default(now())
+  invoiceLineId    String?          @unique
+  hospital         Hospital         @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient          Patient          @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  item             PrescriptionItem @relation(fields: [prescriptionItemId], references: [id], onDelete: Restrict)
+  medication       Medication       @relation(fields: [medicationId], references: [id], onDelete: Restrict)
+  dispensedBy      User?            @relation(fields: [dispensedById], references: [id], onDelete: SetNull)
+  invoiceLine      InvoiceLine?     @relation(fields: [invoiceLineId], references: [id], onDelete: SetNull)
+
+  @@index([patientId, createdAt])
+  @@index([prescriptionItemId])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
+}
+
+enum PaymentMethod {
+  CASH
+  CARD
+  INSURANCE
+  TRANSFER
+}
+
+// DRAFT is editable and has no number; ISSUED gets the next gap-free number and is frozen; PAID when payments cover the total.
+model Invoice {
+  id            String        @id @default(uuid())
+  hospitalId    String
+  patientId     String
+  number        String?
+  status        InvoiceStatus @default(DRAFT)
+  currency      String        @default("USD")
+  discountMinor Int           @default(0)
+  // Denormalised, recomputed by the server on every draft change; frozen at issue.
+  totalMinor    Int           @default(0)
+  paidMinor     Int           @default(0)
+  createdAt     DateTime      @default(now())
+  issuedAt      DateTime?
+  voidedAt      DateTime?
+  hospital      Hospital      @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient       Patient       @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  lines         InvoiceLine[]
+  payments      Payment[]
+
+  @@unique([hospitalId, number])
+  @@index([hospitalId, status, createdAt])
+  @@index([patientId])
+}
+
+model InvoiceLine {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  description    String
+  quantity       Int
+  unitPriceMinor Int
+  totalMinor     Int
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  dispensation   Dispensation?
+
+  @@index([invoiceId])
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  hospitalId     String
+  amountMinor    Int
+  method         PaymentMethod
+  reference      String?
+  receivedById   String?
+  receivedByName String
+  createdAt      DateTime      @default(now())
+  invoice        Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Restrict)
+  receivedBy     User?         @relation(fields: [receivedById], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+}
+
+enum LabPriority {
+  ROUTINE
+  URGENT
+  STAT
+}
+
+enum LabOrderStatus {
+  ORDERED
+  RESULTED
+  CANCELLED
+}
+
+enum LabFlag {
+  NORMAL
+  LOW
+  HIGH
+  CRITICAL_LOW
+  CRITICAL_HIGH
+}
+
+model LabOrder {
+  id            String         @id @default(uuid())
+  hospitalId    String
+  patientId     String
+  testName      String
+  testCode      String?
+  priority      LabPriority    @default(ROUTINE)
+  status        LabOrderStatus @default(ORDERED)
+  notes         String?
+  orderedById   String?
+  orderedByName String
+  orderedAt     DateTime       @default(now())
+  resultedAt    DateTime?
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id], onDelete: Restrict)
+  patient       Patient        @relation(fields: [patientId], references: [id], onDelete: Restrict)
+  orderedBy     User?          @relation(fields: [orderedById], references: [id], onDelete: SetNull)
+  results       LabResult[]
+
+  @@index([patientId, orderedAt])
+  @@index([hospitalId, status])
+}
+
+// One analyte of an order (e.g. "Hemoglobin"). Results are entered once; the flag is computed by the server from the
+// numeric value and the reference/critical limits, never trusted from the client.
+model LabResult {
+  id           String   @id @default(uuid())
+  labOrderId   String
+  analyte      String
+  value        Float?
+  textValue    String?
+  unit         String?
+  refLow       Float?
+  refHigh      Float?
+  criticalLow  Float?
+  criticalHigh Float?
+  flag         LabFlag?
+  labOrder     LabOrder @relation(fields: [labOrderId], references: [id], onDelete: Cascade)
+
+  @@index([labOrderId])
 }
 
 model Staff {

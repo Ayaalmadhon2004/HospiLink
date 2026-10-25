@@ -11,6 +11,8 @@ type BedWithWard = Bed & { ward: { id: string; name: string } };
 
 const PATIENT_CODE_BASE = 2040;
 const MAX_CODE_ATTEMPTS = 10;
+// Serialises patient-code allocation between concurrent admits (transaction-scoped advisory lock, released on commit/rollback).
+const PATIENT_CODE_LOCK_KEY = 4204001;
 
 const isPatientCodeConflict = (error: unknown): boolean => {
   const e = error as { code?: string; meta?: { target?: unknown } };
@@ -19,9 +21,9 @@ const isPatientCodeConflict = (error: unknown): boolean => {
 
 // Next free number: above both the row count and the highest existing PT-<n>,
 // so deleted or seeded rows can't make the count-based guess collide.
-const nextPatientNumber = async (): Promise<number> => {
-  const count = await prisma.patient.count();
-  const agg = await prisma.patient.aggregate({
+const nextPatientNumber = async (db: Pick<typeof prisma, 'patient'> = prisma): Promise<number> => {
+  const count = await db.patient.count();
+  const agg = await db.patient.aggregate({
     _max: { patientCode: true },
     where: { patientCode: { startsWith: 'PT-' } },
   });
@@ -135,13 +137,15 @@ export const admitPatient = async (req: Request, res: Response) => {
   try {
     const hospitalId = hospitalIdOf(req);
 
-    const firstNumber = await nextPatientNumber();
-
     let result;
     for (let attempt = 0; ; attempt++) {
-      const patientCode = `PT-${firstNumber + attempt}`;
       try {
         result = await prisma.$transaction(async (tx) => {
+          // pg_advisory_xact_lock returns void, which only $executeRaw tolerates (found by the integration suite).
+          // Under the lock a concurrent admit has already committed its row, so the number read here is really free.
+          // (Without it, N simultaneous admits all read the same "next" number and N-1 of them collide.)
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PATIENT_CODE_LOCK_KEY}::bigint)`;
+          const patientCode = `PT-${await nextPatientNumber(tx)}`;
           let validBedId = null;
 
           if (doctorId) {

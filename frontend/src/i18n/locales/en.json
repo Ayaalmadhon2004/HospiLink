@@ -104,7 +104,11 @@
       "Vitals Monitor": "Vitals Monitor",
       "Incidents": "Incidents",
       "Dispatch": "Dispatch",
-      "Settings": "Settings"
+      "Settings": "Settings",
+      "Audit Log": "Audit Log",
+      "Users": "Users",
+      "Pharmacy": "Pharmacy",
+      "Billing": "Billing"
     },
     "openMenu": "Open menu",
     "closeMenu": "Close menu"
@@ -206,6 +210,7 @@
     "updateFailed": "Failed to update {{item}}"
   },
   "errors": {
+    "unexpectedError": "Something went wrong. Please try again.",
     "forbidden": "You do not have permission to perform this action.",
     "server": "Server error. Please try again later.",
     "codes": {
@@ -225,7 +230,20 @@
       "DOCTOR_NOT_FOUND": "Doctor not found.",
       "UNIT_NOT_FOUND": "Unit not found.",
       "THRESHOLD_NOT_FOUND": "Threshold not found.",
-      "FILE_NOT_FOUND": "File not found."
+      "FILE_NOT_FOUND": "File not found.",
+      "WARD_HAS_BEDS": "This ward still has beds. Move or delete its beds first.",
+      "LAST_ADMIN": "The hospital must keep at least one active admin.",
+      "INSUFFICIENT_STOCK": "Not enough stock on hand.",
+      "INVOICE_NOT_EDITABLE": "Only a draft invoice can be changed.",
+      "OVERPAYMENT": "The invoice is not open for payment, or the amount is more than the balance.",
+      "VALIDATION_ERROR": "The submitted data is not valid. Please review it and try again.",
+      "UNAUTHORIZED": "Your session has expired. Please sign in again.",
+      "FORBIDDEN": "You do not have permission to do this.",
+      "NOT_FOUND": "The requested item was not found.",
+      "CONFLICT": "This action conflicts with the current state. Refresh and try again.",
+      "INTERNAL_ERROR": "Something went wrong on our side. Please try again.",
+      "TWO_FACTOR_LOCKED": "Too many wrong codes. Two-factor sign-in is locked for 15 minutes.",
+      "EXPORT_TOO_LARGE": "This export has more than 10,000 rows. Narrow the date range and try again."
     }
   },
   "errorBoundary": {
@@ -327,6 +345,38 @@
       "reportedByPlaceholder": "Staff name",
       "description": "Description",
       "descriptionPlaceholder": "Describe the incident in detail..."
+    },
+    "ward": {
+      "name": "Ward name",
+      "namePlaceholder": "e.g. Cardiology",
+      "floor": "Floor",
+      "floorPlaceholder": "e.g. 2"
+    },
+    "note": {
+      "type": "Note type",
+      "content": "Note",
+      "contentPlaceholder": "Write the clinical note...",
+      "correctedContent": "Corrected note",
+      "amendHint": "The original stays on record; your correction is saved as a new version."
+    },
+    "labOrder": {
+      "testName": "Test",
+      "testNamePlaceholder": "e.g. Complete blood count",
+      "testCode": "Code",
+      "priority": "Priority",
+      "notes": "Notes"
+    },
+    "medication": {
+      "name": "Name",
+      "genericName": "Generic name",
+      "form": "Form",
+      "formPlaceholder": "tablet, injection...",
+      "strength": "Strength",
+      "strengthPlaceholder": "e.g. 500 mg",
+      "unitPrice": "Unit price",
+      "unitPricePlaceholder": "e.g. 2.50",
+      "reorderLevel": "Reorder level",
+      "reorderHint": "Stock at or below this is flagged as low"
     }
   },
   "patients": {
@@ -951,6 +1001,422 @@
       "chartBP": "Blood Pressure (mmHg)",
       "chartSpO2": "SpO2 (%)",
       "chartTemperature": "Temperature (°C)"
+    }
+  },
+  "wards": {
+    "title": "Wards",
+    "subtitle": "Manage the wards that beds belong to",
+    "itemName": "Ward",
+    "itemType": "ward",
+    "add": "Add Ward",
+    "empty": "No wards yet",
+    "floor": "Floor {{floor}}",
+    "bedCount_one": "{{count}} bed",
+    "bedCount_other": "{{count}} beds",
+    "edit": "Edit ward {{name}}",
+    "delete": "Delete ward {{name}}",
+    "hasBeds": "Remove or move its beds before deleting",
+    "modalAdd": "Add Ward",
+    "modalEdit": "Edit Ward",
+    "modalAddSubtitle": "Create a ward for your beds",
+    "modalEditSubtitle": "Rename the ward or change its floor",
+    "save": "Save changes",
+    "created": "Ward created",
+    "updated": "Ward updated"
+  },
+  "audit": {
+    "title": "Audit Log",
+    "subtitle": "Who did what, and when. Read-only.",
+    "filters": {
+      "action": "Action",
+      "allActions": "All actions",
+      "from": "From",
+      "to": "To",
+      "entityId": "Entity ID",
+      "entityPlaceholder": "Patient, bed, ward id...",
+      "reset": "Reset filters"
+    },
+    "cols": {
+      "time": "Time",
+      "user": "User",
+      "action": "Action",
+      "entity": "Entity",
+      "details": "Details"
+    },
+    "deletedUser": "Deleted user",
+    "empty": "No activity matches these filters",
+    "loading": "Loading audit log",
+    "loadFailed": "Could not load the audit log",
+    "retry": "Retry",
+    "page": "Page {{page}} of {{total}}",
+    "total_one": "{{count}} entry",
+    "total_other": "{{count}} entries",
+    "prev": "Previous page",
+    "next": "Next page"
+  },
+  "users": {
+    "title": "User Management",
+    "subtitle": "Approve sign-ups, change roles and activate or deactivate accounts",
+    "filter": "Filter by account status",
+    "filters": {
+      "ALL": "All",
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Deactivated"
+    },
+    "loading": "Loading users",
+    "loadFailed": "Could not load users",
+    "empty": "No users in this view",
+    "you": "you",
+    "roleFor": "Role for {{name}}",
+    "cols": {
+      "user": "User",
+      "department": "Department",
+      "role": "Role",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "roles": {
+      "ADMIN": "Admin",
+      "DOCTOR": "Doctor",
+      "NURSE": "Nurse",
+      "DISPATCHER": "Dispatcher"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "ACTIVE": "Active",
+      "DISABLED": "Deactivated"
+    },
+    "approve": "Approve",
+    "reject": "Reject",
+    "activate": "Activate",
+    "deactivate": "Deactivate",
+    "confirmRoleTitle": "Change role?",
+    "confirmRole": "Change {{name}} from {{from}} to {{to}}? They will be signed out everywhere and must sign in again.",
+    "actionFailed": "The action failed",
+    "done": {
+      "approve": "User approved",
+      "reject": "User rejected",
+      "deactivate": "User deactivated",
+      "activate": "User activated",
+      "role": "Role changed"
+    }
+  },
+  "clinical": {
+    "title": "Clinical records",
+    "tabs": {
+      "notes": "Notes",
+      "prescriptions": "Prescriptions",
+      "labs": "Lab results"
+    },
+    "noteTypes": {
+      "PROGRESS": "Progress",
+      "ADMISSION": "Admission",
+      "CONSULTATION": "Consultation",
+      "DISCHARGE": "Discharge",
+      "NURSING": "Nursing"
+    },
+    "priority": {
+      "ROUTINE": "Routine",
+      "URGENT": "Urgent",
+      "STAT": "STAT"
+    },
+    "notes": {
+      "add": "Add note",
+      "empty": "No notes yet",
+      "amended": "Amended",
+      "amend": "Amend",
+      "history": "Earlier versions",
+      "save": "Save note",
+      "saveAmendment": "Save amendment"
+    },
+    "medications": {
+      "title": "Medication catalogue",
+      "manage": "Medication catalogue",
+      "add": "Add medication",
+      "retire": "Retire",
+      "restore": "Restore",
+      "updateFailed": "Could not update the medication"
+    },
+    "rx": {
+      "add": "New prescription",
+      "empty": "No prescriptions yet",
+      "item": "Item {{n}}",
+      "medication": "Medication",
+      "dose": "Dose",
+      "frequency": "Frequency",
+      "route": "Route",
+      "days": "Days",
+      "instructions": "Instructions",
+      "removeItem": "Remove item",
+      "addItem": "Add another medication",
+      "notes": "Notes",
+      "save": "Save prescription",
+      "saveFailed": "Could not save the prescription",
+      "closeFailed": "Could not update the prescription",
+      "complete": "Mark completed",
+      "cancel": "Cancel prescription",
+      "forDays_one": "for {{count}} day",
+      "forDays_other": "for {{count}} days",
+      "status": {
+        "ACTIVE": "Active",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "labs": {
+      "order": "Order lab test",
+      "empty": "No lab orders yet",
+      "enterResults": "Enter results: {{test}}",
+      "flagHint": "Flags (low, high, critical) are calculated from the limits you enter.",
+      "saveFailed": "Could not save the results",
+      "cancelFailed": "Could not cancel the order",
+      "analyteN": "Result {{n}}",
+      "addAnalyte": "Add another result",
+      "saveResults": "Save results",
+      "enter": "Enter results",
+      "cancel": "Cancel order",
+      "reference": "Reference",
+      "flag": "Flag",
+      "status": {
+        "ORDERED": "Awaiting results",
+        "RESULTED": "Resulted",
+        "CANCELLED": "Cancelled"
+      },
+      "fields": {
+        "analyte": "Test",
+        "value": "Value",
+        "unit": "Unit",
+        "refLow": "Normal from",
+        "refHigh": "Normal to",
+        "criticalLow": "Critical below",
+        "criticalHigh": "Critical above"
+      },
+      "flags": {
+        "NORMAL": "Normal",
+        "LOW": "Low",
+        "HIGH": "High",
+        "CRITICAL_LOW": "Critical low",
+        "CRITICAL_HIGH": "Critical high"
+      }
+    }
+  },
+  "pharmacy": {
+    "title": "Pharmacy",
+    "subtitle": "Stock on hand and dispensing",
+    "lowOnly": "Show low stock only",
+    "loadFailed": "Could not load the stock",
+    "empty": "No medications to show",
+    "low": "Low",
+    "cols": {
+      "medication": "Medication",
+      "onHand": "On hand",
+      "reorder": "Reorder level",
+      "price": "Unit price"
+    },
+    "receive": "Receive",
+    "adjust": "Adjust",
+    "receiveTitle": "Receive stock: {{name}}",
+    "adjustTitle": "Adjust stock: {{name}}",
+    "onHand": "Currently on hand: {{qty}}",
+    "quantity": "Units received",
+    "change": "Change (units)",
+    "changeHint": "Use a negative number to remove stock (damage, expiry, count correction).",
+    "noteOptional": "Note (optional)",
+    "reason": "Reason",
+    "save": "Save",
+    "saveFailed": "Could not update the stock",
+    "dispense": "Dispense",
+    "dispenseTitle": "Dispense {{name}}",
+    "dispenseFailed": "Could not dispense",
+    "unitsToDispense": "Units to dispense"
+  },
+  "billing": {
+    "title": "Billing",
+    "subtitle": "Invoices and payments",
+    "new": "New invoice",
+    "filter": "Filter by invoice status",
+    "loadFailed": "Could not load billing data",
+    "empty": "No invoices yet",
+    "draft": "Draft",
+    "back": "All invoices",
+    "issue": "Issue invoice",
+    "void": "Void",
+    "confirmIssueTitle": "Issue this invoice?",
+    "confirmIssue": "It receives its invoice number and can no longer be edited.",
+    "confirmVoidTitle": "Void this invoice?",
+    "confirmVoid": "The invoice is cancelled. Dispensed medications on it can be billed again.",
+    "lines": "Items",
+    "noLines": "No items yet",
+    "cols": {
+      "number": "Invoice",
+      "patient": "Patient",
+      "status": "Status",
+      "total": "Total",
+      "paid": "Paid",
+      "date": "Date",
+      "description": "Description",
+      "quantity": "Qty",
+      "unitPrice": "Unit price"
+    },
+    "removeLine": "Remove {{name}}",
+    "subtotal": "Subtotal",
+    "discount": "Discount",
+    "total": "Total",
+    "addLine": "Add item",
+    "applyDiscount": "Apply discount",
+    "payments": "Payments",
+    "paidOf": "Paid {{paid}} of {{total}}",
+    "balance": "Balance {{amount}}",
+    "amount": "Amount",
+    "method": "Method",
+    "reference": "Reference",
+    "recordPayment": "Record payment",
+    "methods": {
+      "CASH": "Cash",
+      "CARD": "Card",
+      "INSURANCE": "Insurance",
+      "TRANSFER": "Bank transfer"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "ISSUED": "Issued",
+      "PAID": "Paid",
+      "VOID": "Void"
+    },
+    "patient": "Patient",
+    "selectPatient": "Select a patient",
+    "includeDispensations": "Add the patient's unbilled dispensed medications",
+    "create": "Create draft",
+    "createFailed": "Could not create the invoice",
+    "actionFailed": "The action failed"
+  },
+  "export": {
+    "button": "Export",
+    "title": "Export data",
+    "hint": "Choose a period (optional, default: last 30 days).",
+    "excel": "Excel",
+    "pdf": "PDF",
+    "preparing": "Preparing…",
+    "badRange": "\"From\" must not be after \"To\".",
+    "tooLarge": "Too many rows for one export. Choose a shorter period.",
+    "failed": "The export failed. Please try again."
+  },
+  "enums": {
+    "appointmentStatus": {
+      "SCHEDULED": "Scheduled",
+      "CONFIRMED": "Confirmed",
+      "IN_PROGRESS": "In progress",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled",
+      "NO_SHOW": "No show"
+    },
+    "dutyStatus": {
+      "ON_DUTY": "On duty",
+      "OFF_DUTY": "Off duty"
+    },
+    "callStatus": {
+      "PENDING": "Pending",
+      "ASSIGNED": "Assigned",
+      "EN_ROUTE": "En route",
+      "ON_SCENE": "On scene",
+      "COMPLETED": "Completed",
+      "CANCELLED": "Cancelled"
+    },
+    "priority": {
+      "LOW": "Low",
+      "MEDIUM": "Medium",
+      "HIGH": "High",
+      "CRITICAL": "Critical"
+    },
+    "stockMovement": {
+      "RECEIVE": "Received",
+      "DISPENSE": "Dispensed",
+      "ADJUST": "Adjusted"
+    },
+    "authTokenType": {
+      "PASSWORD_RESET": "Password reset",
+      "EMAIL_VERIFY": "Email verification"
+    },
+    "auditAction": {
+      "2FA_DISABLE": "Two-factor disabled",
+      "2FA_ENABLE": "Two-factor enabled",
+      "2FA_RECOVERY_CODES": "Recovery codes regenerated",
+      "2FA_SETUP": "Two-factor setup started",
+      "ACTIVATE_USER": "User activated",
+      "ADD_INVOICE_LINE": "Invoice line added",
+      "ADJUST_STOCK": "Stock adjusted",
+      "ADMIT_PATIENT": "Patient admitted",
+      "AMEND_CLINICAL_NOTE": "Clinical note amended",
+      "APPROVE_USER": "User approved",
+      "ASSIGN_CALL": "Call assigned",
+      "BROADCAST_NOTIFICATION": "Notification broadcast",
+      "CANCEL_CALL": "Call cancelled",
+      "CANCEL_LAB_ORDER": "Lab order cancelled",
+      "CHANGE_USER_ROLE": "User role changed",
+      "CLOSE_PRESCRIPTION": "Prescription closed",
+      "COMPLETE_CALL": "Call completed",
+      "CREATE_APPOINTMENT": "Appointment created",
+      "CREATE_CALL": "Call created",
+      "CREATE_CLINICAL_NOTE": "Clinical note created",
+      "CREATE_DEVICE_KEY": "Device key created",
+      "CREATE_INCIDENT": "Incident created",
+      "CREATE_INVOICE": "Invoice created",
+      "CREATE_LAB_ORDER": "Lab order created",
+      "CREATE_MEDICATION": "Medication created",
+      "CREATE_PRESCRIPTION": "Prescription created",
+      "CREATE_SHIFT": "Shift created",
+      "CREATE_STAFF": "Staff member created",
+      "CREATE_UNIT": "Unit created",
+      "CREATE_WARD": "Ward created",
+      "DEACTIVATE_USER": "User deactivated",
+      "DELETE_APPOINTMENT": "Appointment deleted",
+      "DELETE_INCIDENT": "Incident deleted",
+      "DELETE_PATIENT": "Patient deleted",
+      "DELETE_SHIFT": "Shift deleted",
+      "DELETE_STAFF": "Staff member deleted",
+      "DELETE_UNIT": "Unit deleted",
+      "DELETE_VITALS": "Vitals deleted",
+      "DELETE_VITAL_THRESHOLD": "Vital threshold deleted",
+      "DELETE_WARD": "Ward deleted",
+      "DISCHARGE_PATIENT": "Patient discharged",
+      "DISPENSE_MEDICATION": "Medication dispensed",
+      "EXPORT_DATA": "Data exported",
+      "INVITE_USER": "User invited",
+      "ISSUE_INVOICE": "Invoice issued",
+      "LINK_STAFF_LOGIN": "Staff login linked",
+      "LIST_PATIENTS": "Patients listed",
+      "RECEIVE_STOCK": "Stock received",
+      "RECORD_PAYMENT": "Payment recorded",
+      "RECORD_VITALS": "Vitals recorded",
+      "REJECT_USER": "User rejected",
+      "REMOVE_INVOICE_LINE": "Invoice line removed",
+      "RESET_2FA": "Two-factor reset",
+      "REVOKE_DEVICE_KEY": "Device key revoked",
+      "SET_INVOICE_DISCOUNT": "Invoice discount set",
+      "SUBMIT_LAB_RESULTS": "Lab results submitted",
+      "UPDATE_APPOINTMENT": "Appointment updated",
+      "UPDATE_DISPLAY": "Display settings updated",
+      "UPDATE_HOSPITAL": "Hospital settings updated",
+      "UPDATE_INCIDENT": "Incident updated",
+      "UPDATE_INCIDENT_STATUS": "Incident status updated",
+      "UPDATE_MEDICATION": "Medication updated",
+      "UPDATE_NOTIFICATIONS": "Notification settings updated",
+      "UPDATE_PATIENT": "Patient updated",
+      "UPDATE_PROFILE": "Profile updated",
+      "UPDATE_SECURITY": "Security settings updated",
+      "UPDATE_SHIFT": "Shift updated",
+      "UPDATE_STAFF": "Staff member updated",
+      "UPDATE_UNIT": "Unit updated",
+      "UPDATE_UNIT_STATUS": "Unit status updated",
+      "UPDATE_VITALS": "Vitals updated",
+      "UPDATE_WARD": "Ward updated",
+      "UPLOAD_REPORT": "Report uploaded",
+      "UPSERT_VITAL_THRESHOLD": "Vital threshold saved",
+      "VIEW_PATIENT": "Patient viewed",
+      "VIEW_PATIENT_REPORTS": "Patient reports viewed",
+      "VIEW_REPORT_FILE": "Report file viewed",
+      "VOID_INVOICE": "Invoice voided"
     }
   }
 }

@@ -3,10 +3,10 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import { getIO } from '../utils/socket';
 import logger from '../config/logger';
-import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
+import { hospitalIdOf } from '../utils/tenant';
 import { pageParams, pageInfo } from '../utils/pagination';
-import { loadEffectiveThresholds, evaluateReading } from '../services/vitalThresholds';
-import { notify } from '../services/notification.service';
+import { loadEffectiveThresholds } from '../services/vitalThresholds';
+import { checkCriticalVitals, escalatePatient, notifyCriticalVitals } from '../services/vitalsIngest';
 import type { Prisma } from '@prisma/client';
 
 const METRIC_KEYS = [
@@ -17,8 +17,7 @@ const METRIC_KEYS = [
   'temperature',
   'respiratoryRate',
 ] as const;
-type MetricKey = (typeof METRIC_KEYS)[number];
-type MetricValues = Partial<Record<MetricKey, number | null>>;
+type MetricValues = Partial<Record<(typeof METRIC_KEYS)[number], number | null>>;
 
 // undefined/null/'' => null (missing); numeric value/string => finite number; anything else => undefined (invalid).
 // `protect` always sets req.user on routed requests; the fallback only covers a call without an authenticated user.
@@ -50,55 +49,6 @@ const parseMetrics = (body: Record<string, unknown>, onlyPresent = false) => {
 
 const invalidMetricsResponse = (res: Response, invalid: string[]) =>
   res.status(400).json({ success: false, message: `Invalid numeric value for: ${invalid.join(', ')}` });
-
-// Judges a reading against the thresholds of the patient's department (own rows + built-in defaults).
-const checkCriticalVitals = async (
-  hospitalId: string,
-  department: string,
-  vitals: MetricValues
-): Promise<{ isCritical: boolean; alertType: string | null }> =>
-  evaluateReading(vitals, await loadEffectiveThresholds(hospitalId, department));
-
-// A critical reading escalates the patient to CRITICAL. It never downgrades (a clinician does that) and never
-// touches a DISCHARGED patient. Returns true when the status actually changed.
-const escalatePatient = async (patient: { id: string; hospitalId: string }, alertType: string | null): Promise<boolean> => {
-  try {
-    const { count } = await prisma.patient.updateMany({
-      where: { id: patient.id, hospitalId: patient.hospitalId, deletedAt: null, status: { notIn: ['CRITICAL', 'DISCHARGED'] } },
-      data: { status: 'CRITICAL' },
-    });
-    if (count === 0) return false;
-    const payload = { patientId: patient.id, status: 'CRITICAL', reason: alertType, timestamp: new Date() };
-    getIO().to(`patient-${patient.id}`).emit('patient-status-changed', payload);
-    getIO().to(clinicalRoom(patient.hospitalId)).emit('patient-status-changed', payload);
-    return true;
-  } catch (err) {
-    // The reading is already saved and the alert goes out: do not fail the request, but make the failure visible.
-    logger.error({ err, patientId: patient.id }, 'Could not escalate the patient to CRITICAL');
-    return false;
-  }
-};
-
-// Critical vitals go to the assigned doctor plus doctors/nurses of the patient's department.
-const notifyCriticalVitals = (
-  patient: { id: string; name?: string | null; department: string; doctor?: { userId: string | null } | null; hospitalId: string },
-  alertType: string | null,
-  actorId?: string
-) =>
-  notify({
-    type: 'VITALS',
-    title: 'Critical vitals alert',
-    message: `${patient.name ?? 'Patient'} (${patient.department}): ${alertType ?? 'critical reading'}`,
-    link: `/patients/${patient.id}`,
-    recipients: {
-      roles: ['DOCTOR', 'NURSE'],
-      department: patient.department,
-      // Patient.doctor is a Staff record: its login (if any) is Staff.userId.
-      userIds: patient.doctor?.userId ? [patient.doctor.userId] : [],
-      hospitalId: patient.hospitalId,
-      scopeUserId: actorId,
-    },
-  });
 
 // POST /api/vitals - Record new vitals
 export const recordVitals = async (req: Request, res: Response) => {

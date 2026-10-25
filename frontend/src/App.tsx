@@ -24,6 +24,11 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then(m =>
 const DispatchDashboard = lazy(() => import('./pages/DispatchDashboard'));
 const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then(m => ({ default: m.IncidentsPage })));
 const StaffDirectoryPage = lazy(() => import('./pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
+const PharmacyPage = lazy(() => import('./pages/PharmacyPage').then(m => ({ default: m.PharmacyPage })));
+const BillingPage = lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
+const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
+const UsersPage = lazy(() => import('./pages/UsersPage').then(m => ({ default: m.UsersPage })));
+const AuditLogsPage = lazy(() => import('./pages/AuditLogsPage').then(m => ({ default: m.AuditLogsPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 
 function App() {
@@ -60,6 +65,11 @@ function App() {
           <Route path="/vitals" element={<VitalsMonitorPage />} />
           <Route path="/incidents" element={<IncidentsPage />} />
           <Route path="/dispatch" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dispatch']}><DispatchDashboard /></PrivateRoute>} />
+          <Route path="/pharmacy" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/pharmacy']}><PharmacyPage /></PrivateRoute>} />
+          <Route path="/billing" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/billing']}><BillingPage /></PrivateRoute>} />
+          <Route path="/billing/:id" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/billing']}><InvoiceDetailPage /></PrivateRoute>} />
+          <Route path="/users" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/users']}><UsersPage /></PrivateRoute>} />
+          <Route path="/audit-logs" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/audit-logs']}><AuditLogsPage /></PrivateRoute>} />
           <Route path="/settings" element={<SettingsPage />} />
         </Route>
 

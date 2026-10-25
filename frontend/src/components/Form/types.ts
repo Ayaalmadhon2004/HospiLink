@@ -35,6 +35,7 @@ export interface FieldConfig<T = Record<string, unknown>> {
   dependsOn?: string;               // field name this depends on (e.g., bed list depends on department)
   colSpan?: 1 | 2;                  // 1 = half width, 2 = full width
   rows?: number;                    // for textarea
+  step?: number | 'any';            // for number inputs (default 1: a price needs 0.01 or 'any', or the browser blocks the submit)
   disabled?: boolean | ((formValues: T) => boolean);
   helperText?: string;
   validation?: ZodTypeAny;          // per-field Zod override

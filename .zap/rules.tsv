@@ -1,0 +1,17 @@
+# OWASP ZAP baseline rule configuration (zap-baseline.py -c .zap/rules.tsv).
+# Format: <rule id><TAB><IGNORE|WARN|FAIL><TAB><reason, free text>.  Keep every IGNORE justified; default (unlisted) is WARN.
+# Rule ids: https://www.zaproxy.org/docs/alerts/
+# Escalate what we fixed so a regression fails the run:
+10020	FAIL	Anti-clickjacking header (X-Frame-Options / frame-ancestors) must stay set
+10021	FAIL	X-Content-Type-Options: nosniff must stay set
+10038	FAIL	Content-Security-Policy header must stay set
+10055	FAIL	CSP: wildcard / unsafe directives must not creep in
+10063	FAIL	Permissions-Policy header must stay set
+10035	FAIL	Strict-Transport-Security must stay set
+10015	FAIL	Authenticated/API responses must not be cacheable (Cache-Control: no-store)
+# Justified ignores:
+10049	IGNORE	Storable/cacheable content on the SPA: hashed /assets/* are intentionally immutable-cacheable; index.html is no-cache and the app shell holds no user data
+10096	IGNORE	Timestamp disclosure: the API returns ISO timestamps (createdAt etc.) by design
+10027	IGNORE	Suspicious comments: minified third-party bundles contain words like "TODO"/"select" (no secrets; gitleaks covers source)
+90004	IGNORE	Site isolation (Spectre): COOP/CORP are already set; the remaining sub-checks are about cross-origin resource policy of the SPA that loads Google Fonts on purpose
+10098	IGNORE	Cross-domain misconfiguration: Access-Control-Allow-Origin is reflected only for origins in CORS_ORIGINS (verified with a disallowed Origin in docs/SECURITY_SCANNING.md)

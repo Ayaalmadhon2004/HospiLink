@@ -4,6 +4,7 @@ import { EmptyState, LoadingSpinner } from './StatusBlocks';
 import { appointmentDot } from '../../../utils/dashboardStats';
 import { formatTime } from '../../../utils/datetime';
 import type { Appointment } from '../../../services/appointmentsService';
+import { enumLabel } from '../../../utils/enumLabel';
 
 const VISIBLE_APPOINTMENTS = 5;
 
@@ -37,7 +38,7 @@ export const TodayScheduleSection = ({ loading, appointments }: TodayScheduleSec
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-gray-900 truncate">{apt.patient?.name || t('common.unknown')}</p>
                 <p className="text-xs text-gray-500">
-                  {t(`dashboard.appointmentTypes.${apt.type}`, { defaultValue: apt.type })} ·{' '}
+                  {enumLabel(t, 'appointmentType', apt.type)} ·{' '}
                   {t('dashboard.doctorPrefix', { name: apt.doctor?.name || t('common.unknown') })}
                   {apt.room && ` · ${apt.room}`}
                 </p>

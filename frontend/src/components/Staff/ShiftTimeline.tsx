@@ -2,6 +2,7 @@
 import { Users } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Shift } from '../../types/staff';
+import { enumLabel } from '../../utils/enumLabel';
 
 interface ShiftTimelineProps {
   timeline: Record<string, Shift[]> | null;
@@ -65,7 +66,7 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
                       key={shift.id}
                       className={`absolute top-4 h-6 rounded-md border text-xs flex items-center px-2 truncate ${SHIFT_COLORS[shift.type] || 'bg-slate-100 text-slate-600'}`}
                       style={{ left: `${left}%`, width: `${Math.max(width, 8)}%` }}
-                      title={`${shift.staffName} - ${t(`staff.shifts.${shift.type}`, { defaultValue: shift.type })}`}
+                      title={`${shift.staffName} - ${enumLabel(t, 'shiftType', shift.type)}`}
                     >
                       <Users size={10} className="me-1 shrink-0" />
                       <span className="truncate">{shift.staffName}</span>

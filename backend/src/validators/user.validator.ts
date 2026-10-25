@@ -22,6 +22,11 @@ export const approveUserSchema = z.object({
   department: nonEmpty('department', 100).optional(),
 });
 
+export const changeRoleSchema = z.object({ role: roleEnum });
+
+// Reactivating needs an explicit role too: a rejected signup only holds a placeholder role.
+export const activateUserSchema = z.object({ role: roleEnum });
+
 export const listUsersQuerySchema = z.object({
   accountStatus: accountStatusEnum.optional(),
   // Only logins that are not yet linked to a staff member (for the "link login" picker).
