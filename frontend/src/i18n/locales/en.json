@@ -337,6 +337,28 @@
       "namePlaceholder": "e.g. Cardiology",
       "floor": "Floor",
       "floorPlaceholder": "e.g. 2"
+    },
+    "note": {
+      "type": "Note type",
+      "content": "Note",
+      "contentPlaceholder": "Write the clinical note...",
+      "correctedContent": "Corrected note",
+      "amendHint": "The original stays on record; your correction is saved as a new version."
+    },
+    "labOrder": {
+      "testName": "Test",
+      "testNamePlaceholder": "e.g. Complete blood count",
+      "testCode": "Code",
+      "priority": "Priority",
+      "notes": "Notes"
+    },
+    "medication": {
+      "name": "Name",
+      "genericName": "Generic name",
+      "form": "Form",
+      "formPlaceholder": "tablet, injection...",
+      "strength": "Strength",
+      "strengthPlaceholder": "e.g. 500 mg"
     }
   },
   "patients": {
@@ -1060,6 +1082,105 @@
       "deactivate": "User deactivated",
       "activate": "User activated",
       "role": "Role changed"
+    }
+  },
+  "clinical": {
+    "title": "Clinical records",
+    "tabs": {
+      "notes": "Notes",
+      "prescriptions": "Prescriptions",
+      "labs": "Lab results"
+    },
+    "noteTypes": {
+      "PROGRESS": "Progress",
+      "ADMISSION": "Admission",
+      "CONSULTATION": "Consultation",
+      "DISCHARGE": "Discharge",
+      "NURSING": "Nursing"
+    },
+    "priority": {
+      "ROUTINE": "Routine",
+      "URGENT": "Urgent",
+      "STAT": "STAT"
+    },
+    "notes": {
+      "add": "Add note",
+      "empty": "No notes yet",
+      "amended": "Amended",
+      "amend": "Amend",
+      "history": "Earlier versions",
+      "save": "Save note",
+      "saveAmendment": "Save amendment"
+    },
+    "medications": {
+      "title": "Medication catalogue",
+      "manage": "Medication catalogue",
+      "add": "Add medication",
+      "retire": "Retire",
+      "restore": "Restore",
+      "updateFailed": "Could not update the medication"
+    },
+    "rx": {
+      "add": "New prescription",
+      "empty": "No prescriptions yet",
+      "item": "Item {{n}}",
+      "medication": "Medication",
+      "dose": "Dose",
+      "frequency": "Frequency",
+      "route": "Route",
+      "days": "Days",
+      "instructions": "Instructions",
+      "removeItem": "Remove item",
+      "addItem": "Add another medication",
+      "notes": "Notes",
+      "save": "Save prescription",
+      "saveFailed": "Could not save the prescription",
+      "closeFailed": "Could not update the prescription",
+      "complete": "Mark completed",
+      "cancel": "Cancel prescription",
+      "forDays_one": "for {{count}} day",
+      "forDays_other": "for {{count}} days",
+      "status": {
+        "ACTIVE": "Active",
+        "COMPLETED": "Completed",
+        "CANCELLED": "Cancelled"
+      }
+    },
+    "labs": {
+      "order": "Order lab test",
+      "empty": "No lab orders yet",
+      "enterResults": "Enter results: {{test}}",
+      "flagHint": "Flags (low, high, critical) are calculated from the limits you enter.",
+      "saveFailed": "Could not save the results",
+      "cancelFailed": "Could not cancel the order",
+      "analyteN": "Result {{n}}",
+      "addAnalyte": "Add another result",
+      "saveResults": "Save results",
+      "enter": "Enter results",
+      "cancel": "Cancel order",
+      "reference": "Reference",
+      "flag": "Flag",
+      "status": {
+        "ORDERED": "Awaiting results",
+        "RESULTED": "Resulted",
+        "CANCELLED": "Cancelled"
+      },
+      "fields": {
+        "analyte": "Test",
+        "value": "Value",
+        "unit": "Unit",
+        "refLow": "Normal from",
+        "refHigh": "Normal to",
+        "criticalLow": "Critical below",
+        "criticalHigh": "Critical above"
+      },
+      "flags": {
+        "NORMAL": "Normal",
+        "LOW": "Low",
+        "HIGH": "High",
+        "CRITICAL_LOW": "Critical low",
+        "CRITICAL_HIGH": "Critical high"
+      }
     }
   }
 }

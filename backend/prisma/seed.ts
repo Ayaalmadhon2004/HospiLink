@@ -502,6 +502,19 @@ async function main() {
   });
   console.log(`📞 Created ${calls.count} dispatch calls`);
 
+  // Starter drug catalogue (idempotent: unique per hospital + name + form + strength)
+  const meds = await prisma.medication.createMany({
+    data: [
+      { name: 'Paracetamol', genericName: 'Acetaminophen', form: 'tablet', strength: '500 mg' },
+      { name: 'Ibuprofen', genericName: 'Ibuprofen', form: 'tablet', strength: '400 mg' },
+      { name: 'Amoxicillin', genericName: 'Amoxicillin', form: 'capsule', strength: '500 mg' },
+      { name: 'Ceftriaxone', genericName: 'Ceftriaxone', form: 'injection', strength: '1 g' },
+      { name: 'Metformin', genericName: 'Metformin', form: 'tablet', strength: '850 mg' },
+    ].map((m) => ({ ...m, hospitalId: hospital.id })),
+    skipDuplicates: true,
+  });
+  console.log(`💊 Created ${meds.count} medications`);
+
   console.log('✅ Seeding completed successfully!');
 }
 

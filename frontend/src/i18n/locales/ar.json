@@ -337,6 +337,28 @@
       "namePlaceholder": "مثال: القلبية",
       "floor": "الطابق",
       "floorPlaceholder": "مثال: 2"
+    },
+    "note": {
+      "type": "نوع الملاحظة",
+      "content": "الملاحظة",
+      "contentPlaceholder": "اكتب الملاحظة السريرية...",
+      "correctedContent": "الملاحظة المصحّحة",
+      "amendHint": "تبقى النسخة الأصلية محفوظة، ويُحفظ تصحيحك كنسخة جديدة."
+    },
+    "labOrder": {
+      "testName": "الفحص",
+      "testNamePlaceholder": "مثال: تعداد دم كامل",
+      "testCode": "الرمز",
+      "priority": "الأولوية",
+      "notes": "ملاحظات"
+    },
+    "medication": {
+      "name": "الاسم",
+      "genericName": "الاسم العلمي",
+      "form": "الشكل",
+      "formPlaceholder": "أقراص، حقن...",
+      "strength": "التركيز",
+      "strengthPlaceholder": "مثال: 500 ملغ"
     }
   },
   "patients": {
@@ -1104,6 +1126,109 @@
       "deactivate": "تم تعطيل المستخدم",
       "activate": "تم تفعيل المستخدم",
       "role": "تم تغيير الدور"
+    }
+  },
+  "clinical": {
+    "title": "السجلات السريرية",
+    "tabs": {
+      "notes": "الملاحظات",
+      "prescriptions": "الوصفات",
+      "labs": "نتائج المختبر"
+    },
+    "noteTypes": {
+      "PROGRESS": "متابعة",
+      "ADMISSION": "إدخال",
+      "CONSULTATION": "استشارة",
+      "DISCHARGE": "خروج",
+      "NURSING": "تمريضية"
+    },
+    "priority": {
+      "ROUTINE": "عادي",
+      "URGENT": "عاجل",
+      "STAT": "فوري"
+    },
+    "notes": {
+      "add": "إضافة ملاحظة",
+      "empty": "لا توجد ملاحظات بعد",
+      "amended": "معدّلة",
+      "amend": "تعديل",
+      "history": "النسخ السابقة",
+      "save": "حفظ الملاحظة",
+      "saveAmendment": "حفظ التعديل"
+    },
+    "medications": {
+      "title": "قائمة الأدوية",
+      "manage": "قائمة الأدوية",
+      "add": "إضافة دواء",
+      "retire": "إيقاف",
+      "restore": "استعادة",
+      "updateFailed": "تعذّر تحديث الدواء"
+    },
+    "rx": {
+      "add": "وصفة جديدة",
+      "empty": "لا توجد وصفات بعد",
+      "item": "البند {{n}}",
+      "medication": "الدواء",
+      "dose": "الجرعة",
+      "frequency": "التكرار",
+      "route": "طريقة الإعطاء",
+      "days": "الأيام",
+      "instructions": "التعليمات",
+      "removeItem": "إزالة البند",
+      "addItem": "إضافة دواء آخر",
+      "notes": "ملاحظات",
+      "save": "حفظ الوصفة",
+      "saveFailed": "تعذّر حفظ الوصفة",
+      "closeFailed": "تعذّر تحديث الوصفة",
+      "complete": "تمييز كمكتملة",
+      "cancel": "إلغاء الوصفة",
+      "forDays_zero": "لمدة {{count}} يوم",
+      "forDays_one": "لمدة يوم واحد",
+      "forDays_two": "لمدة يومين",
+      "forDays_few": "لمدة {{count}} أيام",
+      "forDays_many": "لمدة {{count}} يومًا",
+      "forDays_other": "لمدة {{count}} يوم",
+      "status": {
+        "ACTIVE": "نشطة",
+        "COMPLETED": "مكتملة",
+        "CANCELLED": "ملغاة"
+      }
+    },
+    "labs": {
+      "order": "طلب فحص مخبري",
+      "empty": "لا توجد طلبات مخبرية بعد",
+      "enterResults": "إدخال النتائج: {{test}}",
+      "flagHint": "تُحسب العلامات (منخفض، مرتفع، حرج) من الحدود التي تدخلها.",
+      "saveFailed": "تعذّر حفظ النتائج",
+      "cancelFailed": "تعذّر إلغاء الطلب",
+      "analyteN": "النتيجة {{n}}",
+      "addAnalyte": "إضافة نتيجة أخرى",
+      "saveResults": "حفظ النتائج",
+      "enter": "إدخال النتائج",
+      "cancel": "إلغاء الطلب",
+      "reference": "المرجع",
+      "flag": "العلامة",
+      "status": {
+        "ORDERED": "بانتظار النتائج",
+        "RESULTED": "ظهرت النتائج",
+        "CANCELLED": "ملغى"
+      },
+      "fields": {
+        "analyte": "الفحص",
+        "value": "القيمة",
+        "unit": "الوحدة",
+        "refLow": "الطبيعي من",
+        "refHigh": "الطبيعي إلى",
+        "criticalLow": "حرج دون",
+        "criticalHigh": "حرج فوق"
+      },
+      "flags": {
+        "NORMAL": "طبيعي",
+        "LOW": "منخفض",
+        "HIGH": "مرتفع",
+        "CRITICAL_LOW": "منخفض حرج",
+        "CRITICAL_HIGH": "مرتفع حرج"
+      }
     }
   }
 }

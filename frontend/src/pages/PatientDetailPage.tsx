@@ -9,6 +9,8 @@ import { getPatientById, dischargePatient, uploadReport, getPatientReports } fro
 import { isReportFileTooLarge } from '../utils/reportFile';
 import { ArrowLeft, User, Bed, Stethoscope, Activity, LogOut, Upload, FileText, X, CheckCircle, Download } from 'lucide-react';
 import { formatDate } from '../utils/datetime';
+import { ClinicalRecords } from '../components/Clinical/ClinicalRecords';
+import { useAuthPermissions } from '../hooks/useAuthPermissions';
 
 const STATUS_COLORS = {
   STABLE: 'bg-green-100 text-green-700',
@@ -30,6 +32,7 @@ export const PatientDetailPage = () => {
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { can } = useAuthPermissions();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [patient, setPatient] = useState<PatientDetail | null>(null);
@@ -341,6 +344,8 @@ export const PatientDetailPage = () => {
             </ul>
           )}
         </section>
+
+        {can('clinical:read') && id && <ClinicalRecords patientId={id} />}
 
         {/* Action Buttons */}
         <div className="flex gap-3 flex-wrap">

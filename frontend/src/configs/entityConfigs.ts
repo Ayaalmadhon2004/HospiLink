@@ -280,3 +280,47 @@ export const wardValidationSchema = z.object({
   name: requiredString('Ward name').max(100),
   floor: z.string().optional().refine((v) => !v || Number.isInteger(Number(v)), 'Floor must be a whole number'),
 });
+
+
+// ─── CLINICAL RECORDS ──────────────────────────────────────────────
+export interface NoteFormValues {
+  type: string;
+  content: string;
+}
+export const noteTypeOptions = (types: readonly string[]) => types.map((v) => ({ label: `clinical.noteTypes.${v}`, value: v }));
+export const noteFields = (types: readonly string[]): FieldConfig<NoteFormValues>[] => [
+  { name: 'type', label: 'forms.note.type', type: 'select', required: true, colSpan: 2, options: noteTypeOptions(types) },
+  { name: 'content', label: 'forms.note.content', type: 'textarea', required: true, rows: 6, colSpan: 2, placeholder: 'forms.note.contentPlaceholder' },
+];
+export const amendFields: FieldConfig<{ content: string }>[] = [
+  { name: 'content', label: 'forms.note.correctedContent', type: 'textarea', required: true, rows: 6, colSpan: 2, helperText: 'forms.note.amendHint' },
+];
+
+export interface LabOrderFormValues {
+  testName: string;
+  testCode?: string;
+  priority: string;
+  notes?: string;
+}
+export const labOrderFields: FieldConfig<LabOrderFormValues>[] = [
+  { name: 'testName', label: 'forms.labOrder.testName', type: 'text', required: true, colSpan: 2, placeholder: 'forms.labOrder.testNamePlaceholder' },
+  { name: 'testCode', label: 'forms.labOrder.testCode', type: 'text', colSpan: 1 },
+  {
+    name: 'priority', label: 'forms.labOrder.priority', type: 'select', required: true, colSpan: 1,
+    options: ['ROUTINE', 'URGENT', 'STAT'].map((v) => ({ label: `clinical.priority.${v}`, value: v })),
+  },
+  { name: 'notes', label: 'forms.labOrder.notes', type: 'textarea', rows: 3, colSpan: 2 },
+];
+
+export interface MedicationFormValues {
+  name: string;
+  genericName?: string;
+  form: string;
+  strength: string;
+}
+export const medicationFields: FieldConfig<MedicationFormValues>[] = [
+  { name: 'name', label: 'forms.medication.name', type: 'text', required: true, colSpan: 1 },
+  { name: 'genericName', label: 'forms.medication.genericName', type: 'text', colSpan: 1 },
+  { name: 'form', label: 'forms.medication.form', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.formPlaceholder' },
+  { name: 'strength', label: 'forms.medication.strength', type: 'text', required: true, colSpan: 1, placeholder: 'forms.medication.strengthPlaceholder' },
+];
