@@ -2,6 +2,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { Pill, Search } from 'lucide-react';
 import { StockActionModal, type StockAction } from '../components/Pharmacy/StockActionModal';
 import { useAuthPermissions } from '../hooks/useAuthPermissions';
@@ -41,6 +42,7 @@ export const PharmacyPage = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Pill className="w-6 h-6 text-blue-600" aria-hidden="true" />{t('pharmacy.title')}</h1>
         <p className="text-gray-500 text-sm mt-1">{t('pharmacy.subtitle')}</p>
+        {canManage && <Link to="/pharmacy/movements" className="inline-block mt-2 text-sm text-blue-700 underline">{t('pharmacy.movements.link')}</Link>}
       </div>
 
       <div className="flex flex-wrap items-center gap-4">

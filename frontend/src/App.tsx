@@ -24,6 +24,7 @@ const AppointmentsPage = lazy(() => import('./pages/AppointmentsPage').then(m =>
 const DispatchDashboard = lazy(() => import('./pages/DispatchDashboard'));
 const IncidentsPage = lazy(() => import('./pages/IncidentsPage').then(m => ({ default: m.IncidentsPage })));
 const StaffDirectoryPage = lazy(() => import('./pages/StaffDirectoryPage').then(m => ({ default: m.StaffDirectoryPage })));
+const StockMovementsPage = lazy(() => import('./pages/StockMovementsPage').then(m => ({ default: m.StockMovementsPage })));
 const PharmacyPage = lazy(() => import('./pages/PharmacyPage').then(m => ({ default: m.PharmacyPage })));
 const BillingPage = lazy(() => import('./pages/BillingPage').then(m => ({ default: m.BillingPage })));
 const InvoiceDetailPage = lazy(() => import('./pages/InvoiceDetailPage').then(m => ({ default: m.InvoiceDetailPage })));
@@ -65,6 +66,7 @@ function App() {
           <Route path="/vitals" element={<VitalsMonitorPage />} />
           <Route path="/incidents" element={<IncidentsPage />} />
           <Route path="/dispatch" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/dispatch']}><DispatchDashboard /></PrivateRoute>} />
+          <Route path="/pharmacy/movements" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/pharmacy/movements']}><StockMovementsPage /></PrivateRoute>} />
           <Route path="/pharmacy" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/pharmacy']}><PharmacyPage /></PrivateRoute>} />
           <Route path="/billing" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/billing']}><BillingPage /></PrivateRoute>} />
           <Route path="/billing/:id" element={<PrivateRoute allowedRoles={ROUTE_ROLES['/billing']}><InvoiceDetailPage /></PrivateRoute>} />

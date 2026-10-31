@@ -84,3 +84,28 @@ export interface LabResultDraft {
   criticalLow: string;
   criticalHigh: string;
 }
+
+export type StockMovementType = 'RECEIVE' | 'DISPENSE' | 'ADJUST';
+export const STOCK_MOVEMENT_TYPES: readonly StockMovementType[] = ['RECEIVE', 'DISPENSE', 'ADJUST'];
+
+/** One row of the append-only stock ledger (`GET /pharmacy/movements`, ADMIN). */
+export interface StockMovement {
+  id: string;
+  medicationId: string;
+  type: StockMovementType;
+  delta: number;
+  note: string | null;
+  userName: string;
+  createdAt: string;
+  medication: { name: string; strength: string };
+}
+
+/** Units handed to a patient (`GET /pharmacy/dispensations?patientId=`). */
+export interface Dispensation {
+  id: string;
+  quantity: number;
+  unitPriceMinor: number;
+  dispensedByName: string;
+  createdAt: string;
+  medication: { name: string; form: string; strength: string };
+}
