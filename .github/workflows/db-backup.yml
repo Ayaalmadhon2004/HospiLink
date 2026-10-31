@@ -23,6 +23,29 @@ jobs:
           sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17
+      # Fails fast with a readable reason (names only, values are never printed) instead of a bare "exit code 1".
+      - name: Preflight (secrets present, client and server versions)
+        env:
+          BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+          BACKUP_S3_URI: ${{ secrets.BACKUP_S3_URI }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          missing=0
+          for name in BACKUP_DATABASE_URL BACKUP_PASSPHRASE BACKUP_S3_URI AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY; do
+            if [ -z "${!name:-}" ]; then echo "::error title=Missing secret::$name is not set (Settings > Secrets and variables > Actions)"; missing=1; fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+          echo "pg_dump client: $(pg_dump --version)"
+          # The pooled Neon endpoint ("-pooler" in the host) cannot be used by pg_dump; the server must not be newer than the client.
+          if printf '%s' "$BACKUP_DATABASE_URL" | grep -q -- '-pooler'; then
+            echo "::error title=Pooled endpoint::BACKUP_DATABASE_URL points at the pooled (-pooler) endpoint; use the direct endpoint"; exit 1
+          fi
+          server_version=$(psql "$BACKUP_DATABASE_URL" -Atc "show server_version_num" 2>/dev/null || true)
+          if [ -z "$server_version" ]; then echo "::error title=Cannot connect::psql could not connect with BACKUP_DATABASE_URL (wrong URL, password or network)"; exit 1; fi
+          echo "server_version_num: $server_version"
+          if [ "$server_version" -ge 180000 ]; then echo "::error title=Version mismatch::server is PostgreSQL 18+ but the workflow installs the 17 client; bump postgresql-client in this workflow"; exit 1; fi
       - name: Backup
         env:
           BACKUP_DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL }}
