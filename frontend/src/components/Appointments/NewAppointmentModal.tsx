@@ -1,37 +1,14 @@
 // frontend/src/components/Appointments/NewAppointmentModal.tsx
-import { useState, useEffect } from 'react';
-import { useTranslation, Trans } from 'react-i18next';
-import { Link } from 'react-router-dom';
-import { X, UserPlus, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
-import { createAppointment, updateAppointment} from '../../services/appointmentsService';
-import { apiGet } from '../../services/api';
-import { Combobox } from '../Form/Combobox';
-import { extractList, getResponseData } from '../../types/api';
-import type { Appointment } from '../../services/appointmentsService';
-import { toast } from 'sonner';
+import { useTranslation } from 'react-i18next';
+import { X, Clock, Stethoscope, MapPin, FileText } from 'lucide-react';
+import type { AppointmentFormOptions } from '../../hooks/useAppointmentForm';
+import { useAppointmentForm } from '../../hooks/useAppointmentForm';
+import { AppointmentPatientPicker } from './AppointmentPatientPicker';
 
-interface Patient {
-  id: string;
-  name: string;
-  patientCode: string;
-  phone?: string;
-  gender?: string;
-  age?: number;
-}
-
-interface Doctor {
-  id: string;
-  name: string;
-  role: string;
-  department?: string;
-}
-
-interface NewAppointmentModalProps {
+interface NewAppointmentModalProps extends AppointmentFormOptions {
   isOpen: boolean;
-  onClose: () => void;
-  onSuccess: () => void;
-  editingAppointment?: (Appointment & { doctorId?: string }) | null;
 }
+
 
 const APPOINTMENT_TYPES = [
   { value: 'CONSULTATION', label: 'Consultation', color: 'bg-teal-100 text-teal-700' },
@@ -52,154 +29,14 @@ const DEPARTMENTS = [
   'Surgery',
 ];
 
-const SLOT_LENGTH = 16; // "YYYY-MM-DDTHH:mm", the value format of <input type="datetime-local">
-const DEFAULT_LEAD_MINUTES = 30;
-
-/** A new appointment starts half an hour from now unless the user picks another time. */
-const defaultSlot = (): string => new Date(Date.now() + DEFAULT_LEAD_MINUTES * 60_000).toISOString().slice(0, SLOT_LENGTH);
-
 const AppointmentForm = ({ onClose, onSuccess, editingAppointment }: Omit<NewAppointmentModalProps, 'isOpen'>) => {
   const { t } = useTranslation();
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [fetchingPatients, setFetchingPatients] = useState(false);
-
-  // Form state
-  // Starts from the appointment being edited (the form is mounted per opening, so there is nothing to reset)
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(editingAppointment?.patient ?? null);
-  const [patientSearch, setPatientSearch] = useState(editingAppointment?.patient?.name ?? '');
-
-  const [doctorId, setDoctorId] = useState(editingAppointment?.doctorId ?? '');
-  const [scheduledAt, setScheduledAt] = useState(() =>
-    editingAppointment?.scheduledAt ? new Date(editingAppointment.scheduledAt).toISOString().slice(0, SLOT_LENGTH) : defaultSlot(),
-  );
-  const [type, setType] = useState(editingAppointment?.type || 'CONSULTATION');
-  const [department, setDepartment] = useState(editingAppointment?.department || 'General');
-  const [room, setRoom] = useState(editingAppointment?.room ?? '');
-  const [notes, setNotes] = useState(editingAppointment?.notes ?? '');
-  const [duration, setDuration] = useState(editingAppointment?.duration || 30);
-  const isEditing = !!editingAppointment;
-
-  interface CreateAppointmentData {
-  doctorId: string;
-  scheduledAt: string;
-  type: string;
-  department: string;
-  room?: string;
-  notes?: string;
-  duration?: number;
-  patientId?: string;
-}
-
-  // ─── Fetch Patients for Search ─────────────────────
-  const fetchPatients = async (search: string) => {
-    if (!search || search.length < 2) {
-      setPatients([]);
-      return;
-    }
-    setFetchingPatients(true);
-    try {
-      const res = await apiGet('/patients', { search, limit: '10' });
-      setPatients(extractList<Patient>(res));
-    } catch {
-      setPatients([]);
-    } finally {
-      setFetchingPatients(false);
-    }
-  };
-
-  // Debounce patient search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (patientSearch && !selectedPatient) {
-        fetchPatients(patientSearch);
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [patientSearch, selectedPatient]);
-
-  // ─── Fetch Doctors ─────────────────────────────────
-  useEffect(() => {
-    const fetchDoctors = async () => {
-      try {
-        const res = await apiGet('/staff', { role: 'DOCTOR', limit: '50' });
-        setDoctors(extractList<Doctor>(res));
-      } catch {
-        // Doctor list stays empty on failure
-      }
-    };
-    fetchDoctors();
-  }, []);
-
-  // ─── Handle Patient Selection ──────────────────────
-  const handleSelectPatient = (patient: Patient) => {
-    setSelectedPatient(patient);
-    setPatientSearch(patient.name);
-    setPatients([]);
-  };
-
-  // ─── Handle New Patient Input ──────────────────────
-  const handlePatientInputChange = (value: string) => {
-    setPatientSearch(value);
-    if (selectedPatient && selectedPatient.name !== value) {
-      setSelectedPatient(null);
-    }
-  };
-
-  // ─── Submit ────────────────────────────────────────
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      if (!doctorId) {
-        toast.error(t('appointments.modal.selectDoctorError'));
-        setLoading(false);
-        return;
-      }
-      if (!scheduledAt) {
-        toast.error(t('appointments.modal.selectDateError'));
-        setLoading(false);
-        return;
-      }
-      if (!selectedPatient?.id) {
-        toast.error(t('appointments.modal.selectPatientError'));
-        setLoading(false);
-        return;
-      }
-
-
-      const data: CreateAppointmentData = {
-        doctorId,
-        scheduledAt: new Date(scheduledAt).toISOString(),
-        type,
-        department,
-        room: room || undefined,
-        notes: notes || undefined,
-        duration: Number(duration) || 30,
-      };
-
-      // Appointments only attach to an existing patient (admit new patients from the Patients page).
-      data.patientId = selectedPatient.id;
-
-
-      if (isEditing) {
-        await updateAppointment(editingAppointment.id, data);
-        toast.success(t('appointments.modal.updated'));
-      } else {
-        await createAppointment(data);
-        toast.success(t('appointments.modal.created'));
-      }
-
-      onSuccess();
-      onClose();
-    } catch (err: unknown) {
-      toast.error(getResponseData(err)?.message || t('appointments.modal.saveFailed'));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const {
+    patients, doctors, loading, fetchingPatients, selectedPatient, patientSearch,
+    doctorId, setDoctorId, scheduledAt, setScheduledAt, type, setType,
+    department, setDepartment, room, setRoom, notes, setNotes, duration, setDuration,
+    isEditing, handleSelectPatient, handlePatientInputChange, clearPatient, handleSubmit,
+  } = useAppointmentForm({ onClose, onSuccess, editingAppointment });
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-hospital-navy/50 backdrop-blur-sm">
@@ -220,54 +57,16 @@ const AppointmentForm = ({ onClose, onSuccess, editingAppointment }: Omit<NewApp
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* ─── Patient Search ────────────────────────── */}
-          <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {t('appointments.modal.patient')} *
-            </label>
-            <Combobox
-              options={patients.map((p) => ({ label: p.name, value: p.id, hint: p.patientCode }))}
-              value={selectedPatient?.id ?? ''}
-              onChange={(id) => {
-                const patient = patients.find((p) => p.id === id);
-                if (patient) handleSelectPatient(patient);
-              }}
-              query={patientSearch}
-              onQueryChange={handlePatientInputChange}
-              loading={fetchingPatients}
-              emptyMessage={
-                patientSearch.length >= 2 && !selectedPatient ? t('appointments.modal.noPatientFound') : undefined
-              }
-              placeholder={t('appointments.modal.patientPlaceholder')}
-            />
+          <AppointmentPatientPicker
+            patients={patients}
+            selectedPatient={selectedPatient}
+            patientSearch={patientSearch}
+            fetchingPatients={fetchingPatients}
+            onSelect={handleSelectPatient}
+            onInputChange={handlePatientInputChange}
+            onClear={clearPatient}
+          />
 
-            {/* Selected Patient Badge */}
-            {selectedPatient && (
-              <div className="mt-2 flex items-center gap-2">
-                <span className="text-sm text-gray-600">
-                  <Trans i18nKey="appointments.modal.selected" values={{ name: selectedPatient.name }} components={{ strong: <strong /> }} />
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedPatient(null);
-                    setPatientSearch('');
-                  }}
-                  className="text-xs text-red-500 hover:text-red-700"
-                >
-                  {t('appointments.modal.change')}
-                </button>
-              </div>
-            )}
-
-            {/* Unknown patient: point at the real admit flow instead of inventing a record */}
-            {!selectedPatient && patientSearch.length >= 2 && patients.length === 0 && !fetchingPatients && (
-              <p className="mt-1 text-xs text-amber-700">
-                <UserPlus size={12} className="inline me-1" aria-hidden="true" />
-                {t('appointments.modal.noPatientFound')}{' '}
-                <Link to="/patients" className="underline font-medium">{t('appointments.modal.admitPatientLink')}</Link>
-              </p>
-            )}
-          </div>
 
           {/* ─── Doctor ────────────────────────────────── */}
           <div>
