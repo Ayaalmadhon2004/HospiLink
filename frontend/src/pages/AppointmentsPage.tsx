@@ -1,60 +1,19 @@
 import { ExportMenu } from '../components/Export/ExportMenu';
 // pages/AppointmentsPage.tsx
-import { useState, useEffect } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Calendar, Clock, Stethoscope, MapPin, Plus, Search, Trash2, Pencil } from 'lucide-react';
-import { apiGet, apiDelete } from '../services/api';
+import { Calendar, Clock, Plus, Search } from 'lucide-react';
+import { apiDelete } from '../services/api';
 import type { Appointment } from '../services/appointmentsService';
-import type { ApiResponse } from '../types/api';
-import { useAppointmentsSocket } from '../hooks/useAppointmentsSocket';
+import { SCHEDULE_KEY, useAppointmentsSchedule } from '../hooks/useAppointmentsSchedule';
 import { NewAppointmentModal } from '../components/Appointments/NewAppointmentModal';
+import { TodayAppointmentRow } from '../components/Appointments/TodayAppointmentRow';
+import { UpcomingAppointmentRow } from '../components/Appointments/UpcomingAppointmentRow';
 import { useOptimisticDelete, useCrudModal } from '../hooks/useCrud';
 import { ConfirmDeleteDialog } from '../components/ConfirmDeleteDialog';
-import { toast } from 'sonner';
-import { formatDate as fmtDate, formatTime as fmtTime } from '../utils/datetime';
+import { formatDate as fmtDate } from '../utils/datetime';
 import { enumLabel } from '../utils/enumLabel';
-
-const SCHEDULE_KEY = ['appointments', 'schedule'];
-
-interface Schedule {
-  today: Appointment[];
-  upcoming: Appointment[];
-}
-
-// Today and upcoming load independently: one failing leaves the other list usable.
-const fetchSchedule = async (): Promise<Schedule> => {
-  const [todayRes, upcomingRes] = await Promise.allSettled([
-    // The endpoint returns either a bare list or { appointments }
-    apiGet<ApiResponse<Appointment[] & { appointments?: Appointment[] }>>('/appointments/today'),
-    apiGet<ApiResponse<Appointment[]>>('/appointments/upcoming'),
-  ]);
-  if (todayRes.status === 'rejected' && upcomingRes.status === 'rejected') throw todayRes.reason;
-
-  const todayData = todayRes.status === 'fulfilled' ? todayRes.value?.data : undefined;
-  const todayList = todayData?.appointments || todayData || [];
-  const upcomingList = upcomingRes.status === 'fulfilled' ? upcomingRes.value?.data : undefined;
-  return {
-    today: Array.isArray(todayList) ? todayList : [],
-    upcoming: Array.isArray(upcomingList) ? upcomingList : [],
-  };
-};
-
-const typeColors: Record<string, string> = {
-  SURGERY: 'bg-red-100 text-red-700 border-red-200',
-  CONSULTATION: 'bg-teal-100 text-teal-700 border-teal-200',
-  IMAGING: 'bg-blue-100 text-blue-700 border-blue-200',
-  FOLLOW_UP: 'bg-amber-100 text-amber-700 border-amber-200',
-  LAB_TEST: 'bg-purple-100 text-purple-700 border-purple-200',
-};
-
-const typeDotColors: Record<string, string> = {
-  SURGERY: 'bg-red-500',
-  CONSULTATION: 'bg-teal-500',
-  IMAGING: 'bg-blue-500',
-  FOLLOW_UP: 'bg-amber-500',
-  LAB_TEST: 'bg-purple-500',
-};
 
 export const AppointmentsPage = () => {
   const { t } = useTranslation();
@@ -72,28 +31,7 @@ export const AppointmentsPage = () => {
 
   const { isModalOpen, editingItem, handleAdd, handleEdit, handleModalSuccess } = useCrudModal<Appointment>();
 
-  const latestUpdate = useAppointmentsSocket();
-
-  const { data, isPending: loading, isError } = useQuery({ queryKey: SCHEDULE_KEY, queryFn: fetchSchedule });
-  const todayAppointments = data?.today ?? [];
-  const upcoming = data?.upcoming ?? [];
-
-  useEffect(() => {
-    if (isError) toast.error(t('appointments.loadError'));
-  }, [isError, t]);
-
-  // A socket update (booked / moved / cancelled elsewhere) refetches both lists.
-  useEffect(() => {
-    if (latestUpdate) void queryClient.invalidateQueries({ queryKey: SCHEDULE_KEY });
-  }, [latestUpdate, queryClient]);
-
-  const formatTime = (dateStr: string) => {
-    return fmtTime(dateStr, { hour: '2-digit', minute: '2-digit', hour12: false }, dateStr);
-  };
-
-  const formatDate = (dateStr: string) => {
-    return fmtDate(dateStr, { month: 'short', day: 'numeric' });
-  };
+  const { todayAppointments, upcoming, loading } = useAppointmentsSchedule();
 
   const filteredUpcoming = upcoming.filter((apt) => {
     const matchesSearch =
@@ -171,63 +109,7 @@ export const AppointmentsPage = () => {
         <div className="space-y-3">
           {todayAppointments.length > 0 ? (
             todayAppointments.map((apt) => (
-              <div
-                key={apt.id}
-                className={`group flex items-start gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border-s-4 ${
-                  typeColors[apt.type] || 'bg-gray-50 border-gray-300'
-                }`}
-              >
-                <div className="flex flex-col items-center min-w-[60px]">
-                  <span className="text-lg font-bold text-gray-900">
-                    {formatTime(apt.scheduledAt)}
-                  </span>
-                  <span className="text-xs text-gray-500">{t('appointments.minutes', { count: apt.duration })}</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
-                    <span className="font-medium text-gray-900">{apt.patient?.name || t('common.unknown')}</span>
-                    {apt.patient?.patientCode && (
-                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
-                    <span className="flex items-center gap-1">
-                      <Stethoscope size={14} />
-                      {enumLabel(t, 'appointmentType', apt.type)}
-                    </span>
-                    {apt.doctor?.name && (
-                      <span className="flex items-center gap-1">
-                        {apt.doctor.name.replace(/^Dr\.\s*/i, '')}
-                      </span>
-                    )}
-                    {apt.room && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={14} />
-                        {apt.room}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
-                  <button
-                    onClick={() => handleEdit(apt)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                    title={t('common.edit')}
-                    aria-label={t('common.edit')}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(apt.id, t('appointments.appointmentFor', { name: apt.patient?.name || t('common.unknown') }))}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                    title={t('common.delete')}
-                    aria-label={t('common.delete')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
+              <TodayAppointmentRow key={apt.id} apt={apt} onEdit={handleEdit} onDelete={handleDeleteClick} />
             ))
           ) : (
             <div className="text-center py-8 text-gray-400">
@@ -279,50 +161,7 @@ export const AppointmentsPage = () => {
         <div className="space-y-3">
           {filteredUpcoming.length > 0 ? (
             filteredUpcoming.map((apt) => (
-              <div
-                key={apt.id}
-                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-lg border hover:bg-gray-50 transition group"
-              >
-                <div className="flex flex-col items-center min-w-[60px] bg-gray-100 rounded-lg p-2">
-                  <span className="text-xs text-gray-500">{formatDate(apt.scheduledAt)}</span>
-                  <span className="text-sm font-bold text-gray-900">
-                    {formatTime(apt.scheduledAt)}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
-                    <span className="font-medium text-gray-900">{apt.patient?.name || t('common.unknown')}</span>
-                    {apt.patient?.patientCode && (
-                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
-                    )}
-                  </div>
-                  <div className="text-sm text-gray-500 mt-1">
-                    {enumLabel(t, 'appointmentType', apt.type)} &middot; {apt.doctor?.name ? apt.doctor.name.replace(/^Dr\.\s*/i, '') : t('appointments.noDoctor')} &middot; {t(`departments.${apt.department}`, { defaultValue: apt.department })}
-                  </div>
-                </div>
-                <span className={`hidden sm:inline-block px-2 py-1 rounded-full text-xs font-medium ${typeColors[apt.type] || ''}`}>
-                  {enumLabel(t, 'appointmentType', apt.type)}
-                </span>
-                <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
-                  <button
-                    onClick={() => handleEdit(apt)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                    title={t('common.edit')}
-                    aria-label={t('common.edit')}
-                  >
-                    <Pencil size={14} />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteClick(apt.id, t('appointments.appointmentFor', { name: apt.patient?.name || t('common.unknown') }))}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                    title={t('common.delete')}
-                    aria-label={t('common.delete')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
+              <UpcomingAppointmentRow key={apt.id} apt={apt} onEdit={handleEdit} onDelete={handleDeleteClick} />
             ))
           ) : (
             <div className="text-center py-8 text-gray-400">
