@@ -4,7 +4,14 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+// Neon suspends idle computes and drops idle connections. Without explicit timeouts, pg waits forever on a dead
+// socket and every request (login, /api/health) hangs until the client gives up. Fail fast and recycle idle sockets.
+const adapter = new PrismaPg({
+  connectionString: process.env.DATABASE_URL,
+  connectionTimeoutMillis: 10_000,
+  idleTimeoutMillis: 20_000,
+  keepAlive: true,
+});
 const prisma = new PrismaClient({ adapter });
 
 export default prisma;
