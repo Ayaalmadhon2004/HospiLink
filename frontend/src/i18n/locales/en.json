@@ -1207,6 +1207,10 @@
     "lowOnly": "Show low stock only",
     "loadFailed": "Could not load the stock",
     "empty": "No medications to show",
+    "unavailable": "The pharmacy service is not available on the server yet. Ask an administrator to update the backend.",
+    "out": "Out of stock",
+    "searchLabel": "Search medications",
+    "searchPlaceholder": "Search by name, form or strength...",
     "low": "Low",
     "cols": {
       "medication": "Medication",

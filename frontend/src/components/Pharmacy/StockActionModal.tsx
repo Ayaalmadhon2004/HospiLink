@@ -36,8 +36,13 @@ export const StockActionModal = ({ medication, action, onClose, onSaved }: { med
   };
 
   return (
-    <div className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="stock-modal-title">
-      <form onSubmit={submit} className="bg-white rounded-xl p-6 w-full max-w-md space-y-4">
+    <div
+      className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
+      role="presentation"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+    >
+      <form onSubmit={submit} role="dialog" aria-modal="true" aria-labelledby="stock-modal-title" className="bg-white rounded-xl p-6 w-full max-w-md space-y-4">
         <div className="flex items-center justify-between">
           <h3 id="stock-modal-title" className="text-lg font-bold">{t(`pharmacy.${action}Title`, { name: medication.name })}</h3>
           <button type="button" onClick={onClose} aria-label={t('common.close')}><X className="w-5 h-5" aria-hidden="true" /></button>

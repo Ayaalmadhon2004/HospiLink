@@ -7,13 +7,15 @@ import { BillingPage } from '../BillingPage';
 import { InvoiceDetailPage } from '../InvoiceDetailPage';
 import { DispenseModal } from '../../components/Pharmacy/DispenseModal';
 import { apiGet, apiPost, apiPut, apiDelete } from '../../services/api';
+import { apiGetAll } from '../../services/paginate';
+import { ApiError } from '../../services/apiError';
 import { QueryWrapper } from '../../test/QueryWrapper';
 import { canAccessRoute, hasPermission } from '../../configs/permissions';
 import type { Invoice } from '../../types/billing';
 
 vi.mock('../../services/api', () => ({ apiGet: vi.fn(), apiPost: vi.fn(), apiPut: vi.fn(), apiDelete: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
-vi.mock('../../services/paginate', () => ({ apiGetAll: vi.fn().mockResolvedValue({ data: [{ id: 'p1', name: 'Ali Hassan', patientCode: 'PT-1' }] }) }));
+vi.mock('../../services/paginate', () => ({ apiGetAll: vi.fn() }));
 const useAuth = vi.fn();
 vi.mock('../../contexts/authContext', () => ({ useAuth: () => useAuth() }));
 
@@ -25,7 +27,8 @@ const inv = (over: Partial<Invoice> = {}): Invoice => ({
 });
 
 beforeEach(() => {
-  [apiGet, apiPost, apiPut, apiDelete].forEach((m) => vi.mocked(m).mockReset());
+  [apiGet, apiPost, apiPut, apiDelete, apiGetAll].forEach((m) => vi.mocked(m as typeof apiGet).mockReset());
+  vi.mocked(apiGetAll).mockResolvedValue({ success: true, data: [{ id: 'p1', name: 'Ali Hassan', patientCode: 'PT-1' }] } as never);
   vi.mocked(apiPost).mockResolvedValue({ success: true } as never);
   vi.mocked(apiPut).mockResolvedValue({ success: true } as never);
   vi.mocked(apiDelete).mockResolvedValue({ success: true } as never);
@@ -43,7 +46,7 @@ describe('permissions', () => {
 });
 
 describe('PharmacyPage', () => {
-  beforeEach(() => vi.mocked(apiGet).mockResolvedValue({ success: true, data: [med(), med({ id: 'm2', name: 'Ibuprofen', stockQuantity: 500 })] } as never));
+  beforeEach(() => vi.mocked(apiGetAll).mockResolvedValue({ success: true, data: [med(), med({ id: 'm2', name: 'Ibuprofen', stockQuantity: 500 }), med({ id: 'm3', name: 'Amoxicillin', stockQuantity: 0 })] } as never));
 
   it('flags low stock; ADMIN gets receive/adjust, NURSE does not', async () => {
     useAuth.mockReturnValue({ user: { role: 'NURSE' } });
@@ -55,7 +58,7 @@ describe('PharmacyPage', () => {
     unmount();
     useAuth.mockReturnValue({ user: { role: 'ADMIN' } });
     render(<PharmacyPage />, { wrapper: QueryWrapper });
-    expect((await screen.findAllByRole('button', { name: 'Receive' })).length).toBe(2);
+    expect((await screen.findAllByRole('button', { name: 'Receive' })).length).toBe(3);
   });
 
   it('receiving stock posts the quantity; adjusting needs a reason', async () => {
@@ -80,7 +83,28 @@ describe('PharmacyPage', () => {
     render(<PharmacyPage />, { wrapper: QueryWrapper });
     await screen.findByText('Paracetamol');
     await userEvent.setup().click(screen.getByLabelText('Show low stock only'));
-    await waitFor(() => expect(apiGet).toHaveBeenCalledWith('/pharmacy/stock', expect.objectContaining({ lowOnly: true })));
+    await waitFor(() => expect(apiGetAll).toHaveBeenCalledWith('/pharmacy/stock', expect.objectContaining({ lowOnly: true })));
+  });
+
+  it('marks a zero-quantity medication as out of stock and filters by the search box', async () => {
+    useAuth.mockReturnValue({ user: { role: 'NURSE' } });
+    const user = userEvent.setup();
+    render(<PharmacyPage />, { wrapper: QueryWrapper });
+    expect(within((await screen.findByText('Amoxicillin')).closest('tr')!).getByText('Out of stock')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('Search medications'), 'ibu');
+    expect(screen.queryByText('Paracetamol')).not.toBeInTheDocument();
+    expect(screen.getByText('Ibuprofen')).toBeInTheDocument();
+    await user.clear(screen.getByLabelText('Search medications'));
+    await user.type(screen.getByLabelText('Search medications'), 'zzz');
+    expect(await screen.findByText('No medications to show')).toBeInTheDocument();
+  });
+
+  it('explains a 404 (server without the pharmacy module) and does not retry it', async () => {
+    useAuth.mockReturnValue({ user: { role: 'NURSE' } });
+    vi.mocked(apiGetAll).mockRejectedValueOnce(new ApiError('Not found', { status: 404 }));
+    render(<PharmacyPage />, { wrapper: QueryWrapper });
+    expect(await screen.findByRole('alert')).toHaveTextContent('not available on the server');
+    expect(apiGetAll).toHaveBeenCalledTimes(1);
   });
 });
 
