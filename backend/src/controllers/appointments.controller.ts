@@ -5,10 +5,9 @@ import { getIO } from '../utils/socket';
 import logger from '../config/logger';
 import { hospitalIdOf, clinicalRoom } from '../utils/tenant';
 import { pageParams, pageInfo } from '../utils/pagination';
-import { dayRange, hospitalTimezone, hourKey, formatLocal } from '../utils/time';
-import { notify } from '../services/notification.service';
+import { dayRange, hospitalTimezone } from '../utils/time';
+import { buildAppointmentWhere, groupByHour, notifyAppointmentDoctor } from '../services/appointmentService';
 import { findDoctorConflict, isOverlapViolation } from '../services/appointmentConflicts';
-import type { Prisma, AppointmentStatus, AppointmentType } from '@prisma/client';
 
 const CONFLICT_MESSAGE = 'Doctor has a conflicting appointment at this time';
 const DEFAULT_DURATION = 30;
@@ -18,54 +17,10 @@ const handleError = (res: Response, error: unknown, message: string) => {
   res.status(500).json({ success: false, message });
 };
 
-const describeAppointment = (a: { scheduledAt: Date | string; patient?: { name?: string } | null }, tz: string) =>
-  `${a.patient?.name ?? 'Patient'} on ${formatLocal(a.scheduledAt, tz)}`;
-
-// Appointment.doctorId points at Staff; its login is Staff.userId (an explicit link, not an email match).
-const notifyAppointmentDoctor = async (
-  appointment: { doctorId: string; scheduledAt: Date | string; patient?: { name?: string } | null },
-  title: string,
-  hospitalId: string,
-  actorId?: string
-) => {
-  try {
-    const message = describeAppointment(appointment, await hospitalTimezone(hospitalId));
-    const doctorStaffId = appointment.doctorId;
-    const staff = await prisma.staff.findUnique({ where: { id: doctorStaffId }, select: { userId: true } });
-    if (!staff) return;
-    if (!staff.userId) {
-      // Not silent: an admin can link or create the login from the staff directory.
-      logger.warn({ staffId: doctorStaffId }, 'Appointment notification skipped: staff member has no linked login');
-      return;
-    }
-    await notify({
-      type: 'APPOINTMENT',
-      title,
-      message,
-      link: '/appointments',
-      recipients: { userIds: [staff.userId], excludeUserId: actorId, scopeUserId: actorId },
-    });
-  } catch (error) {
-    logger.error({ err: error }, 'Appointment notification failed');
-  }
-};
-
 // ─── GET /api/appointments ─────────────────────────────────────────────
 export const getAppointments = async (req: Request, res: Response) => {
   try {
-    const { date, doctorId, patientId, status, type, department } = req.query;
-
-    const where: Prisma.AppointmentWhereInput = { patient: { hospitalId: hospitalIdOf(req), deletedAt: null } };
-
-    if (date) {
-      const { start, end } = dayRange(await hospitalTimezone(hospitalIdOf(req)), date as string);
-      where.scheduledAt = { gte: start, lt: end };
-    }
-    if (doctorId) where.doctorId = doctorId as string;
-    if (patientId) where.patientId = patientId as string;
-    if (status) where.status = status as AppointmentStatus;
-    if (type) where.type = type as AppointmentType;
-    if (department) where.department = department as string;
+    const where = await buildAppointmentWhere(hospitalIdOf(req), req.query);
 
     const page = pageParams(req.query);
     const [appointments, totalCount] = await Promise.all([
@@ -108,13 +63,7 @@ export const getTodaySchedule = async (req: Request, res: Response) => {
       take: 50,
     });
 
-    // Group by hour for timeline view
-    const schedule = appointments.reduce<Record<string, typeof appointments>>((acc, apt) => {
-      const timeKey = hourKey(apt.scheduledAt, tz);
-      if (!acc[timeKey]) acc[timeKey] = [];
-      acc[timeKey].push(apt);
-      return acc;
-    }, {});
+    const schedule = groupByHour(appointments, tz);
 
     res.status(200).json({ success: true, data: { appointments, schedule } });
   } catch (error: unknown) {
