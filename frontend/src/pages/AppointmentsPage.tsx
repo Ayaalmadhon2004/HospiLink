@@ -49,7 +49,7 @@ export const AppointmentsPage = () => {
   if (loading && !hasData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">{t('appointments.loading')}</div>
+        <div className="animate-pulse text-gray-500">{t('appointments.loading')}</div>
       </div>
     );
   }
@@ -112,7 +112,7 @@ export const AppointmentsPage = () => {
               <TodayAppointmentRow key={apt.id} apt={apt} onEdit={handleEdit} onDelete={handleDeleteClick} />
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-500">
               <Clock size={48} className="mx-auto mb-3 opacity-50" />
               <p>{t('appointments.emptyToday')}</p>
             </div>
@@ -132,7 +132,7 @@ export const AppointmentsPage = () => {
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder={t('appointments.searchPlaceholder')}
@@ -164,7 +164,7 @@ export const AppointmentsPage = () => {
               <UpcomingAppointmentRow key={apt.id} apt={apt} onEdit={handleEdit} onDelete={handleDeleteClick} />
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-500">
               <Calendar size={48} className="mx-auto mb-3 opacity-50" />
               <p>{t('appointments.emptyUpcoming')}</p>
             </div>

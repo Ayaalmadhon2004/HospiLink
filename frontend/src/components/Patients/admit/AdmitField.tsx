@@ -16,7 +16,7 @@ export const AdmitField = ({ id, label, children }: AdmitFieldProps) => {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-medium text-clinic-text mb-1">
-        {label} <span className="text-red-500" aria-hidden="true">*</span>
+        {label} <span className="text-red-600" aria-hidden="true">*</span>
         <span className="sr-only"> ({t('common.required')})</span>
       </label>
       {children}

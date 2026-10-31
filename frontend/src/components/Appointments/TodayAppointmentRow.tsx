@@ -34,7 +34,7 @@ export const TodayAppointmentRow = ({ apt, onEdit, onDelete }: Props) => {
           <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
           <span className="font-medium text-gray-900">{apt.patient?.name || t('common.unknown')}</span>
           {apt.patient?.patientCode && (
-            <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+            <span className="text-xs text-gray-500">{apt.patient.patientCode}</span>
           )}
         </div>
         <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
@@ -58,7 +58,7 @@ export const TodayAppointmentRow = ({ apt, onEdit, onDelete }: Props) => {
       <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
         <button
           onClick={() => onEdit(apt)}
-          className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+          className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
           title={t('common.edit')}
           aria-label={t('common.edit')}
         >
@@ -66,7 +66,7 @@ export const TodayAppointmentRow = ({ apt, onEdit, onDelete }: Props) => {
         </button>
         <button
           onClick={() => onDelete(apt.id, t('appointments.appointmentFor', { name: apt.patient?.name || t('common.unknown') }))}
-          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+          className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
           title={t('common.delete')}
           aria-label={t('common.delete')}
         >

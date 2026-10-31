@@ -74,7 +74,7 @@ export const StaffDirectoryPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">{t('staff.loading')}</div>
+        <div className="animate-pulse text-gray-500">{t('staff.loading')}</div>
       </div>
     );
   }
@@ -142,7 +142,7 @@ export const StaffDirectoryPage = () => {
       <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500" aria-hidden="true" />
             <input
               type="text"
               placeholder={t('staff.searchPlaceholder')}
@@ -192,7 +192,7 @@ export const StaffDirectoryPage = () => {
       {/* Staff Table */}
       <StaffTable staff={filteredStaff} canManage={canManage} onEdit={handleEdit} onDelete={handleDeleteClick} />
       {filteredStaff.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border text-center py-20 text-gray-400">
+        <div className="bg-white rounded-xl shadow-sm border text-center py-20 text-gray-500">
           <Users size={48} className="mx-auto mb-4 opacity-50" aria-hidden="true" />
           <p>{t('staff.empty')}</p>
         </div>

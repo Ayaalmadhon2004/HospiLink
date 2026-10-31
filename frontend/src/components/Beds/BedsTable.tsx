@@ -55,7 +55,7 @@ export const BedsTable = ({ beds: filteredBeds, onEdit, onDelete }: Props) => {
                       <span className="text-sm text-gray-700">{bed.patient.name}</span>
                     </div>
                   ) : (
-                    <span className="text-sm text-gray-400">—</span>
+                    <span className="text-sm text-gray-500">—</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-end">
@@ -63,14 +63,14 @@ export const BedsTable = ({ beds: filteredBeds, onEdit, onDelete }: Props) => {
                     <button
                       onClick={() => onEdit(bed)}
                       aria-label={t('beds.editLabel', { number: bed.bedNumber })}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => onDelete(bed.id, t('beds.bedLabel', { number: bed.bedNumber }))}
                       aria-label={t('beds.deleteLabel', { number: bed.bedNumber })}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -82,7 +82,7 @@ export const BedsTable = ({ beds: filteredBeds, onEdit, onDelete }: Props) => {
         </tbody>
       </table>
       {filteredBeds.length === 0 && (
-        <div className="text-center py-12 text-gray-400">
+        <div className="text-center py-12 text-gray-500">
           <BedDouble className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>{t('beds.empty')}</p>
         </div>

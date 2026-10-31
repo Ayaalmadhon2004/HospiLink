@@ -128,21 +128,22 @@ test.describe('user management and audit log (real backend + database)', () => {
   test('every one of those actions is in the audit log, and the action filter narrows it', async ({ page }) => {
     await login(page, 'admin');
     await page.goto('/audit-logs');
-    const codes = page.locator('tbody code');
-    await expect(codes.filter({ hasText: 'APPROVE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'DEACTIVATE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'ACTIVATE_USER' }).first()).toBeVisible();
-    await expect(codes.filter({ hasText: 'CHANGE_USER_ROLE' }).first()).toBeVisible();
+    // The action cell shows a translated label ("User approved"); the raw action name is its title attribute.
+    const codes = page.locator('tbody [title]');
+    await expect(codes.and(page.locator('[title="APPROVE_USER"]')).first()).toBeVisible();
+    await expect(codes.and(page.locator('[title="DEACTIVATE_USER"]')).first()).toBeVisible();
+    await expect(codes.and(page.locator('[title="ACTIVATE_USER"]')).first()).toBeVisible();
+    await expect(codes.and(page.locator('[title="CHANGE_USER_ROLE"]')).first()).toBeVisible();
 
     await page.getByLabel('Action').selectOption('CHANGE_USER_ROLE');
-    await expect(codes.first()).toHaveText('CHANGE_USER_ROLE');
-    const texts = await codes.allTextContents();
+    await expect(codes.first()).toHaveAttribute('title', 'CHANGE_USER_ROLE');
+    const texts = await codes.evaluateAll((els) => els.map((e) => e.getAttribute('title')));
     expect(texts.length).toBeGreaterThan(0);
     expect(new Set(texts)).toEqual(new Set(['CHANGE_USER_ROLE']));
     await expect(page.getByText('E2E Admin').first()).toBeVisible(); // who did it
 
     await page.getByRole('button', { name: 'Reset filters' }).click();
-    await expect(codes.filter({ hasText: 'APPROVE_USER' }).first()).toBeVisible();
+    await expect(codes.and(page.locator('[title="APPROVE_USER"]')).first()).toBeVisible();
   });
 
   test('doctors and nurses have no Users or Audit Log entry and are refused on the routes', async ({ page }) => {

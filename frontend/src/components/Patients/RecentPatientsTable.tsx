@@ -114,7 +114,7 @@ const RecentPatientsTable = memo(() => {
           aria-live="assertive"
         >
           <AlertCircle className="w-12 h-12 text-red-400 mx-auto mb-3" aria-hidden="true" />
-          <p className="text-red-500 font-medium">{t('patients.recent.loadError')}</p>
+          <p className="text-red-600 font-medium">{t('patients.recent.loadError')}</p>
           <p className="text-red-400 text-sm mt-1">{String(error)}</p>
         </div>
       </section>

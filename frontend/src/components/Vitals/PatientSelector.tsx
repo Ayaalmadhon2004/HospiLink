@@ -34,7 +34,7 @@ export const PatientSelector = ({ patients, selectedId, onSelect, formOpen, onTo
           </select>
           <ChevronDown
             size={16}
-            className="absolute end-3 top-1/2 -translate-y-1/2 text-clinic-text/40 pointer-events-none"
+            className="absolute end-3 top-1/2 -translate-y-1/2 text-clinic-text/70 pointer-events-none"
             aria-hidden="true"
           />
         </div>

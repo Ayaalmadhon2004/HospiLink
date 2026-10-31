@@ -19,7 +19,7 @@ export const DischargeModal = ({ patientName, error, discharging, onCancel, onCo
     >
       <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
         <h2 id="discharge-title" className="text-xl font-bold text-hospital-navy mb-2">{t('patientDetail.confirmDischarge')}</h2>
-        <p className="text-clinic-text/50 mb-6">
+        <p className="text-clinic-text/70 mb-6">
           <Trans
             i18nKey="patientDetail.dischargeQuestion"
             values={{ name: patientName }}

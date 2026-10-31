@@ -28,8 +28,8 @@ export const RecordVitalsForm = ({ submitting, onSubmit, onCancel }: RecordVital
       <form onSubmit={handleSubmit} className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {METRIC_FIELDS.map((field) => (
           <div key={field.name}>
-            <label htmlFor={field.id} className="block text-sm text-clinic-text/60 mb-1">
-              {t(field.labelKey)} <span className="text-xs text-clinic-text/50">{field.hint}</span>
+            <label htmlFor={field.id} className="block text-sm text-clinic-text/70 mb-1">
+              {t(field.labelKey)} <span className="text-xs text-clinic-text/70">{field.hint}</span>
             </label>
             <input
               id={field.id}
@@ -45,7 +45,7 @@ export const RecordVitalsForm = ({ submitting, onSubmit, onCancel }: RecordVital
           </div>
         ))}
         <div className="col-span-2 md:col-span-3">
-          <label htmlFor="notes" className="block text-sm text-clinic-text/60 mb-1">
+          <label htmlFor="notes" className="block text-sm text-clinic-text/70 mb-1">
             {t('vitals.page.notes')}
           </label>
           <textarea

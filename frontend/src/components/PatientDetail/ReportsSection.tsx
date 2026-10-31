@@ -29,17 +29,17 @@ export const ReportsSection = ({ reports, loading, onOpenError }: Props) => {
       </h2>
 
       {loading ? (
-        <div className="text-clinic-text/40 text-sm">{t('patientDetail.loadingReports')}</div>
+        <div className="text-clinic-text/70 text-sm">{t('patientDetail.loadingReports')}</div>
       ) : reports.length === 0 ? (
-        <p className="text-clinic-text/40 text-sm">{t('patientDetail.noReports')}</p>
+        <p className="text-clinic-text/70 text-sm">{t('patientDetail.noReports')}</p>
       ) : (
-        <ul className="space-y-2" role="list" aria-label={t('patientDetail.reportsLabel')}>
+        <ul className="space-y-2" aria-label={t('patientDetail.reportsLabel')}>
           {reports.map((report) => (
             <li key={report.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition">
               <FileText size={16} className="text-medical-teal" aria-hidden="true" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-clinic-text truncate">{report.fileName}</p>
-                <p className="text-xs text-clinic-text/40">
+                <p className="text-xs text-clinic-text/70">
                   <time dateTime={report.createdAt}>
                     {formatDate(report.createdAt)}
                   </time>

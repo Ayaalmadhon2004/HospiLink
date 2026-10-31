@@ -59,21 +59,19 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="upload-modal-title"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
+      <div role="dialog" aria-modal="true" aria-labelledby="upload-modal-title" className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
         <div className="flex justify-between items-center mb-4">
           <h2 id="upload-modal-title" className="text-xl font-bold text-hospital-navy">
             {t('patientDetail.uploadReport')}
           </h2>
           <button
             onClick={onClose}
-            className="text-clinic-text/50 hover:text-clinic-text p-1 rounded-lg hover:bg-slate-100 transition"
+            className="text-clinic-text/70 hover:text-clinic-text p-1 rounded-lg hover:bg-slate-100 transition"
             aria-label={t('patientDetail.closeUpload')}
             type="button"
           >
@@ -129,7 +127,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
               <p className="text-clinic-text/70">
                 {selectedFile ? selectedFile.name : t('uploadReport.select')}
               </p>
-              <p className="text-clinic-text/40 text-sm">
+              <p className="text-clinic-text/70 text-sm">
                 {t('uploadReport.help')}
               </p>
             </div>
@@ -141,7 +139,7 @@ export const UploadReportModal = ({ isOpen, onClose, patientId }: UploadReportMo
           <div className="mt-4 p-3 bg-slate-50 rounded-xl">
             <div className="flex justify-between items-center">
               <span className="text-sm text-clinic-text truncate">{selectedFile.name}</span>
-              <span className="text-xs text-clinic-text/50">
+              <span className="text-xs text-clinic-text/70">
                 {t('patientDetail.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
               </span>
             </div>

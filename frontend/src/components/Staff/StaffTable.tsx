@@ -35,7 +35,7 @@ export const StaffTable = ({ staff: filteredStaff, canManage, onEdit, onDelete }
                   </div>
                   <div>
                     <div className="font-medium text-gray-900">{member.name}</div>
-                    <div className="text-xs text-gray-400">{member.email}</div>
+                    <div className="text-xs text-gray-500">{member.email}</div>
                     {member.hasLogin === false && (
                       <span
                         className="mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
@@ -60,7 +60,7 @@ export const StaffTable = ({ staff: filteredStaff, canManage, onEdit, onDelete }
                     {enumLabel(t, 'shiftType', member.shifts[0].type)}
                   </span>
                 ) : (
-                  <span className="text-gray-400 text-sm">—</span>
+                  <span className="text-gray-500 text-sm">—</span>
                 )}
               </td>
               <td className="px-6 py-4 text-end">
@@ -68,7 +68,7 @@ export const StaffTable = ({ staff: filteredStaff, canManage, onEdit, onDelete }
                   <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                     <button
                       onClick={() => onEdit(member)}
-                      className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                      className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       title={t('staff.edit')}
                       aria-label={t('staff.edit')}
                     >
@@ -76,7 +76,7 @@ export const StaffTable = ({ staff: filteredStaff, canManage, onEdit, onDelete }
                     </button>
                     <button
                       onClick={() => onDelete(member.id, member.name)}
-                      className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                      className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       title={t('staff.delete')}
                       aria-label={t('staff.delete')}
                     >

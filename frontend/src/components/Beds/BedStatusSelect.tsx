@@ -36,16 +36,16 @@ export const BedStatusSelect = ({ status, hasPatient, open: showStatusDropdown, 
         disabled={!!selectedPatientId}
         className={`w-full border rounded-lg px-3 py-2.5 text-start outline-none text-sm flex justify-between items-center ${
           selectedPatientId
-            ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+            ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed'
             : 'border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
         }`}
       >
-        <span id="status-value" className={status ? 'text-gray-900' : 'text-gray-400'}>
+        <span id="status-value" className={status ? 'text-gray-900' : 'text-gray-500'}>
           {statusLabels[status] || status}
         </span>
         {!selectedPatientId && (
           <svg
-            className={`w-4 h-4 text-gray-400 transition ${showStatusDropdown ? 'rotate-180' : ''}`}
+            className={`w-4 h-4 text-gray-500 transition ${showStatusDropdown ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -79,7 +79,7 @@ export const BedStatusSelect = ({ status, hasPatient, open: showStatusDropdown, 
         </div>
       )}
       {selectedPatientId && (
-        <p className="text-xs text-gray-400 mt-1" id="status-hint">
+        <p className="text-xs text-gray-500 mt-1" id="status-hint">
           {t('beds.modal.autoStatus')}
         </p>
       )}

@@ -48,7 +48,7 @@ export const AppointmentPatientPicker = ({
           <button
             type="button"
             onClick={onClear}
-            className="text-xs text-red-500 hover:text-red-700"
+            className="text-xs text-red-600 hover:text-red-700"
           >
             {t('appointments.modal.change')}
           </button>

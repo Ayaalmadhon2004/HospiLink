@@ -126,7 +126,7 @@ const PatientFlowChart = memo(({ data, title }: PatientFlowChartProps) => {
         </>
       ) : (
         <div
-          className="flex items-center justify-center py-12 text-gray-400"
+          className="flex items-center justify-center py-12 text-gray-500"
           role="status"
           aria-live="polite"
           aria-label={t('patients.flow.loadingChart')}

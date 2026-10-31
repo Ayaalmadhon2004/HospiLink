@@ -30,14 +30,14 @@ export const ReportUploadModal = ({
           <h2 id="upload-title" className="text-xl font-bold text-hospital-navy">{t('patientDetail.uploadReport')}</h2>
           <button
             onClick={onClose}
-            className="text-clinic-text/50 hover:text-clinic-text"
+            className="text-clinic-text/70 hover:text-clinic-text"
             aria-label={t('patientDetail.closeUpload')}
           >
             <X size={20} />
           </button>
         </div>
 
-        <p className="text-clinic-text/50 mb-4">
+        <p className="text-clinic-text/70 mb-4">
           {t('patientDetail.uploadPrompt', { name: patientName })}
         </p>
 
@@ -57,7 +57,7 @@ export const ReportUploadModal = ({
             <span className="text-clinic-text/70">
               {selectedFile ? selectedFile.name : t('patientDetail.selectFile')}
             </span>
-            <span id="file-help" className="text-xs text-clinic-text/40">{t('patientDetail.fileHelp')}</span>
+            <span id="file-help" className="text-xs text-clinic-text/70">{t('patientDetail.fileHelp')}</span>
           </label>
         </div>
 
@@ -66,7 +66,7 @@ export const ReportUploadModal = ({
           <div className="bg-medical-teal/5 border border-medical-teal/20 rounded-lg p-3 mb-4 flex items-center gap-2">
             <FileText size={16} className="text-medical-teal" aria-hidden="true" />
             <span className="text-sm text-clinic-text">{selectedFile.name}</span>
-            <span className="text-xs text-clinic-text/40 ms-auto">
+            <span className="text-xs text-clinic-text/70 ms-auto">
               {t('patientDetail.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
             </span>
           </div>

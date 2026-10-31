@@ -15,7 +15,7 @@ export const BedWardSelect = ({ wards, wardId, open: showWardDropdown, onToggle,
   return (
     <div className="relative">
       <label id="ward-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-        {t('beds.modal.ward')} <span className="text-red-500" aria-hidden="true">*</span>
+        {t('beds.modal.ward')} <span className="text-red-600" aria-hidden="true">*</span>
         <span className="sr-only"> ({t('common.required')})</span>
       </label>
       <button
@@ -27,11 +27,11 @@ export const BedWardSelect = ({ wards, wardId, open: showWardDropdown, onToggle,
         onClick={onToggle}
         className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
       >
-        <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-400'}>
+        <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-500'}>
           {selectedWard ? selectedWard.name : t('beds.modal.selectWard')}
         </span>
         <svg
-          className={`w-4 h-4 text-gray-400 transition ${showWardDropdown ? 'rotate-180' : ''}`}
+          className={`w-4 h-4 text-gray-500 transition ${showWardDropdown ? 'rotate-180' : ''}`}
           fill="none"
           stroke="currentColor"
           viewBox="0 0 24 24"
@@ -48,7 +48,7 @@ export const BedWardSelect = ({ wards, wardId, open: showWardDropdown, onToggle,
           aria-labelledby="ward-label"
         >
           {wards.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noWards')}</div>
+            <div className="px-3 py-2 text-sm text-gray-500">{t('beds.modal.noWards')}</div>
           ) : (
             wards.map(w => (
               <button

@@ -66,7 +66,7 @@ export const PatientsPage = () => {
         <div className="relative ms-auto">
           <Search 
             size={16} 
-            className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-400" 
+            className="absolute start-3 top-1/2 -translate-y-1/2 text-slate-500" 
             aria-hidden="true" 
           />
           <input

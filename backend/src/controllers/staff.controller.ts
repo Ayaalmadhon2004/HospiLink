@@ -6,19 +6,11 @@ import logger from '../config/logger';
 import { hospitalIdOf, departmentRoom } from '../utils/tenant';
 import { pageParams, pageInfo } from '../utils/pagination';
 import { dayRange, hospitalTimezone } from '../utils/time';
-import { randomPasswordHash, sendSetPasswordMail } from '../services/staffLink';
-import type { Prisma, Role } from '@prisma/client';
-
-type TimelineEntry = {
-  id: string;
-  staffName: string;
-  role: string;
-  avatar: string | null;
-  type: string;
-  startTime: Date;
-  endTime: Date;
-  notes: string | null;
-};
+import { sendSetPasswordMail } from '../services/staffLink';
+import {
+  buildShiftWhere, buildStaffUpdate, createStaffRecord, groupShiftTimeline, isForeignKeyViolation, isUniqueViolation,
+  linkStaffLogin, toStaffDto, type CreateStaffInput,
+} from '../services/staffManagement';
 
 // ─── Helpers ───────────────────────────────────────────────────────────
 
@@ -26,15 +18,6 @@ const handleError = (res: Response, error: unknown, message: string) => {
   logger.error({ err: error }, message);
   res.status(500).json({ success: false, message });
 };
-
-// The login id stays server-side; clients only learn whether the staff member can sign in / be notified.
-const toStaffDto = <T extends { userId: string | null }>(staff: T) => {
-  const { userId, ...rest } = staff;
-  return { ...rest, hasLogin: Boolean(userId) };
-};
-
-const isUniqueViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2002';
-const isForeignKeyViolation = (error: unknown): boolean => (error as { code?: unknown })?.code === 'P2003';
 
 export const getStaff = async (req: Request, res: Response) => {
   try {
@@ -81,52 +64,16 @@ export const getStaffById = async (req: Request, res: Response) => {
 // an existing unlinked login of the same hospital with the same email is linked instead.
 export const createStaff = async (req: Request, res: Response) => {
   try {
-    const { name, email, role, department, phone, avatar, loginRole } = req.body as {
-      name: string; email: string; role: string; department: string; phone?: string; avatar?: string; loginRole?: Role;
-    };
-    const hospitalId = hospitalIdOf(req);
-
-    // Emails are unique across hospitals for logins: never link (or reveal) a login of another hospital.
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-      select: { id: true, hospitalId: true, staff: { select: { id: true } } },
-    });
-    if (existingUser && existingUser.hospitalId !== hospitalId && loginRole) {
+    const outcome = await createStaffRecord(req.body as CreateStaffInput, hospitalIdOf(req));
+    if (outcome.kind === 'email-other-hospital') {
       return res.status(409).json({ success: false, message: 'This email is already used by another account' });
     }
-    const sameHospitalUser = existingUser && existingUser.hospitalId === hospitalId ? existingUser : null;
-    if (sameHospitalUser?.staff && loginRole) {
+    if (outcome.kind === 'login-already-linked') {
       return res.status(409).json({ success: false, message: 'A login with this email is already linked to another staff member' });
     }
-    const linkUserId = sameHospitalUser && !sameHospitalUser.staff ? sameHospitalUser.id : null;
-    const createLogin = Boolean(loginRole) && !existingUser;
+    const { staff, newUserId } = outcome;
 
-    const { staff, newUserId } = await prisma.$transaction(async (tx) => {
-      let userId = linkUserId;
-      if (createLogin && loginRole) {
-        const user = await tx.user.create({
-          data: {
-            email,
-            password: await randomPasswordHash(),
-            name,
-            role: loginRole,
-            department,
-            shift: 'DAY',
-            accountStatus: 'ACTIVE',
-            emailVerifiedAt: new Date(),
-            hospitalId,
-          },
-          select: { id: true },
-        });
-        userId = user.id;
-      }
-      const created = await tx.staff.create({
-        data: { name, email, role, department, phone, avatar, hospitalId, userId },
-      });
-      return { staff: created, newUserId: createLogin ? userId : null };
-    });
-
-    if (newUserId) sendSetPasswordMail(newUserId, email);
+    if (newUserId) sendSetPasswordMail(newUserId, (req.body as CreateStaffInput).email);
 
     res.status(201).json({ success: true, data: toStaffDto(staff) });
   } catch (error: unknown) {
@@ -147,16 +94,7 @@ export const updateStaff = async (req: Request, res: Response) => {
     const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true, userId: true } });
     if (!existing) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
 
-    // Correcting a mistyped email of a staff member without a login: attach the matching login of this
-    // hospital if there is one (the link itself never depends on the email afterwards).
-    const data: Prisma.StaffUncheckedUpdateInput = { ...updateData };
-    if (typeof updateData.email === 'string' && !existing.userId) {
-      const candidate = await prisma.user.findFirst({
-        where: { hospitalId, email: { equals: updateData.email, mode: 'insensitive' }, staff: null },
-        select: { id: true },
-      });
-      if (candidate) data.userId = candidate.id;
-    }
+    const data = await buildStaffUpdate(updateData, existing, hospitalId);
 
     const staff = await prisma.staff.update({
       where: { id },
@@ -178,24 +116,17 @@ export const setStaffLogin = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const { userId } = req.body as { userId: string | null };
-    const hospitalId = hospitalIdOf(req);
-
-    const existing = await prisma.staff.findFirst({ where: { id, hospitalId }, select: { id: true } });
-    if (!existing) return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
-
-    if (userId !== null) {
-      const user = await prisma.user.findFirst({
-        where: { id: userId, hospitalId },
-        select: { id: true, staff: { select: { id: true } } },
-      });
-      if (!user) return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
-      if (user.staff && user.staff.id !== id) {
+    const outcome = await linkStaffLogin(id, userId, hospitalIdOf(req));
+    switch (outcome.kind) {
+      case 'staff-not-found':
+        return res.status(404).json({ success: false, code: 'STAFF_NOT_FOUND', message: 'Staff not found' });
+      case 'user-not-found':
+        return res.status(404).json({ success: false, code: 'USER_NOT_FOUND', message: 'User not found' });
+      case 'already-linked':
         return res.status(409).json({ success: false, message: 'This login is already linked to another staff member' });
-      }
+      case 'ok':
+        return res.status(200).json({ success: true, data: toStaffDto(outcome.staff) });
     }
-
-    const staff = await prisma.staff.update({ where: { id }, data: { userId } });
-    res.status(200).json({ success: true, data: toStaffDto(staff) });
   } catch (error: unknown) {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ success: false, message: 'This login is already linked to another staff member' });
@@ -229,16 +160,7 @@ export const deleteStaff = async (req: Request, res: Response) => {
 // GET /api/staff/shifts - Get all shifts (with filters)
 export const getShifts = async (req: Request, res: Response) => {
   try {
-    const { department, staffId, date } = req.query;
-
-    const where: Prisma.ShiftWhereInput = { staff: { hospitalId: hospitalIdOf(req) } };
-    if (department) where.department = department as string;
-    if (staffId) where.staffId = staffId as string;
-    if (date) {
-      const d = new Date(date as string);
-      where.startTime = { gte: d };
-      where.endTime = { lte: new Date(d.getTime() + 24 * 60 * 60 * 1000) };
-    }
+    const where = buildShiftWhere(hospitalIdOf(req), req.query);
 
     const page = pageParams(req.query);
     const [shifts, totalCount] = await Promise.all([
@@ -358,22 +280,7 @@ export const getShiftTimeline = async (req: Request, res: Response) => {
       orderBy: { startTime: 'asc' },
     });
 
-    // Group by department
-    const timeline = shifts.reduce<Record<string, TimelineEntry[]>>((acc, shift) => {
-      const dept = shift.department;
-      if (!acc[dept]) acc[dept] = [];
-      acc[dept].push({
-        id: shift.id,
-        staffName: shift.staff.name,
-        role: shift.staff.role,
-        avatar: shift.staff.avatar,
-        type: shift.type,
-        startTime: shift.startTime,
-        endTime: shift.endTime,
-        notes: shift.notes,
-      });
-      return acc;
-    }, {});
+    const timeline = groupShiftTimeline(shifts);
 
     res.status(200).json({ success: true, data: timeline });
   } catch (error: unknown) {

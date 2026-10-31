@@ -31,7 +31,7 @@ export const ErrorBanner = ({ message, onRetry }: { message: string; onRetry: ()
 };
 
 export const EmptyState = ({ message }: { message: string }) => (
-  <div className="text-center py-6 text-gray-400">
+  <div className="text-center py-6 text-gray-500">
     <p className="text-sm">{message}</p>
   </div>
 );

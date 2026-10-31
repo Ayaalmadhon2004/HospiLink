@@ -156,6 +156,12 @@
     font-feature-settings: 'tnum' 1;
   }
 
+  /* Tailwind 4 placeholders are currentColor at 50%, below AA. Use the theme-aware neutral 500 instead. */
+  ::placeholder {
+    color: var(--color-gray-500);
+    opacity: 1;
+  }
+
   h1,
   h2,
   h3 {

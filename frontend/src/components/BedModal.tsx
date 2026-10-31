@@ -22,9 +22,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="bed-modal-title"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -47,6 +45,9 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
 
       <div
         ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="bed-modal-title"
         className="bg-white rounded-xl p-6 w-full max-w-lg relative outline-none"
         tabIndex={-1}
       >
@@ -61,7 +62,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           {/* Bed Number */}
           <div>
             <label htmlFor="bed-number" className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t('beds.modal.bedNumber')} <span className="text-red-500" aria-hidden="true">*</span>
+              {t('beds.modal.bedNumber')} <span className="text-red-600" aria-hidden="true">*</span>
               <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <input
@@ -104,7 +105,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               placeholder={t('beds.modal.unassigned')}
               clearLabel={t('beds.modal.unassigned')}
             />
-            <p className="text-xs text-gray-400 mt-1" id="patient-hint">
+            <p className="text-xs text-gray-500 mt-1" id="patient-hint">
               {selectedPatientId ? t('beds.modal.willBeOccupied') : t('beds.modal.willBeAvailable')}
             </p>
           </div>

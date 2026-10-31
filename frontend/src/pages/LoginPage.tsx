@@ -1,5 +1,5 @@
 // frontend/src/pages/Auth/LoginPage.tsx
-import { useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Activity } from 'lucide-react';
 import { login, resendVerification, verifyTwoFactor } from '../services/authService';
 import { getErrorCode, getErrorMessage } from '../types/api';
@@ -22,6 +22,12 @@ export const LoginPage = () => {
   const [challenge, setChallenge] = useState<string | null>(null);
   const [useRecovery, setUseRecovery] = useState(false);
   const [secondFactor, setSecondFactor] = useState('');
+  const secondFactorRef = useRef<HTMLInputElement>(null);
+
+  // Move focus to the code field when the 2FA step appears (instead of the autoFocus attribute).
+  useEffect(() => {
+    if (challenge) secondFactorRef.current?.focus();
+  }, [challenge, useRecovery]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
@@ -118,6 +124,7 @@ export const LoginPage = () => {
                 </label>
                 <input
                   id="second-factor"
+                  ref={secondFactorRef}
                   value={secondFactor}
                   onChange={(e) => setSecondFactor(useRecovery ? e.target.value : e.target.value.replace(/\D/g, ''))}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 outline-none tracking-widest"
@@ -125,7 +132,6 @@ export const LoginPage = () => {
                   autoComplete="one-time-code"
                   maxLength={useRecovery ? 11 : 6}
                   dir="ltr"
-                  autoFocus
                   required
                 />
               </div>

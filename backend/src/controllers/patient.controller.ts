@@ -3,33 +3,13 @@ import { Request, Response } from 'express';
 import prisma from '../config/db';
 import logger from '../config/logger';
 import { hospitalIdOf } from '../utils/tenant';
-import { BedRuleError, claimBed, releaseBed } from '../services/bedAssignment';
+import { BedRuleError } from '../services/bedAssignment';
 import { randomUUID } from 'crypto';
-import type { Bed, PatientStatus, Prisma } from '@prisma/client';
+import type { Bed } from '@prisma/client';
+import { AdmitError, admitPatientTx, dischargePatientRecord, softDeletePatient, updatePatientRecord, type AdmitInput, type PatientUpdateInput } from '../services/patientAdmission';
+import { getPatientFlowData, listPatients } from '../services/patientQueries';
 
 type BedWithWard = Bed & { ward: { id: string; name: string } };
-
-const PATIENT_CODE_BASE = 2040;
-const MAX_CODE_ATTEMPTS = 10;
-// Serialises patient-code allocation between concurrent admits (transaction-scoped advisory lock, released on commit/rollback).
-const PATIENT_CODE_LOCK_KEY = 4204001;
-
-const isPatientCodeConflict = (error: unknown): boolean => {
-  const e = error as { code?: string; meta?: { target?: unknown } };
-  return e?.code === 'P2002' && String(e.meta?.target ?? 'patientCode').includes('patientCode');
-};
-
-// Next free number: above both the row count and the highest existing PT-<n>,
-// so deleted or seeded rows can't make the count-based guess collide.
-const nextPatientNumber = async (db: Pick<typeof prisma, 'patient'> = prisma): Promise<number> => {
-  const count = await db.patient.count();
-  const agg = await db.patient.aggregate({
-    _max: { patientCode: true },
-    where: { patientCode: { startsWith: 'PT-' } },
-  });
-  const highest = Number(agg?._max?.patientCode?.slice(3));
-  return Math.max(PATIENT_CODE_BASE + count, Number.isFinite(highest) ? highest : 0) + 1;
-};
 
 // ============================================
 // GET /api/patients/recent
@@ -75,44 +55,11 @@ export const getCriticalPatientCount = async (req: Request, res: Response) => {
 // GET /api/patients/flow?days=7
 // Daily admissions and discharges (UTC days, today included), oldest first
 // ============================================
-const DAY_MS = 24 * 60 * 60 * 1000;
-const utcDay = (d: Date): string => d.toISOString().slice(0, 10);
-
 export const getPatientFlow = async (req: Request, res: Response) => {
   try {
     const days = Number((req.query as { days?: number }).days ?? 7);
-    const now = new Date();
-    const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()) - (days - 1) * DAY_MS);
-
-    const hospitalId = hospitalIdOf(req);
-    // Aggregated in the DB (one row per UTC day) instead of loading every patient into memory.
-    type DayCount = { d: string; c: number };
-    const [admitted, discharged] = await Promise.all([
-      prisma.$queryRaw<DayCount[]>`
-        SELECT to_char("admissionDate" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d, COUNT(*)::int AS c
-        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "deletedAt" IS NULL AND "admissionDate" >= ${start}
-        GROUP BY 1`,
-      prisma.$queryRaw<DayCount[]>`
-        SELECT to_char("dischargeDate" AT TIME ZONE 'UTC', 'YYYY-MM-DD') AS d, COUNT(*)::int AS c
-        FROM "Patient" WHERE "hospitalId" = ${hospitalId} AND "deletedAt" IS NULL AND "dischargeDate" >= ${start}
-        GROUP BY 1`,
-    ]);
-
-    const buckets = new Map<string, { date: string; admissions: number; discharges: number }>();
-    for (let i = 0; i < days; i++) {
-      const date = utcDay(new Date(start.getTime() + i * DAY_MS));
-      buckets.set(date, { date, admissions: 0, discharges: 0 });
-    }
-    for (const { d, c } of admitted) {
-      const b = buckets.get(d);
-      if (b) b.admissions = Number(c);
-    }
-    for (const { d, c } of discharged) {
-      const b = buckets.get(d);
-      if (b) b.discharges = Number(c);
-    }
-
-    res.status(200).json({ success: true, data: Array.from(buckets.values()) });
+    const data = await getPatientFlowData(hospitalIdOf(req), days);
+    res.status(200).json({ success: true, data });
   } catch (error) {
     logger.error({ err: error }, 'getPatientFlow error:');
     res.status(500).json({ success: false, message: 'Failed to fetch patient flow' });
@@ -122,77 +69,20 @@ export const getPatientFlow = async (req: Request, res: Response) => {
 // ============================================
 // POST /api/patients/admit
 // ============================================
-// Business-rule failure inside the admit transaction: safe to show to the client.
-class AdmitError extends Error {
-  constructor(message: string, readonly status: number) {
-    super(message);
-  }
-}
-
-
 export const admitPatient = async (req: Request, res: Response) => {
   // hospitalId is never read from the body: the patient joins the admitting user's hospital.
-  const { name, age, gender, department, diagnosis, bedId, doctorId } = req.body;
+  const input = req.body as AdmitInput;
 
   try {
-    const hospitalId = hospitalIdOf(req);
-
-    let result;
-    for (let attempt = 0; ; attempt++) {
-      try {
-        result = await prisma.$transaction(async (tx) => {
-          // pg_advisory_xact_lock returns void, which only $executeRaw tolerates (found by the integration suite).
-          // Under the lock a concurrent admit has already committed its row, so the number read here is really free.
-          // (Without it, N simultaneous admits all read the same "next" number and N-1 of them collide.)
-          await tx.$executeRaw`SELECT pg_advisory_xact_lock(${PATIENT_CODE_LOCK_KEY}::bigint)`;
-          const patientCode = `PT-${await nextPatientNumber(tx)}`;
-          let validBedId = null;
-
-          if (doctorId) {
-            const doctor = await tx.staff.findFirst({ where: { id: doctorId, hospitalId }, select: { id: true } });
-            if (!doctor) throw new AdmitError('Doctor not found', 404);
-          }
-
-          if (bedId) {
-            // Atomic: only a free AVAILABLE bed can be claimed (404 / 409 otherwise).
-            await claimBed(tx, bedId, hospitalId);
-            validBedId = bedId;
-          }
-
-          const patientData: Prisma.PatientUncheckedCreateInput = {
-            patientCode,
-            name,
-            age: parseInt(age),
-            gender,
-            department,
-            diagnosis,
-            status: 'OBSERVATION',
-            hospitalId,
-          };
-
-          if (validBedId) patientData.bedId = validBedId;
-          if (doctorId) patientData.doctorId = doctorId;
-
-          const newPatient = await tx.patient.create({ data: patientData });
-
-          return newPatient;
-        });
-        break;
-      } catch (error) {
-        // Concurrent admits can pick the same number; the unique index rejects one, so retry with the next.
-        if (isPatientCodeConflict(error) && attempt < MAX_CODE_ATTEMPTS - 1) continue;
-        throw error;
-      }
-    }
-
+    const result = await admitPatientTx(input, hospitalIdOf(req));
     res.status(201).json({ success: true, data: result });
   } catch (error: unknown) {
     if (error instanceof AdmitError || error instanceof BedRuleError) {
       return res.status(error.status).json({ success: false, message: error.message });
     }
     logger.error({ err: error }, '🔥 Admit error:');
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'Failed to admit patient' });
   }
 };
@@ -321,72 +211,8 @@ export const getPatientById = async (req: Request, res: Response) => {
 // ============================================
 export const getPatients = async (req: Request, res: Response) => {
   try {
-    const { status, department, search, page = '1', limit = '10' } = req.query;
-
-    const pageNum = Math.max(1, parseInt(page as string) || 1);
-    const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
-    const skip = (pageNum - 1) * limitNum;
-
-    const whereClause: Prisma.PatientWhereInput = { hospitalId: hospitalIdOf(req), deletedAt: null };
-
-    if (status && status !== 'undefined' && status !== 'ALL' && status !== '' && status !== 'All') {
-      whereClause.status = (status as string).toUpperCase() as PatientStatus;
-    }
-
-    if (department && department !== 'undefined' && department !== 'ALL' && department !== '' && department !== 'All') {
-      whereClause.department = department as string;
-    }
-
-    if (search && search !== 'undefined' && search !== '') {
-      whereClause.OR = [
-        { name: { contains: search as string, mode: 'insensitive' } },
-        { patientCode: { contains: search as string, mode: 'insensitive' } },
-      ];
-    }
-
-    const [patients, totalCount] = await Promise.all([
-      prisma.patient.findMany({
-        where: whereClause,
-        skip,
-        take: limitNum,
-        orderBy: { admissionDate: 'desc' },
-        select: {
-          id: true,
-          patientCode: true,
-          name: true,
-          age: true,
-          gender: true,
-          department: true,
-          diagnosis: true,
-          status: true,
-          admissionDate: true,
-          dischargeDate: true,
-          bedId: true,
-          bed: {
-            select: {
-              bedNumber: true,
-              ward: { select: { name: true } },
-            },
-          },
-        },
-      }),
-      prisma.patient.count({ where: whereClause }),
-    ]);
-
-    const totalPages = Math.ceil(totalCount / limitNum);
-
-    res.status(200).json({ 
-      success: true, 
-      data: patients,
-      pagination: {
-        page: pageNum,
-        limit: limitNum,
-        totalCount,
-        totalPages,
-        hasNextPage: pageNum < totalPages,
-        hasPrevPage: pageNum > 1,
-      }
-    });
+    const { patients, pagination } = await listPatients(hospitalIdOf(req), req.query);
+    res.status(200).json({ success: true, data: patients, pagination });
   } catch (error: unknown) {
     logger.error({ err: error }, "🔥 Error:");
     res.status(500).json({ success: false, message: 'Failed to fetch patients' });
@@ -428,48 +254,19 @@ export const getAvailableBeds = async (req: Request, res: Response) => {
 export const updatePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const { bedId: requestedBedId, ...fields } = req.body as Omit<Prisma.PatientUncheckedUpdateInput, 'bedId'> & {
-      bedId?: string | null;
-      doctorId?: string | null;
-      status?: PatientStatus;
-    };
-    const hospitalId = hospitalIdOf(req);
+    const { bedId: requestedBedId, ...fields } = req.body as PatientUpdateInput['fields'] & { bedId?: string | null };
 
-    const existing = await prisma.patient.findFirst({ where: { id, hospitalId, deletedAt: null }, select: { id: true, bedId: true, status: true } });
-    if (!existing) {
-      return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
+    const outcome = await updatePatientRecord(id, hospitalIdOf(req), { fields, requestedBedId });
+    switch (outcome.kind) {
+      case 'not-found':
+        return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
+      case 'doctor-not-found':
+        return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
+      case 'discharged-with-bed':
+        return res.status(400).json({ success: false, message: 'A discharged patient cannot be assigned a bed' });
+      case 'ok':
+        return res.status(200).json({ success: true, data: outcome.patient });
     }
-    if (fields.doctorId && !(await prisma.staff.findFirst({ where: { id: fields.doctorId, hospitalId }, select: { id: true } }))) {
-      return res.status(404).json({ success: false, code: 'DOCTOR_NOT_FOUND', message: 'Doctor not found' });
-    }
-
-    // Bed rules (OCCUPIED <=> has a patient): a DISCHARGED patient holds no bed and cannot be given one.
-    const discharging = (fields.status ?? existing.status) === 'DISCHARGED';
-    if (discharging && requestedBedId) {
-      return res.status(400).json({ success: false, message: 'A discharged patient cannot be assigned a bed' });
-    }
-    // The bed the patient ends up in: discharge frees it, an explicit bedId (or null) replaces it, otherwise unchanged.
-    const targetBedId = discharging ? null : requestedBedId === undefined ? existing.bedId : requestedBedId;
-    const bedChanges = targetBedId !== existing.bedId;
-    const justDischarged = discharging && existing.status !== 'DISCHARGED';
-
-    const updated = await prisma.$transaction(async (tx) => {
-      if (bedChanges) {
-        if (targetBedId) await claimBed(tx, targetBedId, hospitalId);
-        if (existing.bedId) await releaseBed(tx, existing.bedId, hospitalId);
-      }
-      return tx.patient.update({
-        where: { id },
-        data: {
-          ...fields,
-          ...(bedChanges ? { bedId: targetBedId } : {}),
-          ...(justDischarged && !fields.dischargeDate ? { dischargeDate: new Date() } : {}),
-        },
-        include: { bed: true },
-      });
-    });
-
-    res.status(200).json({ success: true, data: updated });
   } catch (error: unknown) {
     if (error instanceof BedRuleError) {
       return res.status(error.status).json({ success: false, message: error.message });
@@ -487,18 +284,9 @@ export const updatePatient = async (req: Request, res: Response) => {
 export const deletePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-    const hospitalId = hospitalIdOf(req);
-
-    const patient = await prisma.patient.findFirst({ where: { id, hospitalId, deletedAt: null }, select: { id: true, bedId: true } });
-    if (!patient) {
+    if (!(await softDeletePatient(id, hospitalIdOf(req)))) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
-
-    await prisma.$transaction(async (tx) => {
-      if (patient.bedId) await releaseBed(tx, patient.bedId, hospitalId);
-      await tx.patient.update({ where: { id }, data: { deletedAt: new Date(), bedId: null } });
-    });
-
     res.status(200).json({ success: true, message: 'Patient deleted' });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Delete patient error:');
@@ -512,32 +300,10 @@ export const deletePatient = async (req: Request, res: Response) => {
 export const dischargePatient = async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
-
-    const hospitalId = hospitalIdOf(req);
-    const patient = await prisma.patient.findFirst({
-      where: { id, hospitalId, deletedAt: null },
-      include: { bed: true }
-    });
-
-    if (!patient) {
+    const result = await dischargePatientRecord(id, hospitalIdOf(req));
+    if (!result) {
       return res.status(404).json({ success: false, code: 'PATIENT_NOT_FOUND', message: 'Patient not found' });
     }
-
-    const result = await prisma.$transaction(async (tx) => {
-      if (patient.bedId) await releaseBed(tx, patient.bedId, hospitalId);
-
-      const updated = await tx.patient.update({
-        where: { id },
-        data: {
-          status: 'DISCHARGED',
-          dischargeDate: new Date(),
-          bedId: null
-        }
-      });
-
-      return updated;
-    });
-
     res.status(200).json({ success: true, data: result });
   } catch (error: unknown) {
     logger.error({ err: error }, 'Discharge patient error:');

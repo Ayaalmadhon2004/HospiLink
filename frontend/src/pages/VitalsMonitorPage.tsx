@@ -41,7 +41,7 @@ export const VitalsMonitorPage = () => {
   if (patientsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="animate-pulse text-clinic-text/50">{t('vitals.page.loading')}</div>
+        <div className="animate-pulse text-clinic-text/70">{t('vitals.page.loading')}</div>
       </div>
     );
   }
@@ -54,7 +54,7 @@ export const VitalsMonitorPage = () => {
             <Activity size={28} className="text-medical-teal" aria-hidden="true" />
             {t('vitals.page.title')}
           </h1>
-          <p className="text-clinic-text/50 text-sm">{t('vitals.page.subtitle')}</p>
+          <p className="text-clinic-text/70 text-sm">{t('vitals.page.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
           <ExportMenu type="vitals" />
@@ -104,7 +104,7 @@ export const VitalsMonitorPage = () => {
       {selectedPatient && history.length === 0 && !showForm && (
         <div className="bg-white rounded-2xl border border-slate-200 p-12 text-center mb-6">
           <Activity size={48} className="text-clinic-text/20 mx-auto mb-3" aria-hidden="true" />
-          <div className="text-clinic-text/50 font-medium">{t('vitals.page.empty')}</div>
+          <div className="text-clinic-text/70 font-medium">{t('vitals.page.empty')}</div>
           <button onClick={() => setShowForm(true)} className="mt-3 text-medical-teal hover:underline text-sm">
             {t('vitals.page.recordFirst')}
           </button>

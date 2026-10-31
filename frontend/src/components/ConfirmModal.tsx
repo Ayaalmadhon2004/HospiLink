@@ -41,13 +41,12 @@ export const ConfirmModal = ({
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget && !confirming) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
+      <div role="dialog" aria-modal="true" className="bg-white rounded-2xl w-full max-w-md shadow-xl p-6">
         <div className="flex items-start gap-4">
           <div className={`p-3 rounded-xl ${tone === 'danger' ? 'bg-red-50' : 'bg-slate-50'}`}>
             <AlertTriangle

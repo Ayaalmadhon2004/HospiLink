@@ -76,7 +76,7 @@ export const PatientsPagination = ({
         <div className="flex items-center gap-1 mx-1" role="group" aria-label={t('pagination.pageNumbers')}>
           {paginationRange.map((item, idx) => (
             item === '...' ? (
-              <span key={`dots-${idx}`} className="px-2 text-slate-400" aria-hidden="true">...</span>
+              <span key={`dots-${idx}`} className="px-2 text-slate-500" aria-hidden="true">...</span>
             ) : (
               <button
                 key={item}

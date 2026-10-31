@@ -48,7 +48,7 @@ export const IncidentCard = ({ incident, updating, timeAgo, onStatusChange, onEd
               onStatusChange(incident.id, 'RESOLVED', 100)
             }
             disabled={updating}
-            className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+            className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
             title={t('incidents.markResolved')}
             aria-label={t('incidents.markResolved')}
           >
@@ -57,7 +57,7 @@ export const IncidentCard = ({ incident, updating, timeAgo, onStatusChange, onEd
         )}
         <button
           onClick={() => onEdit(incident)}
-          className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
           title={t('incidents.edit')}
           aria-label={t('incidents.edit')}
         >
@@ -67,7 +67,7 @@ export const IncidentCard = ({ incident, updating, timeAgo, onStatusChange, onEd
           onClick={() =>
             onDelete(incident.id, incident.code)
           }
-          className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
           title={t('incidents.delete')}
           aria-label={t('incidents.delete')}
         >
@@ -96,7 +96,7 @@ export const IncidentCard = ({ incident, updating, timeAgo, onStatusChange, onEd
             {enumLabel(t, 'incidentStatus', incident.status)}
           </span>
         </div>
-        <span className="text-sm text-gray-400">
+        <span className="text-sm text-gray-500">
           {timeAgo(incident.createdAt)}
         </span>
       </div>
@@ -121,7 +121,7 @@ export const IncidentCard = ({ incident, updating, timeAgo, onStatusChange, onEd
           {timeAgo(incident.createdAt)}
         </span>
         {incident.reportedBy && (
-          <span className="text-xs text-gray-400">
+          <span className="text-xs text-gray-500">
             {t('incidents.by', { name: incident.reportedBy })}
           </span>
         )}
