@@ -2,7 +2,7 @@
 
 **Hospital management platform for patient flow, bed and ward capacity, vitals monitoring, appointments, incidents, staff scheduling and ambulance dispatch.**
 
-**Live demo:** [hospi-link-liart.vercel.app](https://hospi-link-liart.vercel.app/)
+**Live demo:** [hospi-link-two.vercel.app](https://hospi-link-two.vercel.app/)
 
 ![overview](docs/images/overview.png)
 ![patients](docs/images/patients.png)
@@ -270,5 +270,5 @@ MIT.
 
 ## Links
 
-- **Live:** [hospi-link-liart.vercel.app](https://hospi-link-liart.vercel.app/)
+- **Live:** [hospi-link-two.vercel.app](https://hospi-link-two.vercel.app/)
 - **GitHub:** [github.com/Ayaalmadhon2004/HospiLink](https://github.com/Ayaalmadhon2004/HospiLink)

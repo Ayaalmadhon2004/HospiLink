@@ -66,7 +66,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
 - `DATABASE_URL`  PostgreSQL connection string
 - `JWT_SECRET`    required, long random string; the app must not start without it
 - `PORT`          default 5000
-- `CORS_ORIGINS`  required, comma separated frontend origins for CORS + Socket.io (no built-in defaults; validated with zod in `config/env.ts`, the API refuses to boot without it)
+- `CORS_ORIGINS`  required, comma separated frontend origins for CORS + Socket.io (production frontend: `https://hospi-link-two.vercel.app`; no built-in defaults; validated with zod in `config/env.ts`, the API refuses to boot without it)
 - `NODE_ENV`      `production` disables dev logging
 - `COOKIE_DOMAIN` optional; shared parent domain (e.g. `.example.com`) switches the auth cookie to SameSite=Lax (default: SameSite=None)
 - `APP_URL`, `SMTP_URL`, `MAIL_FROM`  frontend URL used in emailed links and the SMTP transport for password reset / email verification
@@ -203,7 +203,6 @@ Open:
 - Migrations are NOT applied automatically on deploy (Dockerfile note); CI applies them only when the `MIGRATE_DATABASE_URL` secret is set. The latest, `20261103000000_revoked_token`, must be applied before logout revocation works (logout still answers 200 and clears the cookie if the write fails).
 - Dependency audit: `npm audit --omit=dev` is clean in the frontend; the backend keeps 11 moderate transitive findings (uuid via exceljs, glob/minimatch via archiver, Sentry bundler) whose only npm fix is a downgrade; wait for upstream releases.
 - CI: the `gitleaks` job fails on `main` because it scans full history (credentials once committed in `backend/.env.example`); confirm those secrets were rotated, then decide on a baseline. The `db-backup` and `load-test` workflows were also red on `main` and have not been investigated.
-- Domain: the README links `hospi-link-liart.vercel.app` while `frontend/index.html` canonical/og:url use `hospi-link-two.vercel.app`; pick one.
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend has unit tests, a mocked-API Playwright suite and a real-backend suite (`npm run test:e2e:real`); broader page coverage is still welcome.
 - i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): icons are generated from `public/icons/logo.svg` by `npm run icons` (`scripts/generate-icons.cjs`). Web Vitals (`docs/WEB_VITALS.md`) report only in production builds when `VITE_VITALS_ENDPOINT` is set; the backend collector is the public, strictly validated, rate-limited `POST /api/telemetry/web-vitals` (204, text/plain beacon).
