@@ -7,7 +7,6 @@ import { hospitalIdOf, departmentRoom } from '../utils/tenant';
 import { pageParams, pageInfo } from '../utils/pagination';
 import { dayRange, hospitalTimezone } from '../utils/time';
 import { sendSetPasswordMail } from '../services/staffLink';
-import type { Prisma } from '@prisma/client';
 import {
   buildShiftWhere, buildStaffUpdate, createStaffRecord, groupShiftTimeline, isForeignKeyViolation, isUniqueViolation,
   linkStaffLogin, toStaffDto, type CreateStaffInput,

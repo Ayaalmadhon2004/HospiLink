@@ -7,45 +7,11 @@ import { hospitalIdOf } from '../utils/tenant';
 import { pageParams, pageInfo } from '../utils/pagination';
 import { loadEffectiveThresholds } from '../services/vitalThresholds';
 import { checkCriticalVitals, escalatePatient, notifyCriticalVitals } from '../services/vitalsIngest';
+import { mergeMetrics, parseMetrics } from '../services/vitalsParsing';
 import type { Prisma } from '@prisma/client';
 
-const METRIC_KEYS = [
-  'heartRate',
-  'systolicBP',
-  'diastolicBP',
-  'spO2',
-  'temperature',
-  'respiratoryRate',
-] as const;
-type MetricValues = Partial<Record<(typeof METRIC_KEYS)[number], number | null>>;
-
-// undefined/null/'' => null (missing); numeric value/string => finite number; anything else => undefined (invalid).
 // `protect` always sets req.user on routed requests; the fallback only covers a call without an authenticated user.
 const SYSTEM_RECORDER = 'system';
-
-const parseMetric = (v: unknown): number | null | undefined => {
-  if (v === undefined || v === null) return null;
-  if (typeof v === 'string') {
-    if (v.trim() === '') return null;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : undefined;
-  }
-  if (typeof v === 'number') return Number.isFinite(v) ? v : undefined;
-  return undefined;
-};
-
-// Reads the metric keys of `body`. Never yields NaN: bad values are listed in `invalid`.
-const parseMetrics = (body: Record<string, unknown>, onlyPresent = false) => {
-  const values: MetricValues = {};
-  const invalid: string[] = [];
-  for (const key of METRIC_KEYS) {
-    if (onlyPresent && !(key in body)) continue;
-    const parsed = parseMetric(body[key]);
-    if (parsed === undefined) invalid.push(key);
-    else values[key] = parsed;
-  }
-  return { values, invalid };
-};
 
 const invalidMetricsResponse = (res: Response, invalid: string[]) =>
   res.status(400).json({ success: false, message: `Invalid numeric value for: ${invalid.join(', ')}` });
@@ -208,11 +174,7 @@ export const updateVitals = async (req: Request, res: Response) => {
       return res.status(404).json({ success: false, code: 'VITALS_NOT_FOUND', message: 'Vitals entry not found' });
     }
 
-    const newVitalsData: MetricValues = {};
-    for (const key of METRIC_KEYS) {
-      const next = key in values ? values[key] : currentVitals[key];
-      newVitalsData[key] = typeof next === 'number' && Number.isFinite(next) ? next : null;
-    }
+    const newVitalsData = mergeMetrics(values, currentVitals);
 
     const { isCritical, alertType } = await checkCriticalVitals(
       currentVitals.patient.hospitalId,
