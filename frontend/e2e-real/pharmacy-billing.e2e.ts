@@ -35,7 +35,7 @@ test.describe('pharmacy and billing (real backend + database)', () => {
   test('admin sees it as low stock, receives a delivery, and it is no longer low', async ({ page }) => {
     await login(page, 'admin');
     await page.goto('/pharmacy');
-    await expect(stockRow(page)).toContainText('Low'); // 0 on hand <= reorder level 5
+    await expect(stockRow(page)).toContainText('Out of stock'); // 0 on hand (also <= reorder level 5)
     await expect(stockRow(page)).toContainText('$2.50');
 
     await stockRow(page).getByRole('button', { name: 'Receive' }).click();

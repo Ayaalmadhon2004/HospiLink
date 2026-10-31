@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import { PrescriptionModal } from './PrescriptionModal';
 import { MedicationCatalogModal } from './MedicationCatalogModal';
 import { DispenseModal } from '../Pharmacy/DispenseModal';
+import { DispensationsList } from '../Pharmacy/DispensationsList';
 import { useAuthPermissions } from '../../hooks/useAuthPermissions';
 import { clinicalKeys, getPrescriptions, closePrescription } from '../../services/clinicalService';
 import { getErrorMessage } from '../../types/api';
@@ -78,6 +79,7 @@ export const PrescriptionsTab = ({ patientId }: { patientId: string }) => {
           ))}
         </ul>
       )}
+      {can('pharmacy:read') && <DispensationsList patientId={patientId} />}
       {creating && <PrescriptionModal patientId={patientId} onClose={() => setCreating(false)} onSaved={refresh} />}
       {catalog && <MedicationCatalogModal onClose={() => setCatalog(false)} />}
       {dispensing && <DispenseModal item={dispensing} onClose={() => setDispensing(null)} onDone={() => queryClient.invalidateQueries({ queryKey: ['pharmacy'] })} />}

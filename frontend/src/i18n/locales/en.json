@@ -1207,6 +1207,12 @@
     "lowOnly": "Show low stock only",
     "loadFailed": "Could not load the stock",
     "empty": "No medications to show",
+    "unavailable": "The pharmacy service is not available on the server yet. Ask an administrator to update the backend.",
+    "out": "Out of stock",
+    "searchLabel": "Search medications",
+    "searchPlaceholder": "Search by name, form or strength...",
+    "movements": {"link": "Stock movements", "title": "Stock movements", "subtitle": "Every change to the stock, newest first", "back": "Back to pharmacy", "loadFailed": "Could not load the stock movements", "empty": "No movements match these filters", "filterMedication": "Filter by medication", "allMedications": "All medications", "filterType": "Filter by type", "allTypes": "All types", "previous": "Previous", "next": "Next", "pageOf": "Page {{page}} of {{pages}}", "cols": {"date": "Date", "medication": "Medication", "type": "Type", "change": "Change", "note": "Note", "by": "By"}},
+    "dispensations": {"title": "Dispensing history", "empty": "Nothing dispensed yet", "loadFailed": "Could not load the dispensing history", "units": "{{count}} unit(s)"},
     "low": "Low",
     "cols": {
       "medication": "Medication",

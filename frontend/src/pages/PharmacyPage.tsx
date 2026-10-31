@@ -1,13 +1,20 @@
 // pages/PharmacyPage.tsx
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Pill } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Pill, Search } from 'lucide-react';
 import { StockActionModal, type StockAction } from '../components/Pharmacy/StockActionModal';
 import { useAuthPermissions } from '../hooks/useAuthPermissions';
 import { getStock, pharmacyKeys } from '../services/pharmacyService';
+import { ApiError } from '../services/apiError';
 import { formatMoney } from '../utils/money';
 import type { Medication } from '../types/clinical';
+
+const shouldRetry = (failures: number, err: unknown): boolean => {
+  if (failures >= 2) return false;
+  return !(err instanceof ApiError && err.status !== undefined && err.status < 500);
+};
 
 export const PharmacyPage = () => {
   const { t } = useTranslation();
@@ -15,29 +22,55 @@ export const PharmacyPage = () => {
   const { can } = useAuthPermissions();
   const [lowOnly, setLowOnly] = useState(false);
   const [action, setAction] = useState<{ med: Medication; type: StockAction } | null>(null);
-  const stock = useQuery({ queryKey: [...pharmacyKeys.stock, lowOnly], queryFn: () => getStock(lowOnly) });
+  const [search, setSearch] = useState('');
+  const stock = useQuery({
+    queryKey: [...pharmacyKeys.stock, lowOnly],
+    queryFn: () => getStock(lowOnly),
+    // A 4xx will not fix itself (e.g. the server has no pharmacy module yet): fail at once instead of hammering it.
+    retry: shouldRetry,
+  });
   const canManage = can('pharmacy:manage');
+  const rows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return stock.data ?? [];
+    return (stock.data ?? []).filter((m) => [m.name, m.genericName, m.form, m.strength].some((v) => v?.toLowerCase().includes(q)));
+  }, [stock.data, search]);
+  const unavailable = stock.error instanceof ApiError && stock.error.status === 404;
 
   return (
     <div className="space-y-6 p-4 md:p-8">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Pill className="w-6 h-6 text-blue-600" aria-hidden="true" />{t('pharmacy.title')}</h1>
         <p className="text-gray-500 text-sm mt-1">{t('pharmacy.subtitle')}</p>
+        {canManage && <Link to="/pharmacy/movements" className="inline-block mt-2 text-sm text-blue-700 underline">{t('pharmacy.movements.link')}</Link>}
       </div>
 
-      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-        <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />
-        {t('pharmacy.lowOnly')}
-      </label>
+      <div className="flex flex-wrap items-center gap-4">
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute start-3 top-2.5 w-4 h-4 text-gray-500" aria-hidden="true" />
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label={t('pharmacy.searchLabel')}
+            placeholder={t('pharmacy.searchPlaceholder')}
+            className="w-full border border-gray-300 rounded-lg ps-9 pe-3 py-2 text-sm"
+          />
+        </div>
+        <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={lowOnly} onChange={(e) => setLowOnly(e.target.checked)} />
+          {t('pharmacy.lowOnly')}
+        </label>
+      </div>
 
       {stock.isError ? (
         <div role="alert" className="bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 flex justify-between">
-          <span>{t('pharmacy.loadFailed')}</span>
+          <span>{t(unavailable ? 'pharmacy.unavailable' : 'pharmacy.loadFailed')}</span>
           <button className="underline font-medium" onClick={() => stock.refetch()}>{t('audit.retry')}</button>
         </div>
       ) : stock.isPending ? (
         <div className="flex justify-center h-32 items-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" role="status" aria-label={t('common.loading')} /></div>
-      ) : stock.data.length === 0 ? (
+      ) : rows.length === 0 ? (
         <p className="text-sm text-gray-500 py-8 text-center">{t('pharmacy.empty')}</p>
       ) : (
         <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-slate-200">
@@ -49,15 +82,16 @@ export const PharmacyPage = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {stock.data.map((m) => {
+              {rows.map((m) => {
                 const qty = m.stockQuantity ?? 0;
+                const out = qty <= 0;
                 const low = qty <= (m.reorderLevel ?? 0);
                 return (
                   <tr key={m.id}>
                     <td className="px-4 py-3"><div className="font-medium text-gray-900">{m.name}</div><div className="text-xs text-gray-500">{m.form} · {m.strength}</div></td>
                     <td className="px-4 py-3">
                       <span className={low ? 'text-red-700 font-semibold' : ''}>{qty}</span>
-                      {low && <span className="ms-2 px-2 py-0.5 rounded-full bg-red-50 text-red-800 text-xs">{t('pharmacy.low')}</span>}
+                      {low && <span className="ms-2 px-2 py-0.5 rounded-full bg-red-50 text-red-800 text-xs">{t(out ? 'pharmacy.out' : 'pharmacy.low')}</span>}
                     </td>
                     <td className="px-4 py-3 text-gray-600">{m.reorderLevel ?? 0}</td>
                     <td className="px-4 py-3 text-gray-600">{formatMoney(m.unitPriceMinor ?? 0)}</td>

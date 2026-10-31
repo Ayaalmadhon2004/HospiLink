@@ -31,6 +31,7 @@ export const ROUTE_ROLES: Readonly<Record<string, readonly Role[]>> = {
   '/audit-logs': ['ADMIN'],
   '/users': ['ADMIN'],
   '/pharmacy': ['ADMIN', 'DOCTOR', 'NURSE'],
+  '/pharmacy/movements': ['ADMIN'],
   '/billing': ['ADMIN'],
 };
 
