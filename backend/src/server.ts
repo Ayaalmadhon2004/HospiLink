@@ -234,7 +234,12 @@ app.use('/api/internal', internalRoutes);
 
 app.get('/api/health', async (req, res) => {
   try {
-    await prisma.$queryRaw`SELECT 1`;
+    // Never hang: a sleeping/unreachable database must answer 500 quickly so the frontend warm-up can retry.
+    const HEALTH_DB_TIMEOUT_MS = 6_000;
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('database health check timed out')), HEALTH_DB_TIMEOUT_MS).unref()),
+    ]);
     res.status(200).json({ status: 'UP', database: 'CONNECTED' });
   } catch (error) {
     logger.error({ err: error }, 'health check: database unreachable');
