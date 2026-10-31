@@ -97,16 +97,16 @@ export const Combobox = ({
         }}
         onKeyDown={onKeyDown}
         onBlur={close}
-        className="w-full ps-4 pe-9 py-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-800 placeholder:text-slate-400 outline-none transition focus:border-medical-teal focus:ring-2 focus:ring-medical-teal/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
+        className="w-full ps-4 pe-9 py-2.5 border border-slate-200 rounded-xl text-sm bg-white text-slate-800 placeholder:text-slate-500 outline-none transition focus:border-medical-teal focus:ring-2 focus:ring-medical-teal/20 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed"
       />
-      <ChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute end-3 top-3.5 text-slate-400" />
+      <ChevronDown aria-hidden="true" size={16} className="pointer-events-none absolute end-3 top-3.5 text-slate-500" />
       {open && (emptyText || items.length > 0) && (
         <ul
           id={listId}
           role="listbox"
           className="absolute z-50 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg max-h-60 overflow-y-auto py-1"
         >
-          {emptyText && <li className="px-4 py-3 text-sm text-slate-400">{emptyText}</li>}
+          {emptyText && <li className="px-4 py-3 text-sm text-slate-500">{emptyText}</li>}
           {!emptyText &&
             items.map((o, i) => (
               <li
@@ -122,7 +122,7 @@ export const Combobox = ({
                 } ${o.value === value ? 'text-medical-teal font-medium' : 'text-slate-800'}`}
               >
                 <span className="truncate">{o.label}</span>
-                {o.hint && <span className="text-xs text-slate-400 shrink-0">{o.hint}</span>}
+                {o.hint && <span className="text-xs text-slate-500 shrink-0">{o.hint}</span>}
               </li>
             ))}
         </ul>

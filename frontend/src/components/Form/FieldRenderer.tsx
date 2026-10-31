@@ -65,19 +65,19 @@ export const FieldRenderer = <T extends object>({
       : 'border-slate-200 focus:border-medical-teal focus:ring-2 focus:ring-medical-teal/20'
   } ${
     isDisabled
-      ? 'bg-slate-50 text-slate-400 cursor-not-allowed'
+      ? 'bg-slate-50 text-slate-500 cursor-not-allowed'
       : 'bg-white text-clinic-text'
   }`;
 
   const labelClass = 'block text-sm font-medium text-clinic-text mb-1.5';
-  const helperClass = 'text-xs text-clinic-text/40 mt-1';
-  const errorClass = 'text-xs text-red-500 mt-1';
+  const helperClass = 'text-xs text-clinic-text/70 mt-1';
+  const errorClass = 'text-xs text-red-600 mt-1';
   const colSpan = field.colSpan === 2 ? 'col-span-2' : 'col-span-1';
 
   const renderLabel = () => (
     <label htmlFor={field.type === 'custom' ? undefined : controlId} className={labelClass}>
       {tr(field.label)}
-      {field.required && <span className="text-red-500 ms-0.5">*</span>}
+      {field.required && <span className="text-red-600 ms-0.5">*</span>}
     </label>
   );
 
@@ -208,7 +208,7 @@ export const FieldRenderer = <T extends object>({
           />
           <span className="text-sm text-clinic-text">
             {tr(field.label)}
-            {field.required && <span className="text-red-500 ms-0.5">*</span>}
+            {field.required && <span className="text-red-600 ms-0.5">*</span>}
           </span>
         </label>
         {field.helperText && <p className={helperClass}>{tr(field.helperText)}</p>}

@@ -55,11 +55,11 @@ export const StaffCard = ({ member }: StaffCardProps) => {
 
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-hospital-navy truncate">{member.name}</h3>
-          <p className="text-sm text-clinic-text/60 flex items-center gap-1">
+          <p className="text-sm text-clinic-text/70 flex items-center gap-1">
             <Stethoscope size={12} aria-hidden="true" />
             {roleLabel}
           </p>
-          <p className="text-xs text-clinic-text/40 mt-0.5">{t(`departments.${member.department}`, { defaultValue: member.department })}</p>
+          <p className="text-xs text-clinic-text/70 mt-0.5">{t(`departments.${member.department}`, { defaultValue: member.department })}</p>
         </div>
 
         {/* Status */}
@@ -79,7 +79,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
 
       {/* Contact Info */}
       <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
-        <div className="flex items-center gap-2 text-sm text-clinic-text/60">
+        <div className="flex items-center gap-2 text-sm text-clinic-text/70">
           <Mail size={14} aria-hidden="true" />
           <a
             href={`mailto:${member.email}`}
@@ -90,7 +90,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
           </a>
         </div>
         {member.phone && (
-          <div className="flex items-center gap-2 text-sm text-clinic-text/60">
+          <div className="flex items-center gap-2 text-sm text-clinic-text/70">
             <Phone size={14} aria-hidden="true" />
             <a
               href={`tel:${member.phone}`}
@@ -111,7 +111,7 @@ export const StaffCard = ({ member }: StaffCardProps) => {
             <span className="text-teal-700 font-medium">
               {enumLabel(t, 'shiftType', currentShift.type)}
             </span>
-            <span className="text-clinic-text/40 text-xs">
+            <span className="text-clinic-text/70 text-xs">
               {formatTime(currentShift.startTime)} - 
               {formatTime(currentShift.endTime)}
             </span>

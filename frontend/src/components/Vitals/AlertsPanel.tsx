@@ -40,7 +40,7 @@ export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
   return (
     <section aria-label={t('vitals.criticalAlerts')} className="space-y-3">
       <h3 className="text-lg font-bold text-hospital-navy flex items-center gap-2">
-        <AlertTriangle size={20} className="text-red-500" aria-hidden="true" />
+        <AlertTriangle size={20} className="text-red-600" aria-hidden="true" />
         {t('vitals.criticalAlerts')}
         <span
           className="bg-red-100 text-red-600 px-2 py-0.5 rounded-full text-sm"
@@ -66,9 +66,9 @@ export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
               <div className="flex items-center gap-2 text-sm text-clinic-text/70 mt-1">
                 <User size={14} aria-hidden="true" />
                 <span>{alert.patient.name}</span>
-                <span className="text-clinic-text/40" aria-hidden="true">•</span>
+                <span className="text-clinic-text/70" aria-hidden="true">•</span>
                 <span className="font-mono text-xs">{alert.patient.patientCode}</span>
-                <span className="text-clinic-text/40" aria-hidden="true">•</span>
+                <span className="text-clinic-text/70" aria-hidden="true">•</span>
                 <span>{t(`departments.${alert.patient.department}`, { defaultValue: alert.patient.department })}</span>
               </div>
 

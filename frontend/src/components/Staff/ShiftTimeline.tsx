@@ -21,7 +21,7 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
     return (
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
         <h3 className="text-lg font-bold text-hospital-navy mb-2">{t('staff.timeline.title')}</h3>
-        <p className="text-clinic-text/40 text-sm">{t('staff.timeline.empty')}</p>
+        <p className="text-clinic-text/70 text-sm">{t('staff.timeline.empty')}</p>
       </div>
     );
   }
@@ -32,7 +32,7 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-bold text-hospital-navy">{t('staff.timeline.title')}</h3>
-        <span className="text-xs text-clinic-text/40">{t('staff.timeline.coverage')}</span>
+        <span className="text-xs text-clinic-text/70">{t('staff.timeline.coverage')}</span>
       </div>
 
       <div className="space-y-4">
@@ -47,7 +47,7 @@ export const ShiftTimeline = ({ timeline }: ShiftTimelineProps) => {
                 <div className="absolute inset-0 flex">
                   {[0, 4, 8, 12, 16, 20].map((hour) => (
                     <div key={hour} className="flex-1 border-r border-slate-200 last:border-r-0 relative">
-                      <span className="absolute top-0 left-1 text-[10px] text-clinic-text/50">
+                      <span className="absolute top-0 left-1 text-[10px] text-clinic-text/70">
                         {hour.toString().padStart(2, '0')}:00
                       </span>
                     </div>

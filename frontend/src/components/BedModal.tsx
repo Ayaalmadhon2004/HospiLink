@@ -132,9 +132,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="bed-modal-title"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -157,6 +155,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
 
       <div
         ref={modalRef}
+        role="dialog" aria-modal="true" aria-labelledby="bed-modal-title"
         className="bg-white rounded-xl p-6 w-full max-w-lg relative outline-none"
         tabIndex={-1}
       >
@@ -171,7 +170,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           {/* Bed Number */}
           <div>
             <label htmlFor="bed-number" className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t('beds.modal.bedNumber')} <span className="text-red-500" aria-hidden="true">*</span>
+              {t('beds.modal.bedNumber')} <span className="text-red-600" aria-hidden="true">*</span>
               <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <input
@@ -189,7 +188,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           {/* Ward - Custom Dropdown */}
           <div className="relative">
             <label id="ward-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t('beds.modal.ward')} <span className="text-red-500" aria-hidden="true">*</span>
+              {t('beds.modal.ward')} <span className="text-red-600" aria-hidden="true">*</span>
               <span className="sr-only"> ({t('common.required')})</span>
             </label>
             <button
@@ -205,11 +204,11 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
             >
-              <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-400'}>
+              <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-500'}>
                 {selectedWard ? selectedWard.name : t('beds.modal.selectWard')}
               </span>
               <svg
-                className={`w-4 h-4 text-gray-400 transition ${showWardDropdown ? 'rotate-180' : ''}`}
+                className={`w-4 h-4 text-gray-500 transition ${showWardDropdown ? 'rotate-180' : ''}`}
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -226,7 +225,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
                 aria-labelledby="ward-label"
               >
                 {wards.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noWards')}</div>
+                  <div className="px-3 py-2 text-sm text-gray-500">{t('beds.modal.noWards')}</div>
                 ) : (
                   wards.map(w => (
                     <button
@@ -263,7 +262,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               placeholder={t('beds.modal.unassigned')}
               clearLabel={t('beds.modal.unassigned')}
             />
-            <p className="text-xs text-gray-400 mt-1" id="patient-hint">
+            <p className="text-xs text-gray-500 mt-1" id="patient-hint">
               {selectedPatientId ? t('beds.modal.willBeOccupied') : t('beds.modal.willBeAvailable')}
             </p>
           </div>
@@ -290,16 +289,16 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               disabled={!!selectedPatientId}
               className={`w-full border rounded-lg px-3 py-2.5 text-start outline-none text-sm flex justify-between items-center ${
                 selectedPatientId
-                  ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
+                  ? 'border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed'
                   : 'border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
               }`}
             >
-              <span id="status-value" className={status ? 'text-gray-900' : 'text-gray-400'}>
+              <span id="status-value" className={status ? 'text-gray-900' : 'text-gray-500'}>
                 {statusLabels[status] || status}
               </span>
               {!selectedPatientId && (
                 <svg
-                  className={`w-4 h-4 text-gray-400 transition ${showStatusDropdown ? 'rotate-180' : ''}`}
+                  className={`w-4 h-4 text-gray-500 transition ${showStatusDropdown ? 'rotate-180' : ''}`}
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -336,7 +335,7 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
               </div>
             )}
             {selectedPatientId && (
-              <p className="text-xs text-gray-400 mt-1" id="status-hint">
+              <p className="text-xs text-gray-500 mt-1" id="status-hint">
                 {t('beds.modal.autoStatus')}
               </p>
             )}

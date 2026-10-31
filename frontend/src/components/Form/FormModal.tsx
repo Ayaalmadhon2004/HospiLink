@@ -165,15 +165,14 @@ const FormModalBody = <T extends object>({
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="form-modal-title"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget && !submitting) onClose();
       }}
     >
       <div
         ref={modalRef}
+        role="dialog" aria-modal="true" aria-labelledby="form-modal-title"
         className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto"
       >
         {/* Header */}
@@ -182,7 +181,7 @@ const FormModalBody = <T extends object>({
             <h2 id="form-modal-title" className="text-xl font-bold text-hospital-navy">
               {t(mode === 'edit' ? 'forms.editTitle' : 'forms.addTitle', { title: tr(title) })}
             </h2>
-            {subtitle && <p className="text-sm text-clinic-text/50 mt-0.5">{tr(subtitle)}</p>}
+            {subtitle && <p className="text-sm text-clinic-text/70 mt-0.5">{tr(subtitle)}</p>}
           </div>
           <button
             onClick={onClose}

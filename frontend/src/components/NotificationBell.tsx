@@ -92,7 +92,7 @@ export const NotificationBell = () => {
               {unreadCount > 0 && (
                 <button
                   onClick={markAllAsRead}
-                  className="p-1 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded transition"
+                  className="p-1 text-gray-500 hover:text-teal-600 hover:bg-teal-50 rounded transition"
                   title={t('notifications.markAllRead')}
                   aria-label={t('notifications.markAllRead')}
                 >
@@ -101,7 +101,7 @@ export const NotificationBell = () => {
               )}
               <button
                 onClick={() => setOpen(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded transition"
+                className="p-1 text-gray-500 hover:text-gray-600 rounded transition"
                 aria-label={t('notifications.close')}
               >
                 <X className="w-4 h-4" />

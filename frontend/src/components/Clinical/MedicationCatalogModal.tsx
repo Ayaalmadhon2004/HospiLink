@@ -38,7 +38,7 @@ export const MedicationCatalogModal = ({ onClose }: { onClose: () => void }) => 
         <ul className="divide-y divide-slate-100">
           {meds.map((m) => (
             <li key={m.id} className="py-2 flex items-center justify-between gap-3 text-sm">
-              <span className={m.active ? '' : 'text-gray-400 line-through'}>{m.name} · {m.form} · {m.strength}{m.unitPriceMinor ? ` · ${formatMoney(m.unitPriceMinor)}` : ''}</span>
+              <span className={m.active ? '' : 'text-gray-500 line-through'}>{m.name} · {m.form} · {m.strength}{m.unitPriceMinor ? ` · ${formatMoney(m.unitPriceMinor)}` : ''}</span>
               <button className="text-blue-700 underline shrink-0" onClick={() => toggle(m.id, !m.active)}>
                 {m.active ? t('clinical.medications.retire') : t('clinical.medications.restore')}
               </button>

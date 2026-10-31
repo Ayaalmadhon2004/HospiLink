@@ -252,7 +252,7 @@ const AppointmentForm = ({ onClose, onSuccess, editingAppointment }: Omit<NewApp
                     setSelectedPatient(null);
                     setPatientSearch('');
                   }}
-                  className="text-xs text-red-500 hover:text-red-700"
+                  className="text-xs text-red-600 hover:text-red-700"
                 >
                   {t('appointments.modal.change')}
                 </button>

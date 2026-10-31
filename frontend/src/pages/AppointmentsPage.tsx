@@ -111,7 +111,7 @@ export const AppointmentsPage = () => {
   if (loading && !hasData) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">{t('appointments.loading')}</div>
+        <div className="animate-pulse text-gray-500">{t('appointments.loading')}</div>
       </div>
     );
   }
@@ -188,7 +188,7 @@ export const AppointmentsPage = () => {
                     <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
                     <span className="font-medium text-gray-900">{apt.patient?.name || t('common.unknown')}</span>
                     {apt.patient?.patientCode && (
-                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+                      <span className="text-xs text-gray-500">{apt.patient.patientCode}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-4 text-sm text-gray-600 flex-wrap">
@@ -212,7 +212,7 @@ export const AppointmentsPage = () => {
                 <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                   <button
                     onClick={() => handleEdit(apt)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                     title={t('common.edit')}
                     aria-label={t('common.edit')}
                   >
@@ -220,7 +220,7 @@ export const AppointmentsPage = () => {
                   </button>
                   <button
                     onClick={() => handleDeleteClick(apt.id, t('appointments.appointmentFor', { name: apt.patient?.name || t('common.unknown') }))}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                     title={t('common.delete')}
                     aria-label={t('common.delete')}
                   >
@@ -230,7 +230,7 @@ export const AppointmentsPage = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-500">
               <Clock size={48} className="mx-auto mb-3 opacity-50" />
               <p>{t('appointments.emptyToday')}</p>
             </div>
@@ -250,7 +250,7 @@ export const AppointmentsPage = () => {
         {/* Filters */}
         <div className="flex flex-col md:flex-row gap-4 mb-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500" />
             <input
               type="text"
               placeholder={t('appointments.searchPlaceholder')}
@@ -294,7 +294,7 @@ export const AppointmentsPage = () => {
                     <span className={`w-2 h-2 rounded-full ${typeDotColors[apt.type] || 'bg-gray-400'}`} />
                     <span className="font-medium text-gray-900">{apt.patient?.name || t('common.unknown')}</span>
                     {apt.patient?.patientCode && (
-                      <span className="text-xs text-gray-400">{apt.patient.patientCode}</span>
+                      <span className="text-xs text-gray-500">{apt.patient.patientCode}</span>
                     )}
                   </div>
                   <div className="text-sm text-gray-500 mt-1">
@@ -307,7 +307,7 @@ export const AppointmentsPage = () => {
                 <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                   <button
                     onClick={() => handleEdit(apt)}
-                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                    className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                     title={t('common.edit')}
                     aria-label={t('common.edit')}
                   >
@@ -315,7 +315,7 @@ export const AppointmentsPage = () => {
                   </button>
                   <button
                     onClick={() => handleDeleteClick(apt.id, t('appointments.appointmentFor', { name: apt.patient?.name || t('common.unknown') }))}
-                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                    className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                     title={t('common.delete')}
                     aria-label={t('common.delete')}
                   >
@@ -325,7 +325,7 @@ export const AppointmentsPage = () => {
               </div>
             ))
           ) : (
-            <div className="text-center py-8 text-gray-400">
+            <div className="text-center py-8 text-gray-500">
               <Calendar size={48} className="mx-auto mb-3 opacity-50" />
               <p>{t('appointments.emptyUpcoming')}</p>
             </div>

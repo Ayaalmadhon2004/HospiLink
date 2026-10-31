@@ -28,14 +28,12 @@ export const AdmitPatientModal = ({ isOpen, onClose, onAdd }: AdmitPatientModalP
   return (
     <div
       className="fixed inset-0 bg-hospital-navy/50 flex items-center justify-center z-50 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="admit-modal-title"
+      role="presentation"
       onClick={(event) => {
         if (event.target === event.currentTarget && !submitting) onClose();
       }}
     >
-      <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
+      <div role="dialog" aria-modal="true" aria-labelledby="admit-modal-title" className="bg-white rounded-2xl w-full max-w-lg shadow-xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-6 border-b border-slate-100 sticky top-0 bg-white rounded-t-2xl z-10">
           <h2 id="admit-modal-title" className="text-xl font-bold text-hospital-navy">
             {t('patients.admitModal.title')}

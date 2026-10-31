@@ -86,7 +86,7 @@ export const StaffDirectoryPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">{t('staff.loading')}</div>
+        <div className="animate-pulse text-gray-500">{t('staff.loading')}</div>
       </div>
     );
   }
@@ -154,7 +154,7 @@ export const StaffDirectoryPage = () => {
       <div className="bg-white rounded-xl shadow-sm border p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
-            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+            <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500" aria-hidden="true" />
             <input
               type="text"
               placeholder={t('staff.searchPlaceholder')}
@@ -224,7 +224,7 @@ export const StaffDirectoryPage = () => {
                     </div>
                     <div>
                       <div className="font-medium text-gray-900">{member.name}</div>
-                      <div className="text-xs text-gray-400">{member.email}</div>
+                      <div className="text-xs text-gray-500">{member.email}</div>
                       {member.hasLogin === false && (
                         <span
                           className="mt-1 inline-block px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800"
@@ -249,7 +249,7 @@ export const StaffDirectoryPage = () => {
                       {enumLabel(t, 'shiftType', member.shifts[0].type)}
                     </span>
                   ) : (
-                    <span className="text-gray-400 text-sm">—</span>
+                    <span className="text-gray-500 text-sm">—</span>
                   )}
                 </td>
                 <td className="px-6 py-4 text-end">
@@ -257,7 +257,7 @@ export const StaffDirectoryPage = () => {
                     <div className="flex items-center justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 focus-within:opacity-100 transition">
                       <button
                         onClick={() => handleEdit(member)}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                         title={t('staff.edit')}
                         aria-label={t('staff.edit')}
                       >
@@ -265,7 +265,7 @@ export const StaffDirectoryPage = () => {
                       </button>
                       <button
                         onClick={() => handleDeleteClick(member.id, member.name)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                         title={t('staff.delete')}
                         aria-label={t('staff.delete')}
                       >
@@ -280,7 +280,7 @@ export const StaffDirectoryPage = () => {
         </table>
       </div>
       {filteredStaff.length === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border text-center py-20 text-gray-400">
+        <div className="bg-white rounded-xl shadow-sm border text-center py-20 text-gray-500">
           <Users size={48} className="mx-auto mb-4 opacity-50" aria-hidden="true" />
           <p>{t('staff.empty')}</p>
         </div>

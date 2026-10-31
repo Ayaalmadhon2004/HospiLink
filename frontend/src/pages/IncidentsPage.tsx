@@ -145,7 +145,7 @@ export const IncidentsPage = () => {
   if (loading && incidents.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">{t('incidents.loading')}</div>
+        <div className="animate-pulse text-gray-500">{t('incidents.loading')}</div>
       </div>
     );
   }
@@ -166,7 +166,7 @@ export const IncidentsPage = () => {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <AlertTriangle size={28} className="text-red-500" />
+            <AlertTriangle size={28} className="text-red-600" />
             {t('incidents.title')}
           </h1>
           <p className="text-gray-500 text-sm">{t('incidents.subtitle')}</p>
@@ -220,7 +220,7 @@ export const IncidentsPage = () => {
         <div className="relative flex-1">
           <Search
             size={16}
-            className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-400"
+            className="absolute start-3 top-1/2 -translate-y-1/2 text-gray-500"
           />
           <input
             type="text"
@@ -262,7 +262,7 @@ export const IncidentsPage = () => {
                       handleStatusChange(incident.id, 'RESOLVED', 100)
                     }
                     disabled={updatingStatus === incident.id}
-                    className="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
+                    className="p-2 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition"
                     title={t('incidents.markResolved')}
                     aria-label={t('incidents.markResolved')}
                   >
@@ -271,7 +271,7 @@ export const IncidentsPage = () => {
                 )}
                 <button
                   onClick={() => handleEdit(incident)}
-                  className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                   title={t('incidents.edit')}
                   aria-label={t('incidents.edit')}
                 >
@@ -281,7 +281,7 @@ export const IncidentsPage = () => {
                   onClick={() =>
                     handleDeleteClick(incident.id, incident.code)
                   }
-                  className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                   title={t('incidents.delete')}
                   aria-label={t('incidents.delete')}
                 >
@@ -310,7 +310,7 @@ export const IncidentsPage = () => {
                     {enumLabel(t, 'incidentStatus', incident.status)}
                   </span>
                 </div>
-                <span className="text-sm text-gray-400">
+                <span className="text-sm text-gray-500">
                   {timeAgo(incident.createdAt)}
                 </span>
               </div>
@@ -335,7 +335,7 @@ export const IncidentsPage = () => {
                   {timeAgo(incident.createdAt)}
                 </span>
                 {incident.reportedBy && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-500">
                     {t('incidents.by', { name: incident.reportedBy })}
                   </span>
                 )}
@@ -395,7 +395,7 @@ export const IncidentsPage = () => {
             </div>
           ))
         ) : (
-          <div className="text-center py-20 text-gray-400">
+          <div className="text-center py-20 text-gray-500">
             <Activity size={48} className="mx-auto mb-4 opacity-50" />
             <p>{t('incidents.empty')}</p>
           </div>

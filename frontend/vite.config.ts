@@ -16,19 +16,14 @@ export default defineConfig({
     chunkSizeWarningLimit: 700,
     rollupOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('react-router-dom')) {
-            return 'react';
-          }
-          if (id.includes('@tanstack/react-query')) {
-            return 'query';
-          }
-          if (id.includes('lucide-react')) {
-            return 'icons';
-          }
-          if (id.includes('sonner')) {
-            return 'ui';
-          }
+        advancedChunks: {
+          groups: [
+            { name: 'react', test: /node_modules\/(react|react-dom|react-router|react-router-dom|react-is|scheduler|use-sync-external-store)\/|@oxc-project[/+]runtime/, priority: 30 },
+            { name: 'charts', test: /node_modules\/(recharts|d3-[^/]+|victory-vendor|decimal\.js-light)\//, priority: 20 },
+            { name: 'query', test: /node_modules\/@tanstack\/react-query/, priority: 10 },
+            { name: 'icons', test: /node_modules\/lucide-react/, priority: 10 },
+            { name: 'ui', test: /node_modules\/sonner/, priority: 10 },
+          ],
         },
       },
     },

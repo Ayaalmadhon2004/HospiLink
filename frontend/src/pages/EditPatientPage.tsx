@@ -73,7 +73,7 @@ export const EditPatientPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="text-clinic-text/50">{t('common.loading')}</div>
+        <div className="text-clinic-text/70">{t('common.loading')}</div>
       </div>
     );
   }
@@ -106,7 +106,7 @@ export const EditPatientPage = () => {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-hospital-navy">{t('editPatient.title')}</h1>
-              <p className="text-clinic-text/50">{t('editPatient.subtitle')}</p>
+              <p className="text-clinic-text/70">{t('editPatient.subtitle')}</p>
             </div>
           </div>
 

@@ -30,7 +30,7 @@ export const AuditTable = ({ items }: { items: AuditLogEntry[] }) => {
                     <div className="text-xs text-gray-500">{enumLabel(t, 'role', row.user.role)}</div>
                   </>
                 ) : (
-                  <span className="text-gray-400">{t('audit.deletedUser')}</span>
+                  <span className="text-gray-500">{t('audit.deletedUser')}</span>
                 )}
               </td>
               <td className="px-4 py-3"><span className="text-xs bg-slate-100 rounded px-1.5 py-0.5" title={row.action}>{enumLabel(t, 'auditAction', row.action)}</span></td>
