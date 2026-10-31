@@ -29,6 +29,16 @@ describe('socketAuth', () => {
     expect(next).toHaveBeenCalledWith(expect.any(Error));
   });
 
+  it('rejects a token revoked by logout', async () => {
+    prismaMock.revokedToken.findUnique.mockResolvedValue({ jti: 'j1' } as any);
+    const token = jwt.sign({ userId: 'u1' }, JWT_SECRET, { expiresIn: '1h', jwtid: 'j1' });
+    const socket = makeSocket({ auth: { token } });
+    const next = jest.fn();
+    await socketAuth(socket, next);
+    expect(next).toHaveBeenCalledWith(expect.any(Error));
+    expect(socket.data.user).toBeUndefined();
+  });
+
   it('accepts token from handshake.auth and attaches user', async () => {
     prismaMock.user.findUnique.mockResolvedValue({ id: 'u1', role: 'ADMIN', hospitalId: 'h1', accountStatus: 'ACTIVE' } as any);
     const socket = makeSocket({ auth: { token: validToken() } });

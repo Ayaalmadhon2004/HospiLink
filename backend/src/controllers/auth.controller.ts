@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { randomUUID } from 'crypto';
 import prisma from '../config/db';
 import { JWT_SECRET, SESSION_TTL } from '../config/jwt';
 import {
@@ -15,6 +16,7 @@ import {
   formatZodError,
 } from '../validators/auth.validator';
 import { issueAuthToken, consumeAuthToken } from '../services/authTokens';
+import { revokeSessionToken } from '../services/revokedTokens';
 import { sendMail, appLink } from '../services/mailer';
 import logger from '../config/logger';
 import { authCookieOptions, clearCookieOptions } from '../config/cookies';
@@ -52,7 +54,7 @@ export const generateToken = (user: { id: string; email: string; role: string },
       role: user.role,
     },
     JWT_SECRET,
-    { expiresIn: ttl.jwt as jwt.SignOptions['expiresIn'] }
+    { expiresIn: ttl.jwt as jwt.SignOptions['expiresIn'], jwtid: randomUUID() }
   );
 };
 
@@ -91,8 +93,8 @@ export const completeLogin = (
   const token = generateToken({ id: user.id, email: user.email, role: user.role }, ttl);
   res.cookie('token', token, authCookieOptions(ttl.cookieMs));
   const publicUser = toPublicUser(user);
-  // `token` / `user` at the top level are deprecated duplicates of `data` (kept for one release).
-  res.status(200).json({ success: true, message: 'Login successful', data: { user: publicUser, token }, token, user: publicUser });
+  // The JWT only travels in the httpOnly cookie (never in the body); `user` at the top level is a deprecated duplicate of `data.user`.
+  res.status(200).json({ success: true, message: 'Login successful', data: { user: publicUser }, user: publicUser });
 };
 
 // ============================================
@@ -261,6 +263,9 @@ export const login = async (req: Request, res: Response) => {
 // ============================================
 export const logout = async (req: Request, res: Response) => {
   try {
+    const raw = req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.split(' ')[1] : req.cookies?.token;
+    // Revoke the presented token server-side; a storage failure must not leave the user signed in on this device.
+    await revokeSessionToken(raw).catch((err: unknown) => logger.error({ err }, 'Token revocation failed'));
     res.clearCookie('token', clearCookieOptions());
 
     res.status(200).json({

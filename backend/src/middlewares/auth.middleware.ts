@@ -3,6 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET } from '../config/jwt';  // ← ✅ Unified secret
+import { isTokenRevoked } from '../services/revokedTokens';
 import { fail } from '../utils/apiResponse';
 
 declare global {
@@ -44,7 +45,11 @@ export const protect = async (req: Request, res: Response, next: NextFunction) =
     // 2FA challenge tokens (and anything else without a userId) are not sessions.
     if (typeof decoded.userId !== 'string' || decoded.purpose) {
       return fail(res, 401, 'UNAUTHORIZED', 'Invalid or expired token');
-    }  // ← ✅ Unified secret
+    }
+
+    if (await isTokenRevoked(decoded.jti)) {
+      return fail(res, 401, 'UNAUTHORIZED', 'Session expired, please sign in again');
+    }
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

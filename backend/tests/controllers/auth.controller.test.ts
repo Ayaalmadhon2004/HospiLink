@@ -256,7 +256,7 @@ describe('auth.controller', () => {
       expect(opts.maxAge).toBe(maxAge);
     });
 
-    it('يضع user و token داخل data (والنسخ القديمة بالأعلى مؤقتاً)', async () => {
+    it('يضع user داخل data ولا يرجع الـ JWT بالـ body (فقط بالكوكي httpOnly)', async () => {
       const hashed = await bcrypt.hash('correct-password', 4);
       const res = mockResponse();
       prismaMock.user.findUnique.mockResolvedValue({
@@ -269,8 +269,9 @@ describe('auth.controller', () => {
       expect(body.success).toBe(true);
       expect(body.data.user).toMatchObject({ id: 'u1', email: 'a@a.com' });
       expect(body.data.user.password).toBeUndefined();
-      expect(typeof body.data.token).toBe('string');
-      expect(body.token).toBe(body.data.token); // deprecated duplicate
+      expect(body.data.token).toBeUndefined();
+      expect(body.token).toBeUndefined();
+      expect(typeof (res.cookie as jest.Mock).mock.calls[0][1]).toBe('string');
     });
 
     it('يرفض rememberMe غير boolean بـ 400', async () => {
@@ -309,7 +310,10 @@ describe('auth.controller', () => {
       expect(jsonArg.user.email).toBe('a@a.com');
 
       // تأكد إنه التوكن فعلاً صالح ويحتوي بيانات المستخدم الصح
-      const decoded = jwt.verify(jsonArg.token, JWT_SECRET) as any;
+      expect(jsonArg.token).toBeUndefined();
+      const cookieToken = (res.cookie as jest.Mock).mock.calls[0][1] as string;
+      const decoded = jwt.verify(cookieToken, JWT_SECRET) as any;
+      expect(typeof decoded.jti).toBe('string');
       expect(decoded.userId).toBe('u1');
       expect(decoded.role).toBe('DOCTOR');
     });
@@ -323,6 +327,41 @@ describe('auth.controller', () => {
       await logout(req, res);
 
       expect(res.clearCookie).toHaveBeenCalledWith('token', expect.any(Object));
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('يسجّل jti التوكن المقدَّم كملغى (idempotent) ويحذف المنتهي', async () => {
+      const token = jwt.sign({ userId: 'u1' }, JWT_SECRET, { expiresIn: '1h', jwtid: 'jti-1' });
+      const res = mockResponse();
+
+      await logout(mockRequest({ cookies: { token } as any }), res);
+
+      const arg = prismaMock.revokedToken.createMany.mock.calls[0][0];
+      expect(arg.data[0].jti).toBe('jti-1');
+      expect(arg.skipDuplicates).toBe(true);
+      expect(prismaMock.revokedToken.deleteMany).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it('يتجاهل التوكن بلا jti أو غير الصالح، ويمسح الكوكي دائماً', async () => {
+      const legacy = jwt.sign({ userId: 'u1' }, JWT_SECRET, { expiresIn: '1h' });
+      for (const t of [legacy, 'garbage']) {
+        const res = mockResponse();
+        await logout(mockRequest({ cookies: { token: t } as any }), res);
+        expect(res.clearCookie).toHaveBeenCalled();
+        expect(res.status).toHaveBeenCalledWith(200);
+      }
+      expect(prismaMock.revokedToken.createMany).not.toHaveBeenCalled();
+    });
+
+    it('يرد 200 ويمسح الكوكي حتى لو فشل تخزين الإلغاء', async () => {
+      const token = jwt.sign({ userId: 'u1' }, JWT_SECRET, { expiresIn: '1h', jwtid: 'jti-2' });
+      prismaMock.revokedToken.createMany.mockRejectedValue(new Error('db down'));
+      const res = mockResponse();
+
+      await logout(mockRequest({ cookies: { token } as any }), res);
+
+      expect(res.clearCookie).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
     });
   });

@@ -125,6 +125,15 @@ model UserSettings {
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+// Session tokens revoked by logout (jti of the JWT). Rows are only needed until expiresAt and are purged on logout.
+model RevokedToken {
+  jti       String   @id
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
 // Append-only trail of mutating requests. userId is nullable + SetNull so the trail outlives a deleted login.
 model AuditLog {
   id        String   @id @default(uuid())
