@@ -38,7 +38,7 @@ Knobs: `DEVICES`, `DURATION`, `PATIENTS`, `USERS`, `RECEIVERS`, `READINGS`, `EXP
 
 ## Run order and gotchas
 - `rate-limits.js` must run against the **default** limits and exhausts the auth window for your IP for 15 minutes: run it last, on a fresh API process, then restart the API.
-  `exports.js` also needs the default export limiter (10/min, fixed): wait a minute between runs.
+  `exports.js` checks the export limiter (10/min, fixed in the code) but its setup admits 300 patients, so start the API with the raised `API_RATE_LIMIT_MAX` for it; wait a minute between runs.
 - The first request after a cold start is slower (JIT, connection pool); that is why p99 is looser than p95. Warm the API with one `GET /api/health` if a threshold flaps.
 - A 409 in `contention.js` is a correct answer (`http.setResponseCallback` treats it as expected); a 5xx or any other 4xx fails the run.
 - CI: `.github/workflows/load-test.yml` (manual with a profile choice, and weekly) starts PostgreSQL + the API on the runner and runs all six; JSON summaries are uploaded.

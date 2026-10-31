@@ -5,7 +5,8 @@
 //   - the per-IP export limiter (10 / minute) answers 429 RATE_LIMITED instead of letting a script melt the database
 //   - an over-long period is refused (400) before any query runs (it still counts against the limiter window)
 //
-//   k6 run perf/exports.js            (needs the API's default export limiter: do not raise it)
+//   k6 run perf/exports.js            (the 10/min export limiter is fixed in the code; start the API with the raised API_RATE_LIMIT_MAX,
+//                                      otherwise the setup, which admits ROWS patients, is cut off by the 200/min general limiter)
 // Run it on its own and wait a minute between runs: the limiter window is 60 s.
 import http from 'k6/http';
 import { check } from 'k6';
