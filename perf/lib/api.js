@@ -35,7 +35,11 @@ export const login = (account) => {
     headers: { 'Content-Type': 'application/json' },
     tags: { name: 'login' },
   });
-  return must(res, 200, `login ${account.email}`).data.token;
+  must(res, 200, `login ${account.email}`);
+  // The API no longer returns the JWT in the body: it is only set as the httpOnly `token` cookie (Bearer is still accepted by the API).
+  const cookie = res.cookies && res.cookies.token && res.cookies.token[0];
+  if (!cookie || !cookie.value) fail(`login ${account.email}: no "token" cookie in the response`);
+  return cookie.value;
 };
 
 export const status = (res, ...allowed) => allowed.indexOf(res.status) !== -1;

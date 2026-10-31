@@ -78,6 +78,9 @@ jobs:
           k6 run perf/api-read.js
           k6 run perf/contention.js
           k6 run perf/socket-fanout.js
+          # exports.js admits 300 patients in its setup: that needs the raised API limit (200/min by default). The export limiter itself
+          # (10 / min) is fixed in the code, so the raised env does not change what this script checks.
+          k6 run perf/exports.js
 
       # The export limiter (10 / min) is fixed, but every other protection test needs the DEFAULT limits: restart the API.
       - name: Export guard rails and abuse protections (default limits)
@@ -88,7 +91,6 @@ jobs:
           (cd backend && nohup npx tsx src/server.ts > "$RUNNER_TEMP/api2.log" 2>&1 &)
           for i in $(seq 1 60); do curl -sf http://localhost:5000/api/health && break; sleep 1; done
           export SUMMARY_JSON="$RUNNER_TEMP/k6/{name}.json"
-          k6 run perf/exports.js
           k6 run perf/rate-limits.js
 
       - name: Upload k6 summaries
