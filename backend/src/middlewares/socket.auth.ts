@@ -3,6 +3,7 @@ import type { Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import prisma from '../config/db';
 import { JWT_SECRET } from '../config/jwt';
+import { isTokenRevoked } from '../services/revokedTokens';
 import { clinicalRoom } from '../utils/tenant';
 
 export interface SocketUser {
@@ -43,10 +44,13 @@ export const socketAuth = async (
   if (!token) return next(new Error('Unauthorized: no token provided'));
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; iat?: number };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId?: string; iat?: number; jti?: string; purpose?: string };
     if (!decoded || typeof decoded.userId !== 'string') {
       return next(new Error('Unauthorized: invalid token'));
     }
+
+    if (decoded.purpose) return next(new Error('Unauthorized: invalid token'));
+    if (await isTokenRevoked(decoded.jti)) return next(new Error('Unauthorized: session expired'));
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },

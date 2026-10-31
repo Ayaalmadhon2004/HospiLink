@@ -68,6 +68,38 @@ describe('auth.middleware', () => {
       expect(next).not.toHaveBeenCalled();
     });
 
+    it('يرفض توكن تم إلغاؤه بالـ logout (jti موجود بجدول RevokedToken)', async () => {
+      const token = jwt.sign({ userId: 'user-1' }, JWT_SECRET, { jwtid: 'jti-x' });
+      const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
+      const res = mockResponse();
+      const next = mockNext();
+      prismaMock.revokedToken.findUnique.mockResolvedValue({ jti: 'jti-x' } as any);
+
+      await protect(req, res, next);
+
+      expect(prismaMock.revokedToken.findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { jti: 'jti-x' } }));
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(next).not.toHaveBeenCalled();
+    });
+
+    it('يقبل توكن بـ jti غير ملغى، وتوكن قديم بلا jti بدون أي استعلام', async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: 'user-1', email: 'a@a.com', role: 'DOCTOR', hospitalId: 'hosp-1', accountStatus: 'ACTIVE', passwordChangedAt: null,
+      } as any);
+      prismaMock.revokedToken.findUnique.mockResolvedValue(null);
+      const withJti = jwt.sign({ userId: 'user-1' }, JWT_SECRET, { jwtid: 'jti-ok' });
+      const next1 = mockNext();
+      await protect(mockRequest({ headers: { authorization: `Bearer ${withJti}` } as any }), mockResponse(), next1);
+      expect(next1).toHaveBeenCalledTimes(1);
+
+      prismaMock.revokedToken.findUnique.mockClear();
+      const legacy = jwt.sign({ userId: 'user-1' }, JWT_SECRET);
+      const next2 = mockNext();
+      await protect(mockRequest({ headers: { authorization: `Bearer ${legacy}` } as any }), mockResponse(), next2);
+      expect(next2).toHaveBeenCalledTimes(1);
+      expect(prismaMock.revokedToken.findUnique).not.toHaveBeenCalled();
+    });
+
     it('يقبل توكن صدر بعد آخر تغيير للباسورد', async () => {
       const token = jwt.sign({ userId: 'user-1' }, JWT_SECRET);
       const req = mockRequest({ headers: { authorization: `Bearer ${token}` } as any });
