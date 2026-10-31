@@ -17,6 +17,6 @@ describe('StatCard', () => {
 
   it('renders a red trend when not trendUp', () => {
     render(<StatCard title="Beds" value="40" trend="-3%" />);
-    expect(screen.getByText('-3%')).toHaveClass('text-red-500');
+    expect(screen.getByText('-3%')).toHaveClass('text-red-600');
   });
 });

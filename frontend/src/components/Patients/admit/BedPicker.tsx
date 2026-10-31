@@ -24,7 +24,7 @@ export const BedPicker = ({ state, onSelect, onClear }: BedPickerProps) => {
       </legend>
 
       {bedsLoading ? (
-        <div className="flex items-center gap-2 text-sm text-clinic-text/50 py-3" role="status">
+        <div className="flex items-center gap-2 text-sm text-clinic-text/70 py-3" role="status">
           <Loader2 size={16} className="animate-spin" aria-hidden="true" />
           {t('patients.admitModal.loadingBeds')}
         </div>
@@ -34,7 +34,7 @@ export const BedPicker = ({ state, onSelect, onClear }: BedPickerProps) => {
           {bedsError}
         </div>
       ) : availableBeds.length === 0 ? (
-        <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-clinic-text/50">
+        <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-clinic-text/70">
           {formData.department ? t('patients.admitModal.noBedsForDepartment') : t('patients.admitModal.noBeds')}
         </div>
       ) : (
@@ -45,7 +45,7 @@ export const BedPicker = ({ state, onSelect, onClear }: BedPickerProps) => {
         >
           {Object.entries(bedsByWard).map(([wardName, beds]) => (
             <div key={wardName}>
-              <div className="bg-slate-50 px-4 py-2 text-xs font-semibold text-clinic-text/60 uppercase tracking-wide">{wardName}</div>
+              <div className="bg-slate-50 px-4 py-2 text-xs font-semibold text-clinic-text/70 uppercase tracking-wide">{wardName}</div>
               <div className="divide-y divide-slate-100">
                 {beds.map((bed) => (
                   <label
@@ -82,7 +82,7 @@ export const BedPicker = ({ state, onSelect, onClear }: BedPickerProps) => {
         <button
           type="button"
           onClick={onClear}
-          className="text-xs text-clinic-text/50 hover:text-red-500 mt-1 transition focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-1"
+          className="text-xs text-clinic-text/70 hover:text-red-500 mt-1 transition focus:outline-none focus:ring-2 focus:ring-red-500 rounded px-1"
         >
           {t('patients.admitModal.clearSelection')}
         </button>

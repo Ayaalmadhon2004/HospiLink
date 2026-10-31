@@ -85,11 +85,11 @@ const UnitActions: React.FC<Props> = ({ unit }) => {
         <ul role="menu" className="absolute end-0 z-20 mt-1 w-56 rounded-xl border border-gray-100 bg-white py-1 shadow-lg">
           {canAssign && (
             <>
-              <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-400">
+              <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-500">
                 {t('dispatch.actions.assign')}
               </li>
               {pendingCalls.length === 0 && (
-                <li role="presentation" className="px-3 py-2 text-sm text-gray-400">{t('dispatch.actions.noPending')}</li>
+                <li role="presentation" className="px-3 py-2 text-sm text-gray-500">{t('dispatch.actions.noPending')}</li>
               )}
               {pendingCalls.map((c) => (
                 <li key={c.id} role="none">
@@ -103,7 +103,7 @@ const UnitActions: React.FC<Props> = ({ unit }) => {
                     className="w-full px-3 py-2 text-start text-sm text-gray-700 hover:bg-gray-50"
                   >
                     <span className={c.priority === 'CRITICAL' ? 'font-semibold text-red-700' : ''}>{c.type}</span>
-                    <span className="block text-xs text-gray-400">{c.location}</span>
+                    <span className="block text-xs text-gray-500">{c.location}</span>
                   </button>
                 </li>
               ))}
@@ -112,7 +112,7 @@ const UnitActions: React.FC<Props> = ({ unit }) => {
           )}
           {activeCall && (
             <>
-              <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-400">
+              <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-500">
                 {activeCall.type}
               </li>
               {(['complete', 'cancel'] as const).map((action) => (
@@ -133,7 +133,7 @@ const UnitActions: React.FC<Props> = ({ unit }) => {
               <li role="separator" className="my-1 border-t border-gray-100" />
             </>
           )}
-          <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-400">
+          <li role="presentation" className="px-3 py-1 text-xs font-medium text-gray-500">
             {t('dispatch.actions.setStatus')}
           </li>
           {/* A unit on a call cannot be freed by hand: complete or cancel the call (the server enforces it too). */}

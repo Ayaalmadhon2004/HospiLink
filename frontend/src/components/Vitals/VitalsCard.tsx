@@ -41,7 +41,7 @@ export const VitalsCard = ({
       value: heartRate ?? null,
       unit: t('vitals.units.bpm'),
       icon: <Heart size={20} aria-hidden="true" />,
-      color: 'text-red-500',
+      color: 'text-red-600',
       isCritical: heartRate ? heartRate < 60 || heartRate > 100 : false,
     },
     {
@@ -101,7 +101,7 @@ export const VitalsCard = ({
           )}
           {recordedAt && (
             <time
-              className="text-clinic-text/40 text-sm"
+              className="text-clinic-text/70 text-sm"
               dateTime={recordedAt}
             >
               {formatTime(recordedAt, { timeStyle: 'medium' })}
@@ -129,8 +129,8 @@ export const VitalsCard = ({
             <div className={`text-2xl font-bold ${vital.isCritical ? 'text-red-600' : 'text-hospital-navy'}`}>
               {vital.value !== null ? vital.value : '—'}
             </div>
-            <div className="text-xs text-clinic-text/50 mt-1">{vital.label}</div>
-            <div dir="auto" className="text-xs text-clinic-text/50">{vital.unit}</div>
+            <div className="text-xs text-clinic-text/70 mt-1">{vital.label}</div>
+            <div dir="auto" className="text-xs text-clinic-text/70">{vital.unit}</div>
           </div>
         ))}
       </div>

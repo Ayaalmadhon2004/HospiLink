@@ -186,7 +186,7 @@ const Beds = () => {
           ))}
         </div>
         <div className="relative flex-1 max-w-md">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input
             type="text"
             placeholder={t('beds.searchPlaceholder')}
@@ -242,7 +242,7 @@ const Beds = () => {
                         <span className="text-sm text-gray-700">{bed.patient.name}</span>
                       </div>
                     ) : (
-                      <span className="text-sm text-gray-400">—</span>
+                      <span className="text-sm text-gray-500">—</span>
                     )}
                   </td>
                   <td className="px-6 py-4 text-end">
@@ -250,14 +250,14 @@ const Beds = () => {
                       <button
                         onClick={() => handleEdit(bed)}
                         aria-label={t('beds.editLabel', { number: bed.bedNumber })}
-                        className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
                       >
                         <MoreHorizontal className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(bed.id, t('beds.bedLabel', { number: bed.bedNumber }))}
                         aria-label={t('beds.deleteLabel', { number: bed.bedNumber })}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                        className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -269,7 +269,7 @@ const Beds = () => {
           </tbody>
         </table>
         {filteredBeds.length === 0 && (
-          <div className="text-center py-12 text-gray-400">
+          <div className="text-center py-12 text-gray-500">
             <BedDouble className="w-12 h-12 mx-auto mb-3 opacity-50" />
             <p>{t('beds.empty')}</p>
           </div>

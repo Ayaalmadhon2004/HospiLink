@@ -157,7 +157,7 @@ export const PatientDetailPage = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-clinic-bg">
-        <div className="text-clinic-text/50">{t('common.loading')}</div>
+        <div className="text-clinic-text/70">{t('common.loading')}</div>
       </div>
     );
   }
@@ -200,7 +200,7 @@ export const PatientDetailPage = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-hospital-navy">{patient.name}</h1>
-                <p className="text-clinic-text/50">{patient.patientCode}</p>
+                <p className="text-clinic-text/70">{patient.patientCode}</p>
               </div>
             </div>
             <span 
@@ -223,15 +223,15 @@ export const PatientDetailPage = () => {
             </h2>
             <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.age')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.age')}</dt>
                 <dd className="font-medium text-clinic-text">{t('patientDetail.years', { count: patient.age })}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.gender')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.gender')}</dt>
                 <dd className="font-medium text-clinic-text">{enumLabel(t, 'gender', patient.gender)}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.admissionDate')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.admissionDate')}</dt>
                 <dd className="font-medium text-clinic-text">
                   <time dateTime={patient.admissionDate}>
                     {formatDate(patient.admissionDate)}
@@ -240,7 +240,7 @@ export const PatientDetailPage = () => {
               </div>
               {patient.dischargeDate && (
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">{t('patientDetail.dischargeDate')}</dt>
+                  <dt className="text-clinic-text/70">{t('patientDetail.dischargeDate')}</dt>
                   <dd className="font-medium text-medical-teal">
                     <time dateTime={patient.dischargeDate}>
                       {formatDate(patient.dischargeDate)}
@@ -254,20 +254,20 @@ export const PatientDetailPage = () => {
           {/* Medical Info */}
           <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-hospital-navy mb-4 flex items-center gap-2">
-              <Stethoscope size={20} className="text-red-500" aria-hidden="true" />
+              <Stethoscope size={20} className="text-red-600" aria-hidden="true" />
               {t('patientDetail.medicalInfo')}
             </h2>
             <dl className="space-y-3">
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.department')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.department')}</dt>
                 <dd className="font-medium text-clinic-text">{t(`departments.${patient.department}`, { defaultValue: patient.department })}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.diagnosis')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.diagnosis')}</dt>
                 <dd className="font-medium text-clinic-text">{patient.diagnosis}</dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-clinic-text/50">{t('patientDetail.attendingPhysician')}</dt>
+                <dt className="text-clinic-text/70">{t('patientDetail.attendingPhysician')}</dt>
                 <dd className="font-medium text-clinic-text">{patient.doctor?.name || t('patientDetail.notAssigned')}</dd>
               </div>
             </dl>
@@ -282,16 +282,16 @@ export const PatientDetailPage = () => {
             {patient.bed ? (
               <dl className="space-y-3">
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">{t('patientDetail.bedNumber')}</dt>
+                  <dt className="text-clinic-text/70">{t('patientDetail.bedNumber')}</dt>
                   <dd className="font-medium text-clinic-text">{patient.bed.bedNumber}</dd>
                 </div>
                 <div className="flex justify-between">
-                  <dt className="text-clinic-text/50">{t('patientDetail.ward')}</dt>
+                  <dt className="text-clinic-text/70">{t('patientDetail.ward')}</dt>
                   <dd className="font-medium text-clinic-text">{patient.bed.wardName}</dd>
                 </div>
               </dl>
             ) : (
-              <p className="text-clinic-text/40">{t('patientDetail.noBed')}</p>
+              <p className="text-clinic-text/70">{t('patientDetail.noBed')}</p>
             )}
           </section>
 
@@ -301,7 +301,7 @@ export const PatientDetailPage = () => {
               <Activity size={20} className="text-purple-500" aria-hidden="true" />
               {t('patientDetail.vitals')}
             </h2>
-            <p className="text-clinic-text/40 text-sm">{t('patientDetail.vitalsSoon')}</p>
+            <p className="text-clinic-text/70 text-sm">{t('patientDetail.vitalsSoon')}</p>
           </section>
         </div>
 
@@ -313,17 +313,17 @@ export const PatientDetailPage = () => {
           </h2>
 
           {reportsLoading ? (
-            <div className="text-clinic-text/40 text-sm">{t('patientDetail.loadingReports')}</div>
+            <div className="text-clinic-text/70 text-sm">{t('patientDetail.loadingReports')}</div>
           ) : reports.length === 0 ? (
-            <p className="text-clinic-text/40 text-sm">{t('patientDetail.noReports')}</p>
+            <p className="text-clinic-text/70 text-sm">{t('patientDetail.noReports')}</p>
           ) : (
-            <ul className="space-y-2" role="list" aria-label={t('patientDetail.reportsLabel')}>
+            <ul className="space-y-2" aria-label={t('patientDetail.reportsLabel')}>
               {reports.map((report) => (
                 <li key={report.id} className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg hover:bg-slate-100 transition">
                   <FileText size={16} className="text-medical-teal" aria-hidden="true" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-clinic-text truncate">{report.fileName}</p>
-                    <p className="text-xs text-clinic-text/40">
+                    <p className="text-xs text-clinic-text/70">
                       <time dateTime={report.createdAt}>
                         {formatDate(report.createdAt)}
                       </time>
@@ -387,7 +387,7 @@ export const PatientDetailPage = () => {
         >
           <div className="bg-white p-6 rounded-2xl w-full max-w-md shadow-xl">
             <h2 id="discharge-title" className="text-xl font-bold text-hospital-navy mb-2">{t('patientDetail.confirmDischarge')}</h2>
-            <p className="text-clinic-text/50 mb-6">
+            <p className="text-clinic-text/70 mb-6">
               <Trans
                 i18nKey="patientDetail.dischargeQuestion"
                 values={{ name: patient.name }}
@@ -431,14 +431,14 @@ export const PatientDetailPage = () => {
               <h2 id="upload-title" className="text-xl font-bold text-hospital-navy">{t('patientDetail.uploadReport')}</h2>
               <button 
                 onClick={closeUploadModal} 
-                className="text-clinic-text/50 hover:text-clinic-text"
+                className="text-clinic-text/70 hover:text-clinic-text"
                 aria-label={t('patientDetail.closeUpload')}
               >
                 <X size={20} />
               </button>
             </div>
 
-            <p className="text-clinic-text/50 mb-4">
+            <p className="text-clinic-text/70 mb-4">
               {t('patientDetail.uploadPrompt', { name: patient.name })}
             </p>
 
@@ -458,7 +458,7 @@ export const PatientDetailPage = () => {
                 <span className="text-clinic-text/70">
                   {selectedFile ? selectedFile.name : t('patientDetail.selectFile')}
                 </span>
-                <span id="file-help" className="text-xs text-clinic-text/40">{t('patientDetail.fileHelp')}</span>
+                <span id="file-help" className="text-xs text-clinic-text/70">{t('patientDetail.fileHelp')}</span>
               </label>
             </div>
 
@@ -467,7 +467,7 @@ export const PatientDetailPage = () => {
               <div className="bg-medical-teal/5 border border-medical-teal/20 rounded-lg p-3 mb-4 flex items-center gap-2">
                 <FileText size={16} className="text-medical-teal" aria-hidden="true" />
                 <span className="text-sm text-clinic-text">{selectedFile.name}</span>
-                <span className="text-xs text-clinic-text/40 ms-auto">
+                <span className="text-xs text-clinic-text/70 ms-auto">
                   {t('patientDetail.sizeMb', { size: (selectedFile.size / 1024 / 1024).toFixed(2) })}
                 </span>
               </div>

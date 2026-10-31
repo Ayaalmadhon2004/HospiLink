@@ -17,7 +17,7 @@ const StatCard = ({ title, value, hint, trend, trendUp, icon }: StatCardProps) =
       <p className="text-3xl font-semibold text-gray-900">{value}</p>
       {hint && <p className="text-sm text-gray-500 mt-1">{hint}</p>}
       {trend && (
-        <p className={`text-sm mt-1 ${trendUp ? 'text-green-500' : 'text-red-500'}`}>
+        <p className={`text-sm mt-1 ${trendUp ? 'text-green-500' : 'text-red-600'}`}>
           {trend}
         </p>
       )}
