@@ -73,6 +73,7 @@ Backend `.env` (never commit; `.env.example` must contain placeholders only):
                  (without `SMTP_URL` mails are only logged in dev, never sent)
 - `TWO_FACTOR_ENC_KEY`  32 random bytes, base64 (`openssl rand -base64 32`); encrypts TOTP secrets, required to use 2FA (the API boots without it, the `/auth/2fa/*` endpoints fail)
 - `AUTH_RATE_LIMIT_MAX`, `API_RATE_LIMIT_MAX`  TEST ONLY overrides of the auth (20 / 15 min) and API (200 / min) per-IP limits; set by the real-backend Playwright config, never in production
+- `ME_RATE_LIMIT_MAX`  optional, per-IP requests/minute on `GET /api/auth/me` (default 120). `/auth/me` runs on every page load, so it has its own limiter and is exempt from the strict login limiter (`config/authRateLimit.ts`); never make it unlimited
 - `INGEST_RATE_LIMIT_MAX`  optional, requests/minute allowed per authenticated device key on `/api/vitals/ingest/*` (default 6000). Ingest is exempt from the general per-IP API limiter on purpose (one hospital gateway carries every bedside device); rejected requests (bad key/payload) are limited per IP (60/min) instead
 - `VITALS_REPORT_RATE_LIMIT_MAX`  optional, per-IP requests/minute on the public `POST /api/telemetry/web-vitals` beacon (default 60)
 - `SENTRY_DSN`    optional; enables error reporting to Sentry (no PII is sent)
@@ -138,9 +139,10 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
   Use `ok()` / `fail(res, status, 'CODE', 'English message')`; `message` is English for developers, the frontend translates `code` (`errors.codes.*` in the locale files).
   `errorEnvelope` (mounted in server.ts) rewrites every legacy failure body (`{ success:false, message }`, `{ error: 'text' }`) into that shape, with a status-based code (VALIDATION_ERROR, UNAUTHORIZED, FORBIDDEN, NOT_FOUND, CONFLICT, RATE_LIMITED, INTERNAL_ERROR) unless the body carries its own `code`
   (e.g. `PATIENT_NOT_FOUND`, `ACCOUNT_PENDING`). New codes: add to `ErrorCode` and to `errors.codes` in `en.json`/`ar.json` when the UI should show a fixed text.
-  Login/register/`/auth/me`/2FA return their payload in `data` (`data.user`, `data.token`, `data.twoFactorRequired`); the top-level `user`/`token`/`message`/`code`/`errors` copies are deprecated and will be removed.
+  Login/register/`/auth/me`/2FA return their payload in `data` (`data.user`, `data.twoFactorRequired`); the top-level `user`/`message`/`code`/`errors` copies are deprecated and will be removed. The JWT is NOT returned in any body: it travels only in the httpOnly cookie (Bearer is still accepted by `protect` for API clients).
 - Errors: throw/forward to `errorHandler` where possible; do not leak `error.message` of internal errors to clients.
-- Auth: JWT (24h) accepted via `Authorization: Bearer` or httpOnly cookie `token`.
+- Auth: JWT (24h, 7d with rememberMe) accepted via `Authorization: Bearer` or httpOnly cookie `token`. Every token carries a `jti`; `POST /auth/logout` stores it in `RevokedToken` (`services/revokedTokens.ts`, expired rows purged on logout) and `protect`/`socketAuth` answer 401 for revoked tokens. Tokens without a `jti` (issued before the migration) keep working. `socketAuth` also rejects 2FA challenge tokens.
+- Database timeouts: the pg pool has `connectionTimeoutMillis` 10s, `idleTimeoutMillis` 20s and keepAlive (`config/db.ts`) so a suspended Neon compute fails fast instead of hanging requests; `GET /api/health` bounds its `SELECT 1` to 6s and answers 500 (`DOWN`). `GET /health` is liveness-only (no DB).
   Passwords hashed with bcryptjs (12 rounds).
 - Sockets: `io` is created once in server.ts via `initIO()`; controllers/services use `getIO()` from `utils/socket.ts` (never import from server.ts; tests mock `utils/socket` through `tests/mocks/io.ts`); rooms are `patient-<id>`, `department-<name>`, `dispatch-room`, `unit-<id>`.
   Controllers emit events (vitals, incidents, appointments, dispatch, notifications) to those rooms.
@@ -156,15 +158,16 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
 - All HTTP goes through `services/api.ts` (`api`, `apiGet/apiPost/apiPut/apiPatch/apiDelete/apiUpload`, all generic over the response type). Never call axios/fetch directly
   in components. Failures reject with `ApiError` (`message` ready to show, `code`, `status`; see `services/normalizeApiError.ts`); read the code with `getErrorCode(err)`.
 - Session/RBAC: a 401 on any request calls `notifySessionExpired()` (`services/sessionExpiry.ts`); `AuthProvider` clears the user, toasts once and `PrivateRoute` redirects to `/login`. Role rules live in `configs/permissions.ts` (`ROUTE_ROLES`, `Permission`); use `PrivateRoute allowedRoles`, `useAuthPermissions().can(...)` and keep them in sync with the backend `authorize(...)`.
-- Cold starts: `useBackendWarmup` (mounted via `BackendWarmupBanner` in `App.tsx`) polls `GET /api/health` and pings every 10 min while the tab is open.
+- Cold starts: `useBackendWarmup` (mounted via `BackendWarmupBanner` in `App.tsx`) polls `GET /api/health` and pings every 10 min while the tab is open. `.github/workflows/keepalive.yml` also pings `vars.API_HEALTH_URL` every 10 min (repository variable, e.g. `https://hospilink-1bfi.onrender.com/api/health`; skipped when unset) so Render's free tier does not sleep.
 - Real-time: one `use*Socket` hook per domain; always clean up listeners in the effect cleanup.
 - Forms: define fields declaratively in `configs/entityConfigs.ts` and render with `components/Form/*`
   instead of hand-writing new modal forms.
 - Styling: Tailwind utility classes (v4, `@tailwindcss/vite`); icons from `lucide-react`; toasts via `sonner`;
   charts via `recharts` only (chart.js was removed).
-- Keep bundles small: lazy-load pages and heavy libs; `vite.config.ts` has manualChunks for react/query/charts/icons.
-- Accessibility: labels on inputs, aria attributes on icon-only buttons, sufficient colour contrast
-  (Lighthouse a11y is ~93; color-contrast is the known failing audit).
+- Keep bundles small: lazy-load pages and heavy libs; `vite.config.ts` uses `advancedChunks` groups for react/charts/query/icons/ui; the `charts` (recharts) chunk must not be preloaded by the entry. Fonts are self-hosted through `@fontsource` (Poppins 400-700, IBM Plex Sans Arabic 400/500/600); there are no Google Fonts links and `vercel.json` `font-src` is `'self'`.
+- Accessibility: labels on inputs, aria attributes on icon-only buttons, sufficient colour contrast (AA, >= 4.5:1: use `text-gray-500`/`text-slate-500` or darker for text on white, never `-400`; muted text is `text-clinic-text/70`).
+  `eslint-plugin-jsx-a11y` (recommended) runs in lint. Modal pattern: backdrop `role="presentation"` with the click-to-close handler, `role="dialog" aria-modal aria-labelledby` on the inner panel.
+  Contrast ratios were raised by reading the Tailwind values, not measured: re-run Lighthouse to confirm.
 - TypeScript strict; type API responses. ESLint forbids `any`, `@ts-ignore`, `console.*` (use `utils/logger`) and ALL inline `eslint-disable` comments (`noInlineConfig`): restructure instead
   (server data -> `useQuery`; reset-on-open -> mount the form per opening; hooks/constants next to a provider -> their own file). Lint must pass before merging.
 - Components over ~250 lines get split: state/effects in a hook (`hooks/use*`), pure logic in `utils/` or a `*State.ts`, markup in small components.
@@ -197,6 +200,10 @@ Frontend: `VITE_API_URL` required, API base incl. `/api` (validated in `src/conf
 
 Open:
 - Security scanning: `.github/workflows/zap-baseline.yml` (ZAP passive baseline, `.zap/rules.tsv`, `docs/SECURITY_SCANNING.md`) has not had a first real run yet (authoring sandbox had no Docker); header fixes came from a manual curl review. A custom API domain must be added to `connect-src` in `frontend/vercel.json`.
+- Migrations are NOT applied automatically on deploy (Dockerfile note); CI applies them only when the `MIGRATE_DATABASE_URL` secret is set. The latest, `20261103000000_revoked_token`, must be applied before logout revocation works (logout still answers 200 and clears the cookie if the write fails).
+- Dependency audit: `npm audit --omit=dev` is clean in the frontend; the backend keeps 11 moderate transitive findings (uuid via exceljs, glob/minimatch via archiver, Sentry bundler) whose only npm fix is a downgrade; wait for upstream releases.
+- CI: the `gitleaks` job fails on `main` because it scans full history (credentials once committed in `backend/.env.example`); confirm those secrets were rotated, then decide on a baseline. The `db-backup` and `load-test` workflows were also red on `main` and have not been investigated.
+- Domain: the README links `hospi-link-liart.vercel.app` while `frontend/index.html` canonical/og:url use `hospi-link-two.vercel.app`; pick one.
 - `prisma/migrations` holds the baseline (`00000000000000_baseline`) and `20261020000000_report_file_data` (adds `Report.fileData`); production must run `migrate resolve --applied` for the baseline once (see `docs/MIGRATIONS.md`) before `migrate deploy` is used.
 - Legacy uploads under `/uploads` live on Render's ephemeral disk (new ones are stored in the DB). Frontend has unit tests, a mocked-API Playwright suite and a real-backend suite (`npm run test:e2e:real`); broader page coverage is still welcome.
 - i18n (en/ar, RTL) covers every page; free text from the API and enum values stay English (see `docs/I18N.md`). PWA (`docs/PWA.md`): icons are generated from `public/icons/logo.svg` by `npm run icons` (`scripts/generate-icons.cjs`). Web Vitals (`docs/WEB_VITALS.md`) report only in production builds when `VITE_VITALS_ENDPOINT` is set; the backend collector is the public, strictly validated, rate-limited `POST /api/telemetry/web-vitals` (204, text/plain beacon).

@@ -242,16 +242,18 @@ Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the
 
 - **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
 - **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so legacy file-based report uploads are lost on redeploy; new reports are stored in the database.
-- **Database: Neon** PostgreSQL.
+- **Database: Neon** PostgreSQL. The connection pool has connect/idle timeouts so a sleeping database fails fast.
+- **Keep-alive (Render free tier):** set the repository variable `API_HEALTH_URL` (Settings > Secrets and variables > Actions > Variables) to `https://<your-api>/api/health`; `.github/workflows/keepalive.yml` pings it every 10 minutes.
 - **Docker (local full stack):** `docker compose --env-file .env.docker up --build`; see [docs/DOCKER.md](docs/DOCKER.md).
 
 Auth cookies default to `sameSite: none` (Vercel and Render are different sites, so the cookie is third-party and browsers may block it). To fix that, serve the frontend and API from sibling subdomains of one custom domain (e.g. `app.example.com` / `api.example.com`) and set `COOKIE_DOMAIN=.example.com` on the backend: the cookie then becomes `sameSite: lax` with that domain. Also set `CORS_ORIGINS` to the app origin and `VITE_API_URL` to the API URL.
 
 ## Security notes
 
-- The JWT lives in an httpOnly cookie; the frontend does not keep the token in `localStorage`.
+- The JWT lives in an httpOnly cookie; the frontend does not keep the token in `localStorage`, and the API does not return it in response bodies.
+- Logging out revokes the token server-side (`RevokedToken`, by `jti`), so a copied token stops working. Apply the latest migrations (`npx prisma migrate deploy`) after deploying.
 - `JWT_SECRET` is mandatory; there is no fallback value.
-- Passwords are hashed with bcryptjs (12 rounds). Auth routes are limited to 20 requests per 15 minutes per IP, the whole API to 200 per minute.
+- Passwords are hashed with bcryptjs (12 rounds). Auth routes (login, signup, password reset, 2FA) are limited to 20 requests per 15 minutes per IP, `GET /api/auth/me` to 120 per minute, the whole API to 200 per minute.
 - `helmet` sets security headers and a Content-Security-Policy; CORS is an explicit origin allowlist with credentials.
 - Request bodies, params and queries are validated with zod on every resource route; signup ignores any client-supplied `role` or `hospitalId`.
 - Roles are loaded from the database on every request, not trusted from the token.
