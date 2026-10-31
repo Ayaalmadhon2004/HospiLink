@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import { createAuthLimiter, createMeLimiter, limitFromEnv } from './config/authRateLimit';
 import { errorEnvelope, fail } from './utils/apiResponse';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
@@ -69,21 +70,10 @@ app.use(compression({
   level: 6,
 }));
 
-// Production limits are the defaults below. The real-backend E2E suite (frontend/playwright.real.config.ts) raises them through
-// env because one browser session hits /api/auth/me on every page load; nothing else sets these.
-const limitFromEnv = (name: string, fallback: number): number => {
-  const n = Number(process.env[name]);
-  return Number.isInteger(n) && n > 0 ? n : fallback;
-};
-
-// ✅ Rate limiting for auth routes — prevents brute force
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: limitFromEnv('AUTH_RATE_LIMIT_MAX', 20), // 20 requests per window
-  message: { success: false, message: 'Too many authentication attempts. Please try again later.' },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
+// ✅ Rate limiting for auth routes — prevents brute force. config/authRateLimit.ts: the strict limiter skips GET /auth/me,
+// which has its own more generous limiter.
+const authLimiter = createAuthLimiter();
+const meLimiter = createMeLimiter();
 
 // General API rate limiter. Device ingestion is exempt: it has its own failure + per-device-key limiters (routes/vitals.routes.ts),
 // because one hospital gateway carries every bedside device and would exhaust a per-IP budget in seconds.
@@ -180,7 +170,8 @@ app.use(errorEnvelope);
 // ✅ Apply rate limiting
 // API responses are never cacheable (patient data); health/uploads/reports set their own headers.
 app.use('/api', noStore);
-app.use('/api/auth', authLimiter);
+app.use('/api/auth', meLimiter); // counts only GET /me
+app.use('/api/auth', authLimiter); // skips GET /me
 app.use('/api', apiLimiter);
 
 // ✅ Cache headers for static uploads (1 hour)
@@ -203,7 +194,8 @@ app.use('/uploads', protect, express.static(path.join(__dirname, '../uploads'), 
   },
 }));
 
-// app.ts أو server.ts
+// LIVENESS ONLY: answers 200 while the process is up and deliberately does NOT touch the database,
+// so it is cheap and safe for platform probes (e.g. Render). Use GET /api/health for the DB readiness check.
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', time: new Date().toISOString() });
 });
