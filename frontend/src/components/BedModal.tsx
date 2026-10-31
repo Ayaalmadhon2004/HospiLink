@@ -1,22 +1,10 @@
 // components/BedModal.tsx
-import { logger } from '../utils/logger';
-import { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from 'react-i18next';
-import { apiGet, apiPost, apiPut } from '../services/api';
 import { Combobox } from './Form/Combobox';
-import { getErrorMessage, type ApiResponse } from '../types/api';
-import type { BedStatus, BedWithDetails, PatientOption } from "../types/bed";
-
-interface Toast {
-  id: string;
-  message: string;
-  type: 'error' | 'success';
-}
-
-interface Ward {
-  id: string;
-  name: string;
-}
+import { BedStatusSelect } from './Beds/BedStatusSelect';
+import { BedWardSelect } from './Beds/BedWardSelect';
+import { useBedForm } from '../hooks/useBedForm';
+import type { BedWithDetails, PatientOption } from "../types/bed";
 
 export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   bed: BedWithDetails | null;
@@ -25,109 +13,11 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
   onSuccess: () => void;
 }) => {
   const { t } = useTranslation();
-  const [bedNumber, setBedNumber] = useState(bed?.bedNumber || '');
-  const [wardId, setWardId] = useState(bed?.wardId || '');
-  const [chosenStatus, setChosenStatus] = useState<BedStatus>(bed?.status || 'AVAILABLE');
-  const [selectedPatientId, setSelectedPatientId] = useState(bed?.patientId || '');
-  // The server enforces OCCUPIED <=> has a patient: a patient makes the bed OCCUPIED, and without one it can only be
-  // AVAILABLE, CLEANING or MAINTENANCE.
-  const status: BedStatus = selectedPatientId ? 'OCCUPIED' : chosenStatus === 'OCCUPIED' ? 'AVAILABLE' : chosenStatus;
-  const [wards, setWards] = useState<Ward[]>([]);
-  const [saving, setSaving] = useState(false);
-  const [toasts, setToasts] = useState<Toast[]>([]);
-
-  const [showWardDropdown, setShowWardDropdown] = useState(false);
-  const [showStatusDropdown, setShowStatusDropdown] = useState(false);
-
-  const wardBtnRef = useRef<HTMLButtonElement>(null);
-  const statusBtnRef = useRef<HTMLButtonElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-
-  const addToast = useCallback((message: string, type: 'error' | 'success') => {
-    const id = Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(item => item.id !== id));
-    }, 5000);
-  }, []);
-
-  // Fetch wards from API
-  useEffect(() => {
-    const fetchWards = async () => {
-      try {
-        const data = await apiGet<ApiResponse<Ward[]>>('/wards');
-        if (data.success) setWards(data.data);
-      } catch {
-        // Ward list stays empty on failure
-      }
-    };
-    fetchWards();
-  }, []);
-
-  // Close dropdowns on Escape
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setShowWardDropdown(false);
-        setShowStatusDropdown(false);
-      }
-    };
-    document.addEventListener('keydown', handleEscape);
-    return () => document.removeEventListener('keydown', handleEscape);
-  }, []);
-
-  // Focus trap
-  useEffect(() => {
-    if (modalRef.current) {
-      modalRef.current.focus();
-    }
-  }, []);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
-
-    try {
-      const body: Record<string, string> = {
-        bedNumber,
-        wardId,
-        status,
-      };
-
-      if (selectedPatientId) {
-        body.patientId = selectedPatientId;
-      } else if (bed?.patientId) {
-        // The patient was cleared in the form: tell the server to unassign them (otherwise the bed keeps its patient).
-        body.patientId = '';
-      }
-
-      const data = bed
-        ? await apiPut(`/beds/${bed.id}`, body)
-        : await apiPost('/beds', body);
-
-      if (data.success) {
-        addToast(bed ? t('beds.modal.updated') : t('beds.modal.created'), 'success');
-        onSuccess();
-        onClose();
-      } else {
-        addToast(data.message || t('beds.modal.saveFailed'), 'error');
-      }
-    } catch (error: unknown) {
-      logger.error('Error saving bed:', error);
-      addToast(getErrorMessage(error, t('common.unexpectedError')), 'error');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const selectedWard = wards.find(w => w.id === wardId);
-
-  const statusLabels: Record<BedStatus, string> = {
-    AVAILABLE: t('beds.status.AVAILABLE'),
-    OCCUPIED: t('beds.status.OCCUPIED'),
-    CLEANING: t('beds.status.CLEANING'),
-    MAINTENANCE: t('beds.status.MAINTENANCE'),
-  };
+  const {
+    bedNumber, setBedNumber, wardId, setWardId, setChosenStatus, selectedPatientId, setSelectedPatientId,
+    status, wards, saving, toasts, showWardDropdown, setShowWardDropdown, showStatusDropdown, setShowStatusDropdown,
+    modalRef, handleSubmit,
+  } = useBedForm(bed, onClose, onSuccess);
 
   return (
     <div
@@ -187,68 +77,19 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           </div>
 
           {/* Ward - Custom Dropdown */}
-          <div className="relative">
-            <label id="ward-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t('beds.modal.ward')} <span className="text-red-500" aria-hidden="true">*</span>
-              <span className="sr-only"> ({t('common.required')})</span>
-            </label>
-            <button
-              ref={wardBtnRef}
-              type="button"
-              id="ward-select"
-              aria-haspopup="listbox"
-              aria-expanded={showWardDropdown}
-              aria-labelledby="ward-label ward-value"
-              onClick={() => {
-                setShowWardDropdown(!showWardDropdown);
-                setShowStatusDropdown(false);
-              }}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-start focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm bg-white flex justify-between items-center"
-            >
-              <span id="ward-value" className={selectedWard ? 'text-gray-900' : 'text-gray-400'}>
-                {selectedWard ? selectedWard.name : t('beds.modal.selectWard')}
-              </span>
-              <svg
-                className={`w-4 h-4 text-gray-400 transition ${showWardDropdown ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                aria-hidden="true"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </button>
-
-            {showWardDropdown && (
-              <div
-                className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto"
-                role="listbox"
-                aria-labelledby="ward-label"
-              >
-                {wards.length === 0 ? (
-                  <div className="px-3 py-2 text-sm text-gray-400">{t('beds.modal.noWards')}</div>
-                ) : (
-                  wards.map(w => (
-                    <button
-                      key={w.id}
-                      type="button"
-                      role="option"
-                      aria-selected={wardId === w.id}
-                      onClick={() => {
-                        setWardId(w.id);
-                        setShowWardDropdown(false);
-                      }}
-                      className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
-                        wardId === w.id ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                      }`}
-                    >
-                      {w.name}
-                    </button>
-                  ))
-                )}
-              </div>
-            )}
-          </div>
+          <BedWardSelect
+            wards={wards}
+            wardId={wardId}
+            open={showWardDropdown}
+            onToggle={() => {
+              setShowWardDropdown(!showWardDropdown);
+              setShowStatusDropdown(false);
+            }}
+            onSelect={(id) => {
+              setWardId(id);
+              setShowWardDropdown(false);
+            }}
+          />
 
           {/* Patient - Custom Dropdown */}
           <div className="relative">
@@ -269,78 +110,19 @@ export const BedModal = ({ bed, patients, onClose, onSuccess }: {
           </div>
 
           {/* Status - Custom Dropdown */}
-          <div className="relative">
-            <label id="status-label" className="block text-sm font-medium text-gray-700 mb-1.5">
-              {t('beds.modal.status')}
-            </label>
-            <button
-              ref={statusBtnRef}
-              type="button"
-              id="status-select"
-              aria-haspopup="listbox"
-              aria-expanded={showStatusDropdown}
-              aria-labelledby="status-label status-value"
-              aria-describedby="status-hint"
-              onClick={() => {
-                if (!selectedPatientId) {
-                  setShowStatusDropdown(!showStatusDropdown);
-                  setShowWardDropdown(false);
-                }
-              }}
-              disabled={!!selectedPatientId}
-              className={`w-full border rounded-lg px-3 py-2.5 text-start outline-none text-sm flex justify-between items-center ${
-                selectedPatientId
-                  ? 'border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed'
-                  : 'border-gray-300 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'
-              }`}
-            >
-              <span id="status-value" className={status ? 'text-gray-900' : 'text-gray-400'}>
-                {statusLabels[status] || status}
-              </span>
-              {!selectedPatientId && (
-                <svg
-                  className={`w-4 h-4 text-gray-400 transition ${showStatusDropdown ? 'rotate-180' : ''}`}
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  aria-hidden="true"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              )}
-            </button>
-
-            {showStatusDropdown && !selectedPatientId && (
-              <div
-                className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg"
-                role="listbox"
-                aria-labelledby="status-label"
-              >
-                {(['AVAILABLE', 'OCCUPIED', 'CLEANING', 'MAINTENANCE'] as BedStatus[]).map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    role="option"
-                    aria-selected={status === s}
-                    onClick={() => {
-                      setChosenStatus(s);
-                      setShowStatusDropdown(false);
-                    }}
-                    className={`w-full text-start px-3 py-2.5 text-sm hover:bg-blue-50 transition ${
-                      status === s ? 'bg-blue-50 text-blue-600' : 'text-gray-700'
-                    }`}
-                  >
-                    {statusLabels[s]}
-                  </button>
-                ))}
-              </div>
-            )}
-            {selectedPatientId && (
-              <p className="text-xs text-gray-400 mt-1" id="status-hint">
-                {t('beds.modal.autoStatus')}
-              </p>
-            )}
-          </div>
+          <BedStatusSelect
+            status={status}
+            hasPatient={!!selectedPatientId}
+            open={showStatusDropdown}
+            onToggle={() => {
+              setShowStatusDropdown(!showStatusDropdown);
+              setShowWardDropdown(false);
+            }}
+            onSelect={(s) => {
+              setChosenStatus(s);
+              setShowStatusDropdown(false);
+            }}
+          />
 
           {/* Buttons */}
           <div className="flex gap-3 mt-6 pt-4 border-t">
