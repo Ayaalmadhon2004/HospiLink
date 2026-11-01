@@ -1,274 +1,248 @@
-# HospiLink
+<div align="center">
 
-**Hospital management platform for patient flow, bed and ward capacity, vitals monitoring, appointments, incidents, staff scheduling and ambulance dispatch.**
+# 🏥 HospiLink
 
-**Live demo:** [hospi-link-two.vercel.app](https://hospi-link-two.vercel.app/)
+**One platform for the whole hospital floor: patients, beds, vitals, appointments, pharmacy, billing and ambulance dispatch.**
 
-![overview](docs/images/overview.png)
-![patients](docs/images/patients.png)
-![beds and wards](docs/images/beds-wards.png)
+[**Live demo**](https://hospi-link-two.vercel.app/) · [Screenshots](#a-quick-tour) · [Run it locally](#run-it-locally) · [How it is built](#how-it-is-built)
 
----
+![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)
+![Prisma](https://img.shields.io/badge/Prisma-7-2D3748?logo=prisma&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Neon-4169E1?logo=postgresql&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-1270%2B%20unit%20%2B%20integration%20%2B%20e2e-2E8B57)
+![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Table of contents
+![Dashboard](docs/images/overview.png)
 
-1. [Features](#features)
-2. [Roadmap / planned](#roadmap--planned)
-3. [Tech stack](#tech-stack)
-4. [Project structure](#project-structure)
-5. [Getting started](#getting-started)
-6. [Roles and permissions](#roles-and-permissions)
-7. [API overview](#api-overview)
-8. [Real-time events](#real-time-events)
-9. [Testing](#testing)
-10. [Deployment](#deployment)
-11. [Security notes](#security-notes)
-12. [Contributing](#contributing)
+</div>
 
 ---
 
-## Features
+## Why I built it
 
-Everything below exists in the code today.
+Hospital software is where small bugs turn into real problems: a bed that shows as free while a patient is in it, a medicine dispensed twice, an invoice number that skips, one hospital seeing another hospital's patients.
 
-| Area | What it does |
-|------|--------------|
-| Authentication | Signup, login, logout, current user, password change. JWT in an httpOnly cookie (or `Authorization: Bearer`). Public signup always creates the lowest-privilege role (`NURSE`). |
-| Patients | Admit, list with filters and pagination, view, edit, discharge, recent patients, available beds. Report upload (jpeg, png, pdf, max 5 MB). |
-| Beds and wards | Ward list, bed CRUD and status updates, occupancy shown on the dashboard. |
-| Vitals monitoring | Record, list, update and delete vitals per patient, configurable thresholds, critical alerts, live charts. |
-| Appointments | CRUD, today's schedule, upcoming appointments. |
-| Incidents | Report, update, change status, delete, list active incidents. |
-| Staff and shifts | Staff directory (admin-managed), shift CRUD and a 24 hour shift timeline. |
-| Ambulance dispatch | Units and live status, create calls, assign a unit to a call, unit location updates. |
-| Notifications | Per-user notifications with read, read-all and delete; bell in the UI. |
-| Settings | Per-user profile, notification, security and display settings. |
-| Dashboard | Stat cards, department bars and patient-flow chart (recharts). |
-| Audit log | Most mutating routes are wrapped in `logActivity(...)` and stored in `AuditLog`. |
-| Real-time | Authenticated Socket.io for vitals, appointments, incidents, shifts and dispatch. |
+HospiLink is my attempt to build the everyday tools of a hospital **and** to get those hard parts right. Most of the interesting work is not in the screens, it is in the rules underneath them, and every one of those rules is enforced by the database or a transaction and then proven by a test against a real PostgreSQL.
 
-## Roadmap / planned
+It is a portfolio project, not a certified medical product. Do not use it with real patient data.
 
-Done since the first roadmap: Arabic / English (RTL) on every page (`docs/I18N.md`), PWA support with an app-shell precache only (`docs/PWA.md`), and opt-in Web Vitals reporting (`docs/WEB_VITALS.md`). The rest below is **not implemented**.
+## A quick tour
 
-- Fine-grained RBAC (per-permission policies, a reception role). Today access is a fixed set of four roles checked per route.
-- Deeper EHR: diagnoses, medications, visit history and clinical notes. Today a patient has basic demographics, status, bed, vitals and uploaded reports.
-- Automated patient queue management.
-- Logistics and resource-utilisation reporting.
-- Move legacy file-based report uploads (`/uploads/...`, on Render's ephemeral disk) off disk. New reports are stored in the database (`Report.fileData`).
+| | |
+|---|---|
+| ![Patients](docs/images/patients.png) **Patients.** Admit, search, filter by status, discharge, export. Patient codes (`PT-2051`) are generated safely under a database lock. | ![Beds and wards](docs/images/beds-wards.png) **Beds and wards.** A bed is occupied if and only if a patient is in it. Wards are managed by admins. |
+| ![Vitals](docs/images/vitals.png) **Vitals monitor.** Readings arrive from the UI or from bedside devices (HL7, FHIR, JSON). A critical reading escalates the patient and alerts the team in real time. | ![Appointments](docs/images/appointments.png) **Appointments.** A doctor can never be double-booked, even by two people clicking at the same second. |
+| ![Pharmacy](docs/images/pharmacy.png) **Pharmacy.** Live stock, low-stock and out-of-stock flags, receive and adjust with a full ledger. | ![Billing](docs/images/billing.png) **Billing.** Draft, issued, paid or void invoices with gap-free numbers and money kept as integers. |
+| ![Dispatch](docs/images/dispatch.png) **Ambulance dispatch.** Units, live status, calls and assignment, shared in real time with the dispatchers. | ![Incidents](docs/images/incidents.png) **Incidents.** Report, triage by severity, follow through to resolved. |
+| ![Staff](docs/images/staff.png) **Staff and shifts.** Directory, shift timeline, and an optional link between a staff member and their login. | ![Audit log](docs/images/audit-log.png) **Audit log.** Every change by every user is recorded and visible to admins only. |
+
+<details>
+<summary><b>More screens: prescriptions and an invoice</b></summary>
+<br>
+
+![Prescriptions](docs/images/prescriptions.png)
+
+![Invoice](docs/images/invoice.png)
+
+</details>
+
+## What it does
+
+**Clinical care**
+- **Patients and beds.** Admission, discharge, soft delete (a patient is never really erased), bed assignment that can never get out of sync with the patient.
+- **Vitals.** Heart rate, blood pressure, SpO₂, temperature and more, with thresholds per hospital and department. Critical readings flag the patient and notify the department over Socket.io.
+- **Clinical records.** Append-only clinical notes (an amendment is a new version, the history is never overwritten), prescriptions, lab orders and results with automatic abnormal and critical flags.
+- **Appointments.** Conflict detection per doctor, reminders sent by an external scheduler.
+
+**Operations**
+- **Pharmacy.** A medication catalogue per hospital, stock that can never go below zero, dispensing straight from an active prescription, and a ledger of every movement.
+- **Billing.** Invoices built from dispensed medicines and manual lines, discounts, partial payments, void, and Excel or PDF export.
+- **Ambulance dispatch.** Units, crews, calls, assignment and live location.
+- **Incidents, staff and shifts, notifications.**
+
+**Platform**
+- **Roles.** Admin, Doctor, Nurse, Dispatcher, checked on the server for every request and mirrored in the UI.
+- **Security.** Account approval, password reset, email verification, two-factor authentication (TOTP) with recovery codes, token revocation on logout.
+- **Arabic and English**, with full right-to-left layout.
+- **Installable PWA**, and every export (Excel, PDF) is hospital-scoped and audit-logged.
+
+## How it is built
+
+```mermaid
+flowchart LR
+    subgraph Browser
+        UI["React 19 + Vite<br/>React Query, Tailwind 4"]
+    end
+    subgraph API["Express 5 API (Render)"]
+        MW["protect → authorize → validate (zod)"]
+        CT["Controllers"]
+        SV["Services<br/>(stock, beds, billing, vitals, reminders)"]
+        IO["Socket.io"]
+    end
+    DB[("PostgreSQL (Neon)<br/>triggers, CHECK and exclusion constraints")]
+    DEV["Bedside devices<br/>HL7 · FHIR · JSON"]
+    CRON["Scheduler<br/>reminders"]
+
+    UI -- "REST + httpOnly cookie" --> MW --> CT --> SV --> DB
+    UI <-- "real-time events" --> IO
+    SV --> IO
+    DEV -- "x-device-key" --> SV
+    CRON --> SV
+```
+
+The path of every request is the same: **route → middleware → controller → Prisma**. Business rules that must never be bypassed live in small services, and the strictest ones live in the database itself.
+
+### The decisions I am proudest of
+
+These are the parts that took thought, and the reason there is a test for each one.
+
+| Problem | How HospiLink solves it |
+|---|---|
+| **Two nurses claim the same bed** | `claimBed` is one atomic `UPDATE ... WHERE status = AVAILABLE`. Exactly one wins, the other gets a clean 409. |
+| **Stock goes negative or is dispensed twice** | Stock changes only through `changeStock`: one conditional `UPDATE` ("enough on hand" is in the `WHERE`) plus a ledger row in the same transaction, with a database `CHECK` as a second wall. |
+| **Invoice numbers skip** | The number is taken from a per-hospital counter in the same transaction as the status change, so a refused issue burns no number. Money is integer minor units, never floats. |
+| **One hospital sees another's data** | Every query is scoped by the hospital of the logged-in user, loaded from the database, never read from the request. A test walks every id-taking route to prove it. |
+| **Double-booked doctors** | An overlap check in code plus a PostgreSQL **exclusion constraint**, so even a race between two requests is rejected. |
+| **A patient record "deleted" by mistake** | Patients are soft-deleted and a database trigger refuses a real `DELETE`. Clinical notes are append-only with a trigger too. |
+| **A stolen token after logout** | Every token has a `jti`, logout stores it in a revocation list, and role changes or password changes invalidate old sessions. |
+| **Reminders sent twice by two server instances** | Each reminder is claimed with an `INSERT ... ON CONFLICT DO NOTHING` before it is sent. |
 
 ## Tech stack
 
-### Backend
-| Technology | Purpose |
-|------------|---------|
-| Node.js, Express 5 | REST API |
-| TypeScript | Type safety |
-| Prisma 7 (`@prisma/adapter-pg`) | ORM |
-| PostgreSQL (Neon) | Database |
-| Socket.io 4 | Real-time events |
-| zod 4 | Request validation |
-| jsonwebtoken, bcryptjs | Auth and password hashing |
-| helmet, express-rate-limit, cors, compression, cookie-parser | HTTP hardening and performance |
-| multer | File uploads |
-| jest, ts-jest, supertest, jest-mock-extended | Testing |
+| Layer | Tools |
+|---|---|
+| **Frontend** | React 19, Vite 8, TypeScript (strict), Tailwind CSS 4, TanStack Query 5, React Router 7, Recharts, i18next (EN/AR + RTL), Socket.io client |
+| **Backend** | Node.js, Express 5, TypeScript, Prisma 7 with `@prisma/adapter-pg`, Socket.io, zod 4, JWT + bcrypt, otplib (2FA), exceljs and pdfkit (exports), Sentry (optional) |
+| **Database** | PostgreSQL on Neon, with migrations, triggers, CHECK and exclusion constraints |
+| **Quality** | Jest, Vitest, Testing Library, Playwright, k6, ESLint with `no-explicit-any`, GitHub Actions, OWASP ZAP and gitleaks workflows |
+| **Hosting** | Vercel (frontend), Render (API), Neon (database), Docker Compose for the full stack locally |
 
-### Frontend
-| Technology | Purpose |
-|------------|---------|
-| React 19 + react-router-dom 7 | UI and routing (pages lazy-loaded) |
-| Vite 8 + TypeScript | Build tooling |
-| Tailwind CSS 4 | Styling |
-| TanStack React Query 5 | Server state, optimistic CRUD |
-| axios | HTTP client |
-| socket.io-client | Real-time |
-| recharts | Charts |
-| sonner, lucide-react | Toasts and icons |
+## Roles at a glance
+
+| | Admin | Doctor | Nurse | Dispatcher |
+|---|:-:|:-:|:-:|:-:|
+| Patients, beds, vitals, appointments | ✅ | ✅ | ✅ | read patients |
+| Clinical notes | read | write all | nursing notes | – |
+| Prescriptions and lab orders | read | write | read, enter results | – |
+| Dispense medicine | ✅ | ✅ | ✅ | – |
+| Receive and adjust stock | ✅ | – | – | – |
+| Billing and invoices | ✅ | – | – | – |
+| Dispatch | ✅ | – | – | ✅ |
+| Users, staff, wards, audit log | ✅ | – | – | – |
+
+Roles are read from the database on every request, never trusted from the token.
+
+## Run it locally
+
+You need **Node 20+** and a **PostgreSQL** database (local, Docker, or a free [Neon](https://neon.tech) project).
+
+**1. Backend**
+
+```bash
+cd backend
+npm install
+cp .env.example .env     # fill in DATABASE_URL, JWT_SECRET, CORS_ORIGINS
+npx prisma generate
+npx prisma migrate deploy
+npx prisma db seed       # demo hospital, patients, staff, beds, medications
+npm run dev              # http://localhost:5000
+```
+
+**2. Frontend**
+
+```bash
+cd frontend
+npm install
+cp .env.example .env     # VITE_API_URL=http://localhost:5000/api
+npm run dev              # http://localhost:5173
+```
+
+Set `CORS_ORIGINS=http://localhost:5173` in the backend `.env`. After seeding, sign in with the seeded demo admin `dr.rivera@curesync.com` / `Password123!` (local demo data only, change it for anything real).
+
+**Prefer Docker?** `docker compose --env-file .env.docker up --build`, see [docs/DOCKER.md](docs/DOCKER.md).
+
+<details>
+<summary><b>Environment variables</b></summary>
+<br>
+
+| Variable | Where | Needed | Purpose |
+|---|---|:-:|---|
+| `DATABASE_URL` | backend | yes | PostgreSQL connection string |
+| `JWT_SECRET` | backend | yes | Long random string, the API will not boot without it |
+| `CORS_ORIGINS` | backend | yes | Comma-separated frontend origins (CORS and Socket.io) |
+| `VITE_API_URL` | frontend | yes | API base including `/api` |
+| `TWO_FACTOR_ENC_KEY` | backend | for 2FA | 32 random bytes, base64 |
+| `APP_URL`, `SMTP_URL`, `MAIL_FROM` | backend | for emails | Password reset and verification links |
+| `COOKIE_DOMAIN` | backend | optional | Shared parent domain, switches the cookie to `SameSite=Lax` |
+| `REMINDERS_CRON_SECRET` | backend | optional | Enables the reminders endpoint |
+| `SENTRY_DSN` | backend | optional | Error reporting, no personal data sent |
+
+Everything else is documented in [`backend/.env.example`](backend/.env.example).
+
+</details>
+
+## Testing
+
+HospiLink is tested in layers, because mocks cannot prove what a database enforces.
+
+| Layer | What it proves | Command |
+|---|---|---|
+| **Backend unit** (875 tests) | Controllers, validators, middleware, with Prisma and sockets mocked | `cd backend && npm test` |
+| **Backend integration** | Triggers, constraints, row-lock races, tenant isolation, device ingestion and socket rooms on a **real PostgreSQL** | `npm run test:int` |
+| **Frontend unit** (396 tests) | Components, hooks, permissions | `cd frontend && npm test` |
+| **E2E, mocked API** | Login, route guards, main flows in a real browser | `npm run test:e2e` |
+| **E2E, real backend** | Whole journeys per role, from prescription to invoice and Excel/PDF download | `npm run test:e2e:real` |
+| **Load tests** (k6) | Contention, rate limits, exports | see [docs/LOAD_TESTS.md](docs/LOAD_TESTS.md) |
+
+CI runs lint, build and every suite above on each push.
 
 ## Project structure
 
 ```
 HospiLink/
 ├── backend/
-│   ├── prisma/
-│   │   ├── schema.prisma        # Data model
-│   │   └── seed.ts              # Demo data
+│   ├── prisma/            schema, migrations, seed
 │   ├── src/
-│   │   ├── config/              # db.ts (Prisma client), jwt.ts
-│   │   ├── controllers/         # Request handlers (Prisma calls)
-│   │   ├── middlewares/         # auth, audit, error, upload, socket.auth, dispatch.socket
-│   │   ├── routes/              # One file per resource
-│   │   ├── types/               # Shared types
-│   │   ├── validators/          # zod schemas
-│   │   └── server.ts            # App bootstrap, Socket.io, route mounting
-│   ├── tests/                   # jest tests and mocks
-│   ├── uploads/                 # Runtime uploads (git-ignored)
-│   ├── prisma.config.ts
-│   └── jest.config.js
+│   │   ├── routes/        one file per resource
+│   │   ├── controllers/   request handlers
+│   │   ├── services/      stock, beds, billing, vitals, reminders...
+│   │   ├── middlewares/   auth, audit, validation, errors
+│   │   └── validators/    zod schemas
+│   ├── tests/             unit tests (Prisma mocked)
+│   └── tests-int/         integration tests (real PostgreSQL)
 ├── frontend/
-│   ├── public/
 │   ├── src/
-│   │   ├── components/          # UI components (Form/ = generic modal forms)
-│   │   ├── configs/             # entityConfigs.ts (declarative forms)
-│   │   ├── constants/
-│   │   ├── contexts/            # AuthContext
-│   │   ├── hooks/               # useCrud, use*Socket, useSettings ...
-│   │   ├── pages/               # One page per route
-│   │   ├── services/            # axios API layer
-│   │   ├── types/
-│   │   └── App.tsx              # Routes
-│   ├── vercel.json              # SPA rewrite
-│   └── vite.config.ts
-├── docs/
-│   ├── images/                  # README screenshots
-│   ├── vitals/DATA_FLOW.md
-│   ├── DOCKER.md  E2E_REAL.md  I18N.md
-│   └── MIGRATIONS.md  PWA.md  WEB_VITALS.md
-├── .github/workflows/ci-cd.yml  # CI/CD pipeline
-└── CLAUDE.md                    # Contributor guidelines
+│   │   ├── pages/         one page per route
+│   │   ├── components/    UI, generic form engine
+│   │   ├── hooks/         React Query CRUD, sockets
+│   │   └── i18n/          English and Arabic
+│   ├── e2e/               Playwright, mocked API
+│   └── e2e-real/          Playwright, real backend
+├── docs/                  design notes (vitals, exports, migrations, security...)
+└── perf/                  k6 load scripts
 ```
 
-## Getting started
+## Documentation
 
-### Prerequisites
-- Node.js 20+ and npm
-- A PostgreSQL database (local, or a free [Neon](https://neon.tech) project)
-
-### Backend
-
-```bash
-cd backend
-npm install
-cp .env.example .env        # then fill in real values
-npx prisma generate
-npx prisma db push          # create tables from schema.prisma
-npx prisma db seed          # optional demo data (runs tsx prisma/seed.ts, see prisma.config.ts)
-npm run dev                 # http://localhost:5000
-```
-
-`prisma/migrations` contains a baseline migration and `report_file_data`. For a new empty database use `npx prisma migrate deploy` (or `migrate dev` in development); `db push` also works. An existing production database created with `db push` must first be marked with `migrate resolve --applied` (see `docs/MIGRATIONS.md`).
-
-Environment variables (`backend/.env`, never commit it):
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `DATABASE_URL` | yes | PostgreSQL connection string |
-| `JWT_SECRET` | yes | Long random string. The server refuses to start without it. |
-| `PORT` | no | Defaults to `5000` |
-| `NODE_ENV` | no | `production` disables dev logging |
-| `SENTRY_DSN` | no | Enables error reporting to Sentry (no PII is sent) |
-
-Backend scripts: `npm run dev` (tsx watch), `npm run build` (tsc to `dist/`), `npm start` (run `dist/server.js`), `npm test`, `npm run test:watch`, `npm run test:coverage`.
-
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev                 # http://localhost:5173
-```
-
-Set `VITE_API_URL` (for example `http://localhost:5000/api`, see `frontend/.env.example`) in `frontend/.env`; it is required and the app refuses to start without it. The backend likewise requires `CORS_ORIGINS` (see `backend/.env.example`). Scripts: `npm run dev`, `npm run build` (`tsc -b && vite build`), `npm run lint`, `npm run preview`.
-
-The backend CORS allowlist (`allowedOrigins` in `backend/src/server.ts`) must include every frontend origin you use.
-
-## Roles and permissions
-
-Roles come from the database (`protect` reloads the user on every request) and are checked per route with `authorize(...)`.
-
-| Role | Can do |
-|------|--------|
-| `ADMIN` | Everything. Exclusive rights: create/update/delete staff, delete beds, delete shifts, delete vitals. |
-| `DOCTOR` | Admit, view, edit and discharge patients; record and update vitals; create, update and delete appointments; create and update beds; create, update and delete incidents; create and update shifts; create dispatch calls. |
-| `NURSE` | Admit, view and edit patients (no discharge); record and update vitals; create and update appointments; report incidents. Default role for public signup. |
-| `DISPATCHER` | List patients (read-only); update ambulance unit status; create calls and assign units. |
-
-Any authenticated user can read beds, wards, appointments, incidents, staff, shifts, vitals lists and dispatch units, upload patient reports, and use their own notifications and settings.
-
-## API overview
-
-Base path `/api`. Everything except `signup`, `login`, `logout` and the health endpoints requires authentication.
-
-| Resource | Endpoints |
-|----------|-----------|
-| Health | `GET /health`, `GET /api/health` (database check) |
-| Auth `/auth` | `POST /signup`, `POST /login`, `POST /logout`, `GET /me`, `PUT /password` |
-| Patients `/patients` | `POST /admit`, `GET /`, `GET /recent`, `GET /beds/available`, `GET /:id`, `PUT /:id`, `PUT /:id/discharge`, `GET /:id/reports`, `POST /:id/reports` (multipart `reportFile`) |
-| Beds `/beds` | `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id` |
-| Wards `/wards` | `GET /` |
-| Vitals `/vitals` | `POST /`, `GET /`, `GET /alerts`, `GET /:id`, `PUT /:id`, `DELETE /:id` |
-| Appointments `/appointments` | `GET /`, `GET /today`, `GET /upcoming`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id` |
-| Incidents `/incidents` | `GET /`, `GET /active`, `GET /:id`, `POST /`, `PUT /:id`, `PUT /:id/status`, `DELETE /:id` |
-| Staff `/staff` | `GET /`, `GET /:id`, `POST /`, `PUT /:id`, `DELETE /:id`; shifts: `GET /shifts`, `GET /shifts/timeline`, `POST /shifts`, `PUT /shifts/:id`, `DELETE /shifts/:id` |
-| Dispatch `/dispatch` | `GET /units`, `GET /units/active`, `PUT /units/:id/status`, `POST /calls`, `POST /calls/:id/assign` |
-| Notifications `/notifications` | `GET /`, `PUT /read-all`, `PUT /:id/read`, `DELETE /:id` |
-| Settings `/settings` | `GET /`, `PUT /profile`, `PUT /notifications`, `PUT /security`, `PUT /display` |
-| Uploads | `GET /uploads/*` (authenticated static files) |
-
-Responses use `{ success, message?, data? }`.
-
-## Real-time events
-
-Socket.io connections must present a valid JWT (`handshake.auth.token` or the `token` cookie); unauthenticated sockets are rejected.
-
-Rooms: `patient-<id>` (client emits `join-room`; ADMIN/DOCTOR/NURSE only), `department-<name>` (`join-department` / `leave-department`), `dispatch-room` (`join-dispatch` / `leave-dispatch`), `unit-<id>` (`track-unit` / `untrack-unit`).
-
-| Event (server to client) | Sent to | Trigger |
-|--------------------------|---------|---------|
-| `new-vital` | `patient-<id>` | Vitals recorded |
-| `appointment-created`, `appointment-updated`, `appointment-cancelled` | all clients | Appointment changes |
-| `incident-created`, `incident-updated`, `incident-status-updated`, `incident-deleted` | all clients | Incident changes |
-| `shift-update`, `shift-delete` | `department-<name>` | Shift changes |
-| `unit-status-update` | `dispatch-room`, `department-<name>` | Unit status change |
-| `new-call`, `critical-alert`, `call-assigned` | `dispatch-room` | Dispatch calls |
-| `unit-assigned` | `unit-<id>` | Unit assigned to a call |
-| `new-notification` | `user-<id>` | Notification created. Sockets join their `user-<id>` room in `socketAuth`. |
-
-Client to server: `unit-location-update` (dispatch units).
-
-## Testing
-
-```bash
-cd backend
-npm test                # jest; Prisma and Socket.io are mocked, no database needed
-npm run test:coverage
-```
-
-Tests live in `backend/tests/` (controllers, middlewares, validators). The frontend has Vitest tests (`npm test` in `frontend/`); before pushing also run `npm run build && npm run lint` there.
-
-Two Playwright suites live in `frontend/`: `npm run test:e2e` (API mocked in the browser) and `npm run test:e2e:real` (real Express API + a throwaway PostgreSQL database; see [docs/E2E_REAL.md](docs/E2E_REAL.md)).
+[Vitals integration](docs/VITALS_INTEGRATION.md) · [Exports](docs/EXPORTS.md) · [Notifications and reminders](docs/NOTIFICATIONS.md) · [Migrations](docs/MIGRATIONS.md) · [Integration tests](docs/INTEGRATION_TESTS.md) · [Real E2E](docs/E2E_REAL.md) · [Load tests](docs/LOAD_TESTS.md) · [Backups and retention](docs/BACKUP_AND_RETENTION.md) · [Security scanning](docs/SECURITY_SCANNING.md) · [i18n](docs/I18N.md) · [PWA](docs/PWA.md) · [Roadmap](docs/ROADMAP.md)
 
 ## Deployment
 
-- **Frontend: Vercel.** Root directory `frontend`, build `npm run build`, output `dist`. `vercel.json` rewrites all paths to `index.html` for SPA routing. Set `VITE_API_URL` to the Render service URL.
-- **Backend: Render** (Node web service). Root directory `backend`; build `npm install && npx prisma generate && npm run build`; start `npm start`. Set `DATABASE_URL`, `JWT_SECRET` and `NODE_ENV=production`. Add the Vercel domain to `allowedOrigins`. Render's disk is ephemeral, so legacy file-based report uploads are lost on redeploy; new reports are stored in the database.
-- **Database: Neon** PostgreSQL. The connection pool has connect/idle timeouts so a sleeping database fails fast.
-- **Keep-alive (Render free tier):** set the repository variable `API_HEALTH_URL` (Settings > Secrets and variables > Actions > Variables) to `https://<your-api>/api/health`; `.github/workflows/keepalive.yml` pings it every 10 minutes.
-- **Docker (local full stack):** `docker compose --env-file .env.docker up --build`; see [docs/DOCKER.md](docs/DOCKER.md).
+- **Frontend** on Vercel: root `frontend`, build `npm run build`, output `dist`, env `VITE_API_URL`.
+- **API** on Render: root `backend`, build `npm install && npx prisma generate && npm run build`, start `npm start`. Apply migrations with `npx prisma migrate deploy`.
+- **Database** on Neon, with short connection timeouts so a sleeping database fails fast instead of hanging requests.
+- A small GitHub Actions workflow pings `/api/health` so the free Render tier stays awake.
 
-Auth cookies default to `sameSite: none` (Vercel and Render are different sites, so the cookie is third-party and browsers may block it). To fix that, serve the frontend and API from sibling subdomains of one custom domain (e.g. `app.example.com` / `api.example.com`) and set `COOKIE_DOMAIN=.example.com` on the backend: the cookie then becomes `sameSite: lax` with that domain. Also set `CORS_ORIGINS` to the app origin and `VITE_API_URL` to the API URL.
+## Known limits and what is next
 
-## Security notes
+Honest list of what is not there yet: no allergy or drug-interaction checks, no tax, refunds or insurance claims in billing, no dedicated pharmacist or billing role, and PDF exports do not render Arabic text yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
 
-- The JWT lives in an httpOnly cookie; the frontend does not keep the token in `localStorage`, and the API does not return it in response bodies.
-- Logging out revokes the token server-side (`RevokedToken`, by `jti`), so a copied token stops working. Apply the latest migrations (`npx prisma migrate deploy`) after deploying.
-- `JWT_SECRET` is mandatory; there is no fallback value.
-- Passwords are hashed with bcryptjs (12 rounds). Auth routes (login, signup, password reset, 2FA) are limited to 20 requests per 15 minutes per IP, `GET /api/auth/me` to 120 per minute, the whole API to 200 per minute.
-- `helmet` sets security headers and a Content-Security-Policy; CORS is an explicit origin allowlist with credentials.
-- Request bodies, params and queries are validated with zod on every resource route; signup ignores any client-supplied `role` or `hospitalId`.
-- Roles are loaded from the database on every request, not trusted from the token.
-- Uploads are restricted by type and size, served only to authenticated users with `nosniff`, and are not tracked in git.
-- Socket.io connections require a valid JWT, and joining patient rooms is role-restricted.
+## Author
 
-## Contributing
-
-Contributions are welcome. Create a branch (`feat/...`, `fix/...`, `docs/...`, `chore/...`) from `main`, keep PRs small, and open a pull request. See `CLAUDE.md` for conventions.
+Built by **Aya Almadhon**. [GitHub](https://github.com/Ayaalmadhon2004) · [Portfolio](https://portfolio-of-aya.vercel.app)
 
 ## License
 
-MIT.
-
-## Links
-
-- **Live:** [hospi-link-two.vercel.app](https://hospi-link-two.vercel.app/)
-- **GitHub:** [github.com/Ayaalmadhon2004/HospiLink](https://github.com/Ayaalmadhon2004/HospiLink)
+[MIT](LICENSE)

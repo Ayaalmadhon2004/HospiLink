@@ -963,6 +963,7 @@
   },
   "vitals": {
     "alertTypes": {
+      "UNSPECIFIED": "قراءة حرجة",
       "HEART_RATE_HIGH": "ارتفاع معدل ضربات القلب",
       "HEART_RATE_LOW": "انخفاض معدل ضربات القلب",
       "BP_SYSTOLIC_HIGH": "ارتفاع ضغط الدم",
