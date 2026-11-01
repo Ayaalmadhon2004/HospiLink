@@ -935,6 +935,7 @@
   },
   "vitals": {
     "alertTypes": {
+      "UNSPECIFIED": "Critical reading",
       "HEART_RATE_HIGH": "High Heart Rate",
       "HEART_RATE_LOW": "Low Heart Rate",
       "BP_SYSTOLIC_HIGH": "High Blood Pressure",

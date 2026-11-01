@@ -42,11 +42,11 @@ export const PharmacyPage = () => {
       <div>
         <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Pill className="w-6 h-6 text-blue-600" aria-hidden="true" />{t('pharmacy.title')}</h1>
         <p className="text-gray-500 text-sm mt-1">{t('pharmacy.subtitle')}</p>
-        {canManage && <Link to="/pharmacy/movements" className="inline-block mt-2 text-sm text-blue-700 underline">{t('pharmacy.movements.link')}</Link>}
+        {canManage && <Link to="/pharmacy/movements" className="inline-block mt-2 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-slate-50">{t('pharmacy.movements.link')}</Link>}
       </div>
 
       <div className="flex flex-wrap items-center gap-4">
-        <div className="relative w-full sm:w-72">
+        <div className="relative w-full sm:w-96">
           <Search className="absolute start-3 top-2.5 w-4 h-4 text-gray-500" aria-hidden="true" />
           <input
             type="search"
@@ -98,8 +98,8 @@ export const PharmacyPage = () => {
                     {canManage && (
                       <td className="px-4 py-3">
                         <div className="flex gap-3">
-                          <button className="text-blue-700 underline" onClick={() => setAction({ med: m, type: 'receive' })}>{t('pharmacy.receive')}</button>
-                          <button className="text-gray-700 underline" onClick={() => setAction({ med: m, type: 'adjust' })}>{t('pharmacy.adjust')}</button>
+                          <button className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-medium text-blue-800 hover:bg-blue-100" onClick={() => setAction({ med: m, type: 'receive' })}>{t('pharmacy.receive')}</button>
+                          <button className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-medium text-gray-700 hover:bg-slate-50" onClick={() => setAction({ med: m, type: 'adjust' })}>{t('pharmacy.adjust')}</button>
                         </div>
                       </td>
                     )}

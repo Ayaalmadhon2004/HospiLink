@@ -21,7 +21,8 @@ const ALERT_COLORS: Record<string, string> = {
 
 export const AlertsPanel = ({ alerts }: AlertsPanelProps) => {
   const { t } = useTranslation();
-  const alertLabel = (type: string) => t(`vitals.alertTypes.${type}`, { defaultValue: type });
+  // The API can send a critical reading without a type: show a neutral label, never the raw translation key.
+  const alertLabel = (type: string | null | undefined) => t(`vitals.alertTypes.${type || 'UNSPECIFIED'}`, { defaultValue: type || t('vitals.alertTypes.UNSPECIFIED') });
   if (alerts.length === 0) {
     return (
       <div
