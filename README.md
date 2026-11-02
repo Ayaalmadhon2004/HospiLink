@@ -6,6 +6,7 @@
 
 [**Live demo**](https://hospi-link-two.vercel.app/) · [Screenshots](#a-quick-tour) · [Run it locally](#run-it-locally) · [How it is built](#how-it-is-built)
 
+[![CI/CD](https://github.com/Ayaalmadhon2004/HospiLink/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/Ayaalmadhon2004/HospiLink/actions/workflows/ci-cd.yml)
 ![TypeScript](https://img.shields.io/badge/TypeScript-strict-3178C6?logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![Express](https://img.shields.io/badge/Express-5-000000?logo=express&logoColor=white)
@@ -226,6 +227,8 @@ HospiLink/
 
 ## Documentation
 
+Full index: [docs/README.md](docs/README.md).
+
 [Vitals integration](docs/VITALS_INTEGRATION.md) · [Exports](docs/EXPORTS.md) · [Notifications and reminders](docs/NOTIFICATIONS.md) · [Migrations](docs/MIGRATIONS.md) · [Integration tests](docs/INTEGRATION_TESTS.md) · [Real E2E](docs/E2E_REAL.md) · [Load tests](docs/LOAD_TESTS.md) · [Backups and retention](docs/BACKUP_AND_RETENTION.md) · [Security scanning](docs/SECURITY_SCANNING.md) · [i18n](docs/I18N.md) · [PWA](docs/PWA.md) · [Roadmap](docs/ROADMAP.md)
 
 ## Deployment
@@ -238,6 +241,10 @@ HospiLink/
 ## Known limits and what is next
 
 Honest list of what is not there yet: no allergy or drug-interaction checks, no tax, refunds or insurance claims in billing, no dedicated pharmacist or billing role, and PDF exports do not render Arabic text yet. See [docs/ROADMAP.md](docs/ROADMAP.md).
+
+## Contributing
+
+Issues and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and report vulnerabilities privately as described in [SECURITY.md](SECURITY.md). Everything is covered by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Author
 
