@@ -87,6 +87,21 @@ jobs:
           path: zap-out/
           retention-days: 30
 
+      # Print which rules fired so the cause is readable in the log without downloading the artifact.
+      - name: Summarise ZAP alerts
+        if: always()
+        run: |
+          node -e '
+            const fs = require("fs");
+            for (const f of ["api", "web"]) {
+              const p = `zap-out/${f}.json`;
+              if (!fs.existsSync(p)) { console.log(`${f}: no report`); continue; }
+              const alerts = JSON.parse(fs.readFileSync(p, "utf8")).site.flatMap((s) => s.alerts);
+              console.log(`== ${f}: ${alerts.length} alert(s)`);
+              for (const a of alerts) console.log(`  [${a.pluginid}] ${a.riskdesc} - ${a.name} (${a.instances.length} instance(s))`);
+            }
+          '
+
       - name: Fail on FAIL-level findings
         if: steps.api.outcome == 'failure' || steps.web.outcome == 'failure'
         run: |
