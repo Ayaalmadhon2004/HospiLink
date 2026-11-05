@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+# Least privilege: the jobs only read the repo (secrets are passed explicitly where needed).
+permissions:
+  contents: read
+
 # لو صار في أكتر من push بفترة قصيرة، بلغي التشغيل القديم وخلي الجديد بس يشتغل
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
